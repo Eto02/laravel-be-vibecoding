@@ -34,6 +34,7 @@ class AuthController extends Controller
         $result = $this->authService->registerUser($request->all());
 
         return response()->json([
+            'status' => 'success',
             'message' => 'User registered successfully',
             'data' => $result,
         ], 201);
@@ -56,6 +57,7 @@ class AuthController extends Controller
         try {
             $result = $this->authService->loginUser($request->all());
             return response()->json([
+                'status' => 'success',
                 'message' => 'Login successful',
                 'data' => $result,
             ]);
@@ -74,6 +76,7 @@ class AuthController extends Controller
         $this->authService->logoutUser($request->user());
 
         return response()->json([
+            'status' => 'success',
             'message' => 'Logged out successfully',
         ]);
     }
@@ -94,6 +97,7 @@ class AuthController extends Controller
         try {
             $result = $this->authService->refreshToken($request->refresh_token);
             return response()->json([
+                'status' => 'success',
                 'message' => 'Token refreshed successfully',
                 'data' => $result,
             ]);

@@ -12,7 +12,7 @@ use Illuminate\Notifications\Notifiable;
 
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'avatar'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -35,5 +35,10 @@ class User extends Authenticatable
     public function refreshTokens()
     {
         return $this->hasMany(RefreshToken::class);
+    }
+
+    public function oauthAccounts()
+    {
+        return $this->hasMany(OAuthAccount::class);
     }
 }

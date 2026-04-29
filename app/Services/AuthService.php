@@ -16,10 +16,10 @@ class AuthService
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => $data['password'], // Automatically hashed by model cast in Laravel 11
+            'password' => $data['password'],
         ]);
 
-        return $this->generateTokenPayload($user);
+        return $this->issueToken($user, 'password');
     }
 
     public function loginUser(array $credentials)
@@ -32,7 +32,7 @@ class AuthService
             ]);
         }
 
-        return $this->generateTokenPayload($user);
+        return $this->issueToken($user, 'password');
     }
 
     public function logoutUser(User $user)
@@ -62,10 +62,10 @@ class AuthService
         // Revoke the old refresh token (Rotation)
         $refreshToken->update(['revoked_at' => now()]);
 
-        return $this->generateTokenPayload($user);
+        return $this->issueToken($user, 'refresh');
     }
 
-    protected function generateTokenPayload(User $user)
+    public function issueToken(User $user, string $provider = 'password')
     {
         // Create Sanctum Access Token
         $accessToken = $user->createToken('access_token')->plainTextToken;
@@ -83,11 +83,13 @@ class AuthService
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'avatar' => $user->avatar,
             ],
             'access_token' => $accessToken,
             'refresh_token' => $refreshTokenStr,
             'token_type' => 'Bearer',
             'expires_in' => config('sanctum.expiration') ? config('sanctum.expiration') * 60 : 3600,
+            'provider' => $provider,
         ];
     }
 }
