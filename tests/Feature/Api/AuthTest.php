@@ -23,11 +23,13 @@ class AuthTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonStructure([
+                'status',
                 'message',
                 'data' => [
                     'user' => ['id', 'name', 'email'],
                     'access_token',
                     'refresh_token',
+                    'provider'
                 ]
             ]);
 
@@ -47,8 +49,13 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
+                'status',
                 'message',
-                'data' => ['access_token', 'refresh_token']
+                'data' => [
+                    'access_token',
+                    'refresh_token',
+                    'provider'
+                ]
             ]);
     }
 
@@ -67,7 +74,12 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'data' => ['access_token', 'refresh_token']
+                'status',
+                'data' => [
+                    'access_token',
+                    'refresh_token',
+                    'provider'
+                ]
             ]);
 
         $this->assertNotNull($refreshToken->fresh()->revoked_at);
