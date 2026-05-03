@@ -26,33 +26,38 @@ class LogApiRequests
 
     protected function logRequest(Request $request, Response $response, float $duration, string $requestId): void
     {
-        if ($request->is('health') || $request->is('up')) {
-            return;
+        try {
+            if ($request->is('health') || $request->is('up')) {
+                return;
+            }
+
+            $logData = [
+                'request_id'  => $requestId,
+                'timestamp'   => now()->toIso8601String(),
+                'method'      => $request->method(),
+                'url'         => $request->fullUrl(),
+                'path'        => $request->path(),
+                'ip_address'  => $request->ip(),
+                'status_code' => $response->getStatusCode(),
+                'duration_ms' => $duration,
+                'user_id'     => $request->user()?->id,
+                'user_agent'  => $request->userAgent(),
+                'payload'     => $this->maskSensitiveData($request->all()),
+            ];
+
+            if ($response->getStatusCode() >= 400) {
+                $logData['response_content'] = json_decode($response->getContent(), true);
+            }
+
+            // 1. Log to File (JSON for Grafana/Loki)
+            Log::info('API Request Log', $logData);
+
+            // 2. Log to Database (Async for Audit)
+            \App\Jobs\ProcessApiLog::dispatch($logData);
+        } catch (\Throwable $e) {
+            // Log the error to the default emergency logger but don't break the request
+            Log::error('Logging Middleware Error: ' . $e->getMessage());
         }
-
-        $logData = [
-            'request_id'  => $requestId,
-            'timestamp'   => now()->toIso8601String(),
-            'method'      => $request->method(),
-            'url'         => $request->fullUrl(),
-            'path'        => $request->path(),
-            'ip_address'  => $request->ip(),
-            'status_code' => $response->getStatusCode(),
-            'duration_ms' => $duration,
-            'user_id'     => $request->user()?->id,
-            'user_agent'  => $request->userAgent(),
-            'payload'     => $this->maskSensitiveData($request->all()),
-        ];
-
-        if ($response->getStatusCode() >= 400) {
-            $logData['response_content'] = json_decode($response->getContent(), true);
-        }
-
-        // 1. Log to File (JSON for Grafana/Loki)
-        Log::info('API Request Log', $logData);
-
-        // 2. Log to Database (Async for Audit)
-        \App\Jobs\ProcessApiLog::dispatch($logData);
     }
 
     protected function maskSensitiveData(array $data): array
