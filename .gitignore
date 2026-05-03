@@ -27,3 +27,5 @@ Thumbs.db
 /docker/mysql/data
 /docker/redis/data
 .env
+*.local.md
+.claude/settings.local.json

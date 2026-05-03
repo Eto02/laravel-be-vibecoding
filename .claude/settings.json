@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan *)",
+      "Bash(composer require *)",
+      "Bash(composer install)",
+      "Bash(composer dump-autoload)",
+      "Bash(composer show *)",
+      "Bash(docker compose exec app *)",
+      "Bash(docker compose ps)",
+      "Bash(docker compose logs *)",
+      "Bash(docker compose up *)",
+      "Bash(docker compose down)",
+      "Bash(docker compose build *)",
+      "Bash(vendor/bin/phpunit *)",
+      "Bash(vendor/bin/pint *)",
+      "Bash(php -l *)",
+      "Bash(php -r *)",
+      "Bash(ls *)",
+      "Bash(ls -la *)",
+      "Bash(find . *)",
+      "Bash(grep *)",
+      "Bash(grep -r *)",
+      "Bash(grep -rn *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(git status)",
+      "Bash(git log *)",
+      "Bash(git diff *)",
+      "Bash(git branch *)"
+    ],
+    "deny": [
+      "Bash(php artisan migrate:fresh*)",
+      "Bash(php artisan db:wipe*)",
+      "Bash(docker compose -f docker-compose.prod.yml *)",
+      "Bash(git push --force*)",
+      "Bash(rm -rf *)"
+    ]
+  }
+}

@@ -3,111 +3,57 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RefreshTokenRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Resources\Auth\UserResource;
+use App\Http\Responses\ApiResponse;
 use App\Services\AuthService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-    protected $authService;
+    public function __construct(private readonly AuthService $authService) {}
 
-    public function __construct(AuthService $authService)
+    public function register(RegisterRequest $request): JsonResponse
     {
-        $this->authService = $authService;
+        $result = $this->authService->registerUser($request->validated());
+
+        return ApiResponse::success('User registered successfully.', $result, 201);
     }
 
-    public function register(Request $request)
+    public function login(LoginRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation error',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $result = $this->authService->registerUser($request->all());
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'User registered successfully',
-            'data' => $result,
-        ], 201);
-    }
-
-    public function login(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email',
-            'password' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation error',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         try {
-            $result = $this->authService->loginUser($request->all());
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Login successful',
-                'data' => $result,
-            ]);
+            $result = $this->authService->loginUser($request->validated());
+
+            return ApiResponse::success('Login successful.', $result);
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Invalid credentials',
-                'errors' => [
-                    'email' => [$e->getMessage()],
-                ],
-            ], 401);
+            return ApiResponse::error('Invalid credentials.', 401);
         }
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request): JsonResponse
     {
         $this->authService->logoutUser($request->user());
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Logged out successfully',
-        ]);
+        return ApiResponse::success('Logged out successfully.');
     }
 
-    public function refresh(Request $request)
+    public function refresh(RefreshTokenRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'refresh_token' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation error',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         try {
-            $result = $this->authService->refreshToken($request->refresh_token);
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Token refreshed successfully',
-                'data' => $result,
-            ]);
+            $result = $this->authService->refreshToken($request->validated()['refresh_token']);
+
+            return ApiResponse::success('Token refreshed successfully.', $result);
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Refresh token error',
-                'errors' => [
-                    'refresh_token' => [$e->getMessage()],
-                ],
-            ], 401);
+            return ApiResponse::error('Invalid or expired refresh token.', 401);
         }
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        return ApiResponse::success('User retrieved.', new UserResource($request->user()));
     }
 }
