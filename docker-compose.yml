@@ -14,6 +14,23 @@ services:
             - mysql
             - redis
 
+    worker:
+        build:
+            context: .
+            dockerfile: docker/php/Dockerfile
+            target: development
+        container_name: laravel-worker
+        restart: unless-stopped
+        command: php artisan queue:work --verbose --tries=3 --timeout=90
+        volumes:
+            - .:/var/www/html
+        networks:
+            - laravel
+        depends_on:
+            - mysql
+            - redis
+            - app
+
     nginx:
         image: nginx:alpine
         container_name: laravel-nginx
@@ -54,6 +71,39 @@ services:
             - ./docker/redis/data:/data
         networks:
             - laravel
+
+    loki:
+        image: grafana/loki:latest
+        container_name: laravel-loki
+        ports:
+            - "3100:3100"
+        command: -config.file=/etc/loki/local-config.yaml
+        networks:
+            - laravel
+
+    promtail:
+        image: grafana/promtail:latest
+        container_name: laravel-promtail
+        volumes:
+            - ./storage/logs:/var/log/laravel
+            - ./docker/observability/promtail-config.yml:/etc/promtail/config.yml
+        command: -config.file=/etc/promtail/config.yml
+        networks:
+            - laravel
+        depends_on:
+            - loki
+
+    grafana:
+        image: grafana/grafana:latest
+        container_name: laravel-grafana
+        ports:
+            - "3000:3000"
+        environment:
+            - GF_SECURITY_ADMIN_PASSWORD=admin
+        networks:
+            - laravel
+        depends_on:
+            - loki
 
 networks:
     laravel:
