@@ -15,5 +15,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\LogApiRequests::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return \App\Http\Responses\ApiResponse::error('Resource not found.', 404);
+        });
+
+        $exceptions->render(function (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return \App\Http\Responses\ApiResponse::error('Forbidden.', 403);
+        });
+
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e) {
+            return \App\Http\Responses\ApiResponse::validationError(
+                'The given data was invalid.',
+                $e->errors(),
+            );
+        });
     })->create();

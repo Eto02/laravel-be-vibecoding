@@ -1,17 +1,16 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Payment;
 
 use App\Enums\TransactionStatus;
 use App\Models\Transaction;
-use App\Services\Payment\PaymentGatewayInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class PaymentService
 {
     public function __construct(
-        private readonly PaymentGatewayInterface $gateway
+        private readonly PaymentGatewayInterface $gateway,
     ) {}
 
     public function createInvoice(array $data): Transaction
@@ -35,7 +34,7 @@ class PaymentService
 
     public function handleWebhook(Request $request): Transaction
     {
-        if (!$this->gateway->verifyWebhook($request)) {
+        if (! $this->gateway->verifyWebhook($request)) {
             throw new \RuntimeException('Invalid webhook token.', 403);
         }
 

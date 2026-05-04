@@ -1,20 +1,21 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Payment;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Http\Resources\Payment\TransactionResource;
 use App\Http\Responses\ApiResponse;
-use App\Services\PaymentService;
+use App\Services\Payment\PaymentService;
+use Illuminate\Http\JsonResponse;
 
 class PaymentController extends Controller
 {
     public function __construct(
-        private readonly PaymentService $paymentService
+        private readonly PaymentService $paymentService,
     ) {}
 
-    public function store(StorePaymentRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StorePaymentRequest $request): JsonResponse
     {
         try {
             $transaction = $this->paymentService->createInvoice($request->validated());

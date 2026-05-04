@@ -346,6 +346,10 @@ public function process(CheckoutDTO $data): Order { ... }
 
 13. **Service Return Type.** Service harus mengembalikan Model, DTO, atau boolean. Gunakan **Exceptions** untuk alur error (misal: `InsufficientStockException`), jangan return `['error' => '...']`.
 
+14. **Git Workflow (PR-first).** DILARANG push langsung ke `main`. Selalu buat branch `feat/nama-fitur` atau `fix/nama-bug`. Setelah selesai, push ke remote dan buat Pull Request untuk review.
+
+15. **API Documentation.** Setiap penambahan endpoint WAJIB diiringi dengan update koleksi Postman. Simpan file `postman_collection.json` di root repository atau gunakan auto-generator (Scribe).
+
 
 ---
 
@@ -747,3 +751,29 @@ Follow this priority when a new feature is requested. Never skip an earlier-prio
 17. Search (Laravel Scout + Meilisearch)
 18. Recommendation Engine
 19. Analytics & Reporting
+
+---
+
+## Git & Contribution Workflow
+
+Selalu ikuti alur ini untuk menjaga integritas `main` branch:
+
+1.  **Sync:** `git checkout main && git pull origin main`
+2.  **Branch:** `git checkout -b feat/feature-name` (Gunakan prefix `feat/`, `fix/`, `refactor/`, atau `chore/`)
+3.  **Code:** Lakukan perubahan dan commit secara atomik.
+4.  **Test:** Pastikan `php artisan test` lulus semua.
+5.  **Push:** `git push origin feat/feature-name`
+6.  **PR:** Buka Pull Request di GitHub. Berikan deskripsi perubahan dan lampirkan screenshot/recording jika ada perubahan UI/logic signifikan.
+7.  **Merge:** Dilakukan setelah review atau jika CI/CD lulus.
+
+---
+
+## API Documentation (Postman)
+
+Agar API mudah dicoba oleh tim Frontend atau QA:
+
+1.  **Collection File:** Gunakan file `docs/marketplace_api.postman_collection.json` untuk menyimpan semua request.
+2.  **Environment:** Sediakan `docs/marketplace_dev.postman_environment.json` yang berisi variable `base_url`, `token`, dll.
+3.  **Authentication:** Set authorization di level folder/collection menggunakan `Bearer Token` dari variable `{{token}}`.
+4.  **Examples:** Simpan contoh response (Success & Error) di setiap request Postman agar frontend tahu struktur data tanpa harus menjalankan API.
+5.  **Automated Doc (Optional):** Kita bisa menggunakan `knuckleswtf/scribe` untuk generate dokumentasi HTML dan Postman collection secara otomatis dari DocBlock di Controller.

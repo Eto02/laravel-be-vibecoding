@@ -32,13 +32,16 @@ class OAuthTest extends TestCase
         $response = $this->getJson('/api/auth/google/callback');
 
         $response->assertStatus(200)
+            ->assertJson(['success' => true])
             ->assertJsonStructure([
-                'status',
+                'success',
+                'message',
                 'data' => [
                     'access_token',
                     'refresh_token',
-                    'provider'
-                ]
+                    'provider',
+                ],
+                'meta' => ['timestamp'],
             ]);
 
         $this->assertDatabaseHas('users', ['email' => 'oauth@example.com']);
