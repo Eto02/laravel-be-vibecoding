@@ -1,0 +1,455 @@
+{
+  "info": {
+    "_postman_id": "marketplace-api-v1",
+    "name": "Marketplace API",
+    "description": "Laravel 13 Headless Marketplace API — multi-vendor platform. Base URL: {{base_url}}\n\n## Setup\n1. Set `base_url` variable to `http://localhost:8000`\n2. Register atau login, token akan otomatis tersimpan ke `access_token`\n3. Refresh token tersimpan di `refresh_token`\n\n## Auth\nSemua endpoint bertanda 🔒 membutuhkan Bearer token yang di-set otomatis via pre-request/test scripts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url",       "value": "http://localhost:8000", "type": "string" },
+    { "key": "access_token",   "value": "",                      "type": "string" },
+    { "key": "refresh_token",  "value": "",                      "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Authentication — Register, Login, OAuth, Token Refresh, Logout",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data && body.data.access_token) {",
+                  "    pm.collectionVariables.set('access_token', body.data.access_token);",
+                  "  }",
+                  "  if (body.data && body.data.refresh_token) {",
+                  "    pm.collectionVariables.set('refresh_token', body.data.refresh_token);",
+                  "  }",
+                  "  pm.test('Register returns 201', () => pm.response.to.have.status(201));",
+                  "  pm.test('Response has access_token', () => pm.expect(body.data).to.have.property('access_token'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/auth/register", "host": ["{{base_url}}"], "path": ["api", "auth", "register"] },
+            "description": "Daftarkan user baru. Access token dan refresh token otomatis tersimpan ke collection variables."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"User registered successfully.\",\n  \"data\": {\n    \"user\": { \"id\": 1, \"name\": \"Test User\", \"email\": \"test@example.com\" },\n    \"access_token\": \"1|abc...\",\n    \"refresh_token\": \"def...\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 Validation Error",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"The email has already been taken.\",\n  \"errors\": { \"email\": [\"The email has already been taken.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data && body.data.access_token) {",
+                  "    pm.collectionVariables.set('access_token', body.data.access_token);",
+                  "  }",
+                  "  if (body.data && body.data.refresh_token) {",
+                  "    pm.collectionVariables.set('refresh_token', body.data.refresh_token);",
+                  "  }",
+                  "  pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('Response has access_token', () => pm.expect(body.data).to.have.property('access_token'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] },
+            "description": "Login dan dapatkan Sanctum access token + refresh token."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful.\",\n  \"data\": {\n    \"user\": { \"id\": 1, \"name\": \"Test User\", \"email\": \"test@example.com\" },\n    \"access_token\": \"1|abc...\",\n    \"refresh_token\": \"def...\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "401 Invalid Credentials",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid credentials.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data && body.data.access_token) {",
+                  "    pm.collectionVariables.set('access_token', body.data.access_token);",
+                  "  }",
+                  "  if (body.data && body.data.refresh_token) {",
+                  "    pm.collectionVariables.set('refresh_token', body.data.refresh_token);",
+                  "  }",
+                  "  pm.test('Refresh returns 200', () => pm.response.to.have.status(200));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/auth/refresh", "host": ["{{base_url}}"], "path": ["api", "auth", "refresh"] },
+            "description": "Rotasi refresh token. Token lama diinvalidasi, pair baru di-return.\n\n⚠️ Tidak membutuhkan Bearer token — gunakan refresh_token di body."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Token refreshed successfully.\",\n  \"data\": {\n    \"access_token\": \"2|xyz...\",\n    \"refresh_token\": \"ghi...\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "401 Invalid Refresh Token",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired refresh token.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Me (Current User) 🔒",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/me", "host": ["{{base_url}}"], "path": ["api", "auth", "me"] },
+            "description": "Ambil data user yang sedang login berdasarkan Bearer token."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"User retrieved.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "401 Unauthenticated",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"message\": \"Unauthenticated.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Logout 🔒",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/logout", "host": ["{{base_url}}"], "path": ["api", "auth", "logout"] },
+            "description": "Revoke current access token."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Logged out successfully.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "OAuth — Google Redirect",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/google/redirect", "host": ["{{base_url}}"], "path": ["api", "auth", "google", "redirect"] },
+            "description": "Redirect ke Google OAuth consent screen. Ganti `google` dengan `github` untuk GitHub OAuth."
+          }
+        },
+        {
+          "name": "OAuth — Google Callback",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/auth/google/callback?code=AUTH_CODE&state=STATE",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "google", "callback"],
+              "query": [
+                { "key": "code",  "value": "AUTH_CODE" },
+                { "key": "state", "value": "STATE" }
+              ]
+            },
+            "description": "Callback dari Google OAuth. Laravel Socialite memproses code → return Sanctum token pair."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Media (File Upload)",
+      "description": "Upload file ke Cloudflare R2 via Presigned URL (client-side direct upload)\n\n**Flow:**\n1. `POST /api/media/presigned-url` → dapat `upload_url` + `key`\n2. `PUT {upload_url}` dari client langsung ke R2 (tidak melalui server)\n3. `POST /api/media/confirm` dengan `key` → konfirmasi upload",
+      "item": [
+        {
+          "name": "Generate Presigned URL 🔒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data) {",
+                  "    pm.collectionVariables.set('media_upload_url', body.data.upload_url || '');",
+                  "    pm.collectionVariables.set('media_key', body.data.key || '');",
+                  "    pm.collectionVariables.set('media_public_url', body.data.public_url || '');",
+                  "  }",
+                  "  pm.test('Returns 201 with upload info', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(body.data).to.have.all.keys('upload_url', 'key', 'public_url');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"folder\": \"products\",\n  \"filename\": \"product-photo.jpg\",\n  \"mime\": \"image/jpeg\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/media/presigned-url", "host": ["{{base_url}}"], "path": ["api", "media", "presigned-url"] },
+            "description": "Generate presigned PUT URL untuk upload langsung ke Cloudflare R2.\n\n**folder** options: `avatars`, `store-assets`, `products`, `reviews`, `kyc-documents`\n\n**mime** options: `image/jpeg`, `image/png`, `image/webp`, `image/gif`, `video/mp4`, `application/pdf`\n\nURL yang dihasilkan valid selama 300 detik (5 menit)."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Presigned URL generated.\",\n  \"data\": {\n    \"upload_url\": \"https://abc.r2.cloudflarestorage.com/products/uuid.jpg?X-Amz-...\",\n    \"key\": \"products/550e8400-e29b-41d4-a716-446655440000.jpg\",\n    \"public_url\": \"https://pub-xxx.r2.dev/products/550e8400-e29b-41d4-a716-446655440000.jpg\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 Invalid Folder",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"The selected folder is invalid.\",\n  \"errors\": { \"folder\": [\"The selected folder is invalid.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Upload File ke R2 (Direct PUT)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "image/jpeg" }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {}
+            },
+            "url": { "raw": "{{media_upload_url}}", "host": ["{{media_upload_url}}"] },
+            "description": "Upload file langsung ke Cloudflare R2 menggunakan presigned URL dari step sebelumnya.\n\n⚠️ Request ini dikirim LANGSUNG ke R2 — tidak melalui server Laravel.\n⚠️ `Content-Type` harus sama persis dengan `mime` yang didaftarkan saat generate presigned URL.\n⚠️ Tidak butuh Authorization header.\n\nSetelah upload sukses (200/204), lanjut ke step Confirm Upload."
+          }
+        },
+        {
+          "name": "Confirm Upload 🔒",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"{{media_key}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/media/confirm", "host": ["{{base_url}}"], "path": ["api", "media", "confirm"] },
+            "description": "Konfirmasi bahwa file sudah berhasil di-upload ke R2.\nBackend akan validasi file exists di R2, hapus upload session dari Redis, dan return public URL.\n\nSimpan `public_url` dari response ke database (misal: `products.image_url`)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Upload confirmed.\",\n  \"data\": {\n    \"public_url\": \"https://pub-xxx.r2.dev/products/550e8400-e29b-41d4-a716-446655440000.jpg\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 File Not Found",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"File not found in storage. Upload may have failed.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete File 🔒",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"{{media_key}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/media", "host": ["{{base_url}}"], "path": ["api", "media"] },
+            "description": "Hapus file dari Cloudflare R2 dan bersihkan Redis session (jika ada)."
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payment",
+      "description": "Pembayaran via Xendit gateway",
+      "item": [
+        {
+          "name": "Create Payment 🔒",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept",              "value": "application/json" },
+              { "key": "X-Idempotency-Key",   "value": "{{$guid}}",       "description": "Unique key per request — mencegah double payment" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 150000,\n  \"description\": \"Payment for Order #123\",\n  \"currency\": \"IDR\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/payments", "host": ["{{base_url}}"], "path": ["api", "payments"] },
+            "description": "Buat invoice pembayaran via Xendit.\n\n⚠️ Selalu sertakan header `X-Idempotency-Key` (UUID) untuk mencegah double charge.\n\n`amount` dalam **satuan Rupiah** (min: Rp 10.000 = `10000`)."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Payment created.\",\n  \"data\": {\n    \"id\": \"pay_xxx\",\n    \"invoice_url\": \"https://checkout.xendit.co/web/...\",\n    \"amount\": 150000,\n    \"status\": \"pending\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "description": "Webhook endpoints — tidak membutuhkan auth, verifikasi via signature",
+      "item": [
+        {
+          "name": "Xendit Webhook",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Accept",                      "value": "application/json" },
+              { "key": "x-callback-token",            "value": "YOUR_XENDIT_CALLBACK_TOKEN", "description": "Xendit webhook verification token" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"invoice_xxx\",\n  \"external_id\": \"order_123\",\n  \"status\": \"PAID\",\n  \"amount\": 150000,\n  \"paid_amount\": 150000,\n  \"paid_at\": \"2026-05-04T12:00:00.000Z\",\n  \"payer_email\": \"buyer@example.com\",\n  \"payment_method\": \"BANK_TRANSFER\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/webhooks/xendit", "host": ["{{base_url}}"], "path": ["api", "webhooks", "xendit"] },
+            "description": "Webhook callback dari Xendit ketika pembayaran berhasil.\n\n⚠️ Endpoint ini PUBLIC — tidak butuh Bearer token.\n⚠️ Verifikasi dilakukan via `x-callback-token` header.\n⚠️ Untuk testing: set `x-callback-token` = nilai `XENDIT_WEBHOOK_TOKEN` di `.env`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "description": "Server health check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/up", "host": ["{{base_url}}"], "path": ["up"] },
+            "description": "Laravel health check endpoint. Returns 200 jika server UP."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
