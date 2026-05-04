@@ -15,6 +15,7 @@ Headless REST API backend for a **full-scale multi-vendor marketplace** (compara
 | Primary DB | MySQL 8.0 — relational/transactional data |
 | Cache / Queue / Session | Redis (phpredis) |
 | Email | Laravel Mail — SMTP/Resend/SES (driver via `MAIL_MAILER` env) |
+| File Storage | Cloudflare R2 — S3-compatible, zero egress fee. Upload via **presigned URL** (client-side direct upload). Minio for local dev. |
 | Payment | Xendit — interface-based in `app/Services/Payment/` |
 | Shipping | RajaOngkir / Biteship — interface-based in `app/Services/Shipping/` |
 | Notifications | Laravel Notifications — Email, FCM Push, WhatsApp |
@@ -155,13 +156,10 @@ app/
 │   ├── Voucher/
 │   │   └── VoucherService.php
 │   └── Shared/                        # Cross-cutting services used by ALL modules
-│       ├── NotificationService.php    # Orchestrator: picks channel (email/push/WA)
 │       ├── EmailService.php           # Wraps Laravel Mail — used by all modules
-│       ├── SmsService.php             # Wraps SMS/WA provider (Fonnte/Twilio)
-│       ├── PushNotificationService.php# Wraps FCM
-│       ├── MediaService.php           # File upload to S3/Cloudinary/Minio
-│       ├── OtpService.php             # Generate & verify OTP (Redis-backed)
-│       └── CacheService.php           # Typed cache helpers with TTL conventions
+│       ├── OtpService.php             # Redis-backed OTP with rate/retry limit
+│       ├── MediaService.php           # Cloudflare R2 Presigned Upload integration
+│       └── IdempotencyService.php     # Mencegah request ganda via Redis
 │
 ├── Enums/
 │   ├── OrderStatus.php                # pending|paid|processing|shipped|delivered|completed|cancelled
@@ -180,6 +178,15 @@ app/
 │   │   └── OrderCancelled.php
 │   └── Payment/
 │       └── PaymentCaptured.php
+│
+├── DTOs/                              # Data Transfer Objects for complex Services
+│   ├── Order/
+│   │   └── CheckoutDTO.php
+│   └── Product/
+│       └── CreateProductDTO.php
+│
+├── Responses/                         # Standardized API response wrappers
+│   └── ApiResponse.php                # MANDATORY Trait for Controllers
 │
 ├── Listeners/
 │   ├── Auth/
@@ -251,7 +258,57 @@ tests/
     │   ├── Payment/
     │   └── Shared/
     └── Models/
+
+---
+
+## API Response Standard
+
+Semua Controller WAJIB menggunakan `ApiResponse` trait. Format JSON harus konsisten:
+
+### Success Response (200/201)
+```json
+{
+    "success": true,
+    "message": "Product created successfully",
+    "data": { ... }
+}
 ```
+
+### Error Response (4xx/5xx)
+```json
+{
+    "success": false,
+    "message": "The given data was invalid.",
+    "errors": {
+        "email": ["The email has already been taken."]
+    }
+}
+```
+
+---
+
+## Data Transfer Pattern (DTO)
+
+Untuk method Service yang menerima > 2 parameter, gunakan `readonly class` DTO.
+
+```php
+// app/DTOs/Order/CheckoutDTO.php
+readonly class CheckoutDTO {
+    public function __construct(
+        public int $addressId,
+        public array $items,
+        public ?string $voucherCode,
+    ) {}
+}
+
+// In Controller:
+$this->orderService->process(CheckoutDTO::fromRequest($request));
+
+// In Service:
+public function process(CheckoutDTO $data): Order { ... }
+```
+
+---
 
 ---
 
@@ -279,9 +336,16 @@ tests/
 
 8. **Routes are split per domain.** `routes/api.php` only loads domain route files. No route definitions directly in `routes/api.php` except the `require` statements.
 
-9. **One Service per domain entity.** `ProductService`, `OrderService`, etc. Inject via constructor DI only — no `app()` or `resolve()` inside methods.
+9. **One Service per domain entity.** `ProductService`, `OrderService`, etc. Inject via constructor DI only.
 
-10. **All interfaces are bound in `AppServiceProvider`.** Payment gateways, shipping providers, and notification channels must be bound via the interface pattern.
+10. **Idempotency for Mutating Actions.** Semua API yang mengubah state finansial atau inventori (Order, Payment, Payout) WAJIB mendukung header `X-Idempotency-Key`. Gunakan `IdempotencyService` untuk memvalidasi key di Redis sebelum memproses logic.
+
+11. **Event-Driven Notifications.** DILARANG menggunakan `NotificationService`. Gunakan Laravel Events (misal `OrderPlaced`). Listener yang akan menangani pengiriman Email, Push, atau WA secara asinkron (`ShouldQueue`).
+
+12. **Data Transfer Objects (DTO).** Untuk service method yang menerima > 2 parameter, WAJIB menggunakan DTO (class readonly). DILARANG mengirim `$request->all()` langsung ke Service.
+
+13. **Service Return Type.** Service harus mengembalikan Model, DTO, atau boolean. Gunakan **Exceptions** untuk alur error (misal: `InsufficientStockException`), jangan return `['error' => '...']`.
+
 
 ---
 
@@ -301,42 +365,59 @@ $this->email->send($user, new OrderConfirmationMail($order));
 $this->email->sendRaw($user->email, 'Subject', 'Body text');
 ```
 
-### `App\Services\Shared\SmsService`
+### `App\Services\Shared\MediaService` (Cloudflare R2 — Presigned Upload)
+**Upload flow:** Backend hanya generate presigned URL, file dikirim langsung dari client ke R2.
 ```php
-// Send OTP or transactional SMS/WhatsApp:
-$this->sms->send($user->phone, 'Your OTP is: 123456');
-```
+// Step 1 — generate presigned URL (dipanggil dari controller)
+$result = $this->media->generatePresignedUrl('products', 'photo.jpg', 'image/jpeg');
+// returns: ['upload_url' => '...', 'key' => 'products/uuid.jpg', 'public_url' => '...']
 
-### `App\Services\Shared\PushNotificationService`
-```php
-// Send FCM push to a user's registered device tokens:
-$this->push->sendToUser($user, title: 'Pesanan Dikirim', body: 'Paket Anda sedang dalam perjalanan.');
+// Step 2 — client melakukan PUT ke upload_url secara langsung (frontend/mobile)
+
+// Step 3 — konfirmasi & simpan key ke DB
+$exists = $this->media->confirmUpload('products/uuid.jpg');
+
+// Get URL
+$this->media->publicUrl('products/uuid.jpg');          // untuk file public
+$this->media->temporaryUrl('kyc-documents/ktp.jpg');   // untuk file private
+
+// Delete
+$this->media->delete('products/uuid.jpg');
 ```
 
 ### `App\Services\Shared\OtpService`
-```php
 // Generate & store OTP (Redis, TTL 5 min):
-$otp = $this->otp->generate($identifier);  // identifier = phone/email
+$otp = $this->otp->generate($identifier);
 
-// Verify OTP:
+// Verify OTP (dengan rate limit & retry limit):
 $valid = $this->otp->verify($identifier, $inputOtp);
-```
 
-### `App\Services\Shared\MediaService`
-```php
-// Upload a file from Request:
-$url = $this->media->upload($request->file('photo'), disk: 's3', folder: 'product-media');
+### `App\Services\Shared\IdempotencyService`
+// Pastikan request tidak diproses dua kali (Order/Payment):
+$this->idempotency->check($request->header('X-Idempotency-Key'), function() use ($data) {
+    return $this->order->create($data);
+});
 
-// Delete a file:
-$this->media->delete($url);
-```
+### `App\Services\Shared\CacheService`
+// Native Laravel Cache contract (simplified):
+$this->cache->remember('key', 3600, fn() => 'value');
 
-### `App\Services\Shared\NotificationService`
-Orchestrator that picks the right channel based on user preferences:
-```php
-// Sends via Email + Push if user has enabled them:
-$this->notification->notify($user, new OrderShippedNotification($order));
-```
+---
+
+## Order State Machine
+
+Status transitions harus mengikuti alur yang valid. Dilarang melompat status tanpa trigger yang sesuai.
+
+| From | To | Trigger |
+|---|---|---|
+| `pending` | `paid` | Payment Webhook (Success) |
+| `pending` | `cancelled` | Expiry Job / User Cancel |
+| `paid` | `processing` | Merchant Accept |
+| `paid` | `cancelled` | Merchant Reject (Auto-refund) |
+| `processing` | `shipped` | Merchant Input AWB |
+| `shipped` | `delivered` | Courier API / User Confirm |
+| `delivered` | `completed` | Auto-complete (3 days) / User Confirm |
+| `any` | `disputed` | User Complaint |
 
 ---
 

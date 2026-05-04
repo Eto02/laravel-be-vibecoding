@@ -36,7 +36,23 @@ enum OrderStatus: string {
     case Delivered  = 'delivered';
     case Completed  = 'completed';
     case Cancelled  = 'cancelled';
+    case Disputed   = 'disputed';
 }
+
+---
+
+## Order State Machine
+
+| From | To | Trigger |
+|---|---|---|
+| `pending` | `paid` | Payment Webhook (Success) |
+| `pending` | `cancelled` | Expiry Job / User Cancel |
+| `paid` | `processing` | Merchant Accept |
+| `paid` | `cancelled` | Merchant Reject (Auto-refund) |
+| `processing` | `shipped` | Merchant Input AWB |
+| `shipped` | `delivered` | Courier API / User Confirm |
+| `delivered` | `completed` | Auto-complete (3 days) / User Confirm |
+| `any` | `disputed` | User Complaint |
 ```
 
 ---
@@ -107,12 +123,13 @@ tests/Feature/Api/Order/OrderTest.php
 | Service | Kegunaan |
 |---|---|
 | `EmailService` | `OrderConfirmationMail`, `OrderShippedMail` |
-| `NotificationService` | Push notif status pesanan berubah |
+| `IdempotencyService` | Mencegah double checkout |
 
 ---
 
 ## Business Logic Notes
 - Checkout harus dalam satu **DB Transaction** — jika gagal satu langkah, semua di-rollback
+- **Idempotency:** Endpoint `POST /api/orders/checkout` WAJIB mengirimkan `X-Idempotency-Key` untuk mencegah order ganda saat koneksi tidak stabil.
 - `address_snapshot` & `product_snapshot`: simpan data saat checkout, bukan relasi — karena alamat dan produk bisa berubah di kemudian hari
 - Stok dikurangi **saat order dibuat** (bukan saat bayar) — restore jika order expired/cancelled
 - `payment_due_at`: default 24 jam dari created_at, configurable
