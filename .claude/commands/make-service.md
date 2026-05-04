@@ -1,37 +1,43 @@
 ---
-description: Scaffold a Service class with constructor DI and a matching PHPUnit unit test stub
+description: Scaffold a Service class within a domain folder, with constructor DI and a matching PHPUnit unit test stub. Always uses the domain-namespaced path per CLAUDE.md.
 ---
 
 Create a Service class for: $ARGUMENTS
 
-Treat the argument as `{Name}` in PascalCase. If the argument includes "implementing" or "interface" keywords, also generate an interface and AppServiceProvider binding.
+Format expected: `{Domain}/{FeatureName}` — e.g. `Order/OrderService`, `Shared/EmailService`, `Product/CategoryService`
+
+If `Shared/` is the domain, also run `make-shared-service` instead for full interface scaffolding.
 
 ---
 
 ## File 1: Service Class
 
-Path: `app/Services/{Name}Service.php`
+Path: `app/Services/{Domain}/{Name}Service.php`
+
+Namespace: `App\Services\{Domain}`
 
 ```php
 <?php
 
-namespace App\Services;
+namespace App\Services\{Domain};
 
 class {Name}Service
 {
     public function __construct(
-        // Inject dependencies here via constructor only.
-        // Examples:
-        // private readonly AnotherService $anotherService,
+        // Inject dependencies via constructor only.
+        // Domain services: inject other domain/shared services
+        // private readonly \App\Services\Shared\EmailService $email,
+        // private readonly \App\Services\Shared\NotificationService $notification,
+        // Shared services: inject Laravel contracts
         // private readonly \Illuminate\Contracts\Events\Dispatcher $events,
     ) {}
 
-    // Public methods below — each with a single clear responsibility.
+    // Public methods — each with a single clear responsibility.
     // Always use typed parameters and return types.
-    // Do NOT call response()->json() here — return data, let controllers return responses.
-    // Do NOT use app() or resolve() inside this class.
-    // Let ModelNotFoundException and ValidationException bubble up — do not catch them here
-    // unless you are re-throwing a domain-specific exception.
+    // Return data (arrays, models, collections) — never JsonResponse.
+    // Do NOT use app(), resolve(), or static facades accessed inside methods.
+    // Let ModelNotFoundException and ValidationException bubble up naturally.
+    // Fire events via injected Dispatcher, not the Event facade.
 }
 ```
 
@@ -39,12 +45,16 @@ class {Name}Service
 
 ## File 2 (conditional): Interface
 
-Only generate if the argument mentions "interface" or "implementing". Path: `app/Contracts/{Name}Interface.php`
+Only generate if the argument mentions "interface" or "implementing", OR if domain is `Shared/`, `Payment/Gateways/`, or `Shipping/Providers/`.
+
+Path: `app/Contracts/{Domain}/{Name}Interface.php`
+
+Namespace: `App\Contracts\{Domain}`
 
 ```php
 <?php
 
-namespace App\Contracts;
+namespace App\Contracts\{Domain};
 
 interface {Name}Interface
 {
@@ -52,12 +62,11 @@ interface {Name}Interface
 }
 ```
 
-And add to `app/Providers/AppServiceProvider.php` in the `register()` method:
-
+Add to `app/Providers/AppServiceProvider.php` in `register()`:
 ```php
 $this->app->bind(
-    \App\Contracts\{Name}Interface::class,
-    \App\Services\{Name}Service::class,
+    \App\Contracts\{Domain}\{Name}Interface::class,
+    \App\Services\{Domain}\{Name}Service::class,
 );
 ```
 
@@ -65,14 +74,16 @@ $this->app->bind(
 
 ## File 3: Unit Test
 
-Path: `tests/Unit/Services/{Name}ServiceTest.php`
+Path: `tests/Unit/Services/{Domain}/{Name}ServiceTest.php`
+
+Namespace: `Tests\Unit\Services\{Domain}`
 
 ```php
 <?php
 
-namespace Tests\Unit\Services;
+namespace Tests\Unit\Services\{Domain};
 
-use App\Services\{Name}Service;
+use App\Services\{Domain}\{Name}Service;
 use PHPUnit\Framework\TestCase;
 
 class {Name}ServiceTest extends TestCase
@@ -82,16 +93,14 @@ class {Name}ServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // Instantiate with mocked dependencies:
-        // $this->service = new {Name}Service(
-        //     $this->createMock(DependencyClass::class),
-        // );
+        // Mock all dependencies:
+        // $mockEmail = $this->createMock(\App\Services\Shared\EmailService::class);
+        // $this->service = new {Name}Service($mockEmail);
         $this->service = new {Name}Service();
     }
 
-    public function test_example(): void
+    public function test_service_instantiates_correctly(): void
     {
-        // Replace with real assertion for the most critical method
         $this->assertInstanceOf({Name}Service::class, $this->service);
     }
 }
@@ -101,8 +110,10 @@ class {Name}ServiceTest extends TestCase
 
 ## Rules
 
-- Constructor injection only — no `app()`, `resolve()`, or static facades accessed inside methods (inject the contract instead)
+- Constructor injection only — no `app()`, `resolve()`, or static facades inside methods
 - Return typed values — avoid `mixed` or untyped returns
-- Services return data (arrays, models, collections, paginated results) — never `JsonResponse`
+- Services return data — never `JsonResponse`
 - Fire events via injected `Dispatcher` contract, not the `Event` facade
-- Keep methods focused — if a method exceeds ~20 lines, consider splitting it
+- Keep methods focused — if a method exceeds ~25 lines, consider splitting it
+- **Shared services** (`app/Services/Shared/`) must always have a matching Interface in `app/Contracts/Shared/`
+- **Domain services** only need an interface if they are swappable providers (Payment, Shipping)

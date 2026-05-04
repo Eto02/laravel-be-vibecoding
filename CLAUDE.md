@@ -1,8 +1,10 @@
-# Laravel 13 Marketplace API — Project Context
+# Laravel 13 Marketplace API — Project Context & SOP
 
 ## Project Purpose
 
-Headless REST API backend for a multi-vendor marketplace. Serves mobile and SPA clients. No Blade/frontend in this repo. All responses are JSON. API prefix is `/api` (handled automatically by Laravel 13's `routes/api.php` binding).
+Headless REST API backend for a **full-scale multi-vendor marketplace** (comparable to Tokopedia/Shopee). Serves mobile and SPA clients. No Blade/frontend in this repo. All responses are JSON. API prefix is `/api` (handled automatically by Laravel 13's `routes/api.php` binding).
+
+---
 
 ## Stack
 
@@ -11,124 +13,352 @@ Headless REST API backend for a multi-vendor marketplace. Serves mobile and SPA 
 | Runtime | PHP 8.3, Laravel 13 |
 | Auth | Laravel Sanctum (Bearer) + custom refresh token rotation + Laravel Socialite (OAuth) |
 | Primary DB | MySQL 8.0 — relational/transactional data |
-| Document DB | MongoDB — product catalogs, search indexes, activity logs (`mongodb/laravel-mongodb`) |
 | Cache / Queue / Session | Redis (phpredis) |
 | Email | Laravel Mail — SMTP/Resend/SES (driver via `MAIL_MAILER` env) |
-| Payment | Stripe or Midtrans — interface-based in `app/Services/Payment/` |
+| Payment | Xendit — interface-based in `app/Services/Payment/` |
+| Shipping | RajaOngkir / Biteship — interface-based in `app/Services/Shipping/` |
+| Notifications | Laravel Notifications — Email, FCM Push, WhatsApp |
+| Search | Laravel Scout + Meilisearch (P3) |
 | Testing | PHPUnit 12 |
-| Containerization | Docker Compose (`docker-compose.yml` dev, `docker-compose.prod.yml` prod) |
+| Containerization | Docker Compose |
+| Observability | Loki + Promtail + Grafana |
 
-## Directory Structure
+---
+
+## Domain Modules
+
+The platform is organized into **13 domain modules**. Each module owns its own controllers, requests, resources, and services. See `.claude/commands/make-module.md` for how to scaffold a module.
+
+| # | Module | Priority | Description |
+|---|---|---|---|
+| 1 | **Auth** | 🔴 P0 | Register, Login, OAuth, Refresh Token, Email Verify, Password Reset |
+| 2 | **User** | 🟠 P1 | Profile, Address Book, Phone Verify, Settings |
+| 3 | **Merchant** | 🟠 P1 | Store Registration, Profile, KYC, Analytics, Followers |
+| 4 | **Product** | 🟠 P1 | Category Tree, CRUD, Variants, Media, Inventory |
+| 5 | **Cart** | 🟠 P1 | Add/Remove/Update Items, Multi-store Cart, Wishlist |
+| 6 | **Order** | 🟠 P1 | Checkout, Status Flow, Cancellation, Dispute |
+| 7 | **Payment** | 🟠 P1 | Multi-method, Wallet, Refund, Webhook |
+| 8 | **Shipping** | 🟠 P1 | Ongkir Calc, AWB, Real-time Tracking |
+| 9 | **Review** | 🟡 P2 | Rating, Comment, Merchant Reply, Moderation |
+| 10 | **Notification** | 🟡 P2 | In-app, Email, Push (FCM), WhatsApp |
+| 11 | **Voucher** | 🟡 P2 | Coupon, Flash Sale, Cashback, Loyalty Points |
+| 12 | **Admin** | 🟡 P2 | User/Merchant/Product Moderation, Revenue Dashboard |
+| 13 | **Search** | 🟢 P3 | Full-text, Autocomplete, Trending, Recommendation |
+
+---
+
+## Directory Structure (Modular)
 
 ```
 app/
 ├── Http/
-│   ├── Controllers/Api/        # HTTP layer — route, validate (via FormRequest), call Service, return response
-│   ├── Requests/               # FormRequest classes — one per action (StoreProductRequest, UpdateProductRequest)
-│   ├── Resources/              # API Resource classes — one per model, wrap ALL model output
-│   └── Responses/              # ApiResponse static helper — all responses go through this
-├── Models/                     # Eloquent models — fillable, casts, relationships, scopes only
-├── Services/                   # Business logic — controllers call these, never call Eloquent directly from controllers
-│   └── Payment/                # Payment gateway abstraction (PaymentGatewayInterface + implementations)
-├── Enums/                      # PHP 8.1+ backed enums for status fields
-├── Events/                     # Laravel events (e.g. OrderPlaced)
-├── Listeners/                  # Event listeners (e.g. SendOrderConfirmationEmail)
-├── Mail/                       # Mailable classes — all implement ShouldQueue
-├── Notifications/              # Laravel notification classes
-├── Jobs/                       # Queued jobs (ProcessPayment, etc.)
+│   ├── Controllers/
+│   │   └── Api/
+│   │       ├── Auth/                  # AuthController, OAuthController
+│   │       ├── User/                  # UserController, AddressController
+│   │       ├── Merchant/              # MerchantController, StoreController
+│   │       ├── Product/               # ProductController, CategoryController, VariantController
+│   │       ├── Cart/                  # CartController, WishlistController
+│   │       ├── Order/                 # OrderController
+│   │       ├── Payment/               # PaymentController, WebhookController
+│   │       ├── Shipping/              # ShippingController
+│   │       ├── Review/                # ReviewController
+│   │       ├── Notification/          # NotificationController
+│   │       ├── Voucher/               # VoucherController, FlashSaleController
+│   │       └── Admin/                 # Admin-specific controllers
+│   ├── Requests/
+│   │   ├── Auth/                      # LoginRequest, RegisterRequest, ...
+│   │   ├── User/                      # UpdateProfileRequest, StoreAddressRequest, ...
+│   │   ├── Merchant/
+│   │   ├── Product/
+│   │   ├── Cart/
+│   │   ├── Order/
+│   │   ├── Payment/
+│   │   ├── Shipping/
+│   │   ├── Review/
+│   │   └── Voucher/
+│   ├── Resources/
+│   │   ├── Auth/                      # TokenResource, ...
+│   │   ├── User/                      # UserResource, AddressResource, ...
+│   │   ├── Merchant/
+│   │   ├── Product/                   # ProductResource, CategoryResource, ...
+│   │   ├── Cart/
+│   │   ├── Order/
+│   │   ├── Payment/
+│   │   ├── Shipping/
+│   │   ├── Review/
+│   │   └── Notification/
+│   ├── Middleware/
+│   │   ├── LogApiRequests.php         # Global — audit + Grafana logging
+│   │   └── EnsureMerchantOwnership.php
+│   └── Responses/
+│       └── ApiResponse.php            # MANDATORY — all responses go through this
+│
+├── Models/                            # All models in root — domain grouped by naming
+│   ├── User.php                       # [Auth/User]
+│   ├── RefreshToken.php               # [Auth]
+│   ├── OAuthAccount.php               # [Auth]
+│   ├── Store.php                      # [Merchant]
+│   ├── StoreDocument.php              # [Merchant]
+│   ├── Category.php                   # [Product]
+│   ├── Product.php                    # [Product]
+│   ├── ProductVariant.php             # [Product]
+│   ├── ProductMedia.php               # [Product]
+│   ├── Address.php                    # [User]
+│   ├── Cart.php                       # [Cart]
+│   ├── CartItem.php                   # [Cart]
+│   ├── Wishlist.php                   # [Cart]
+│   ├── WishlistItem.php               # [Cart]
+│   ├── Order.php                      # [Order]
+│   ├── OrderItem.php                  # [Order]
+│   ├── Transaction.php                # [Payment]
+│   ├── Refund.php                     # [Payment]
+│   ├── WalletBalance.php              # [Payment]
+│   ├── WalletTransaction.php          # [Payment]
+│   ├── Shipment.php                   # [Shipping]
+│   ├── Review.php                     # [Review]
+│   ├── Voucher.php                    # [Voucher]
+│   ├── FlashSale.php                  # [Voucher]
+│   ├── Notification.php               # [Notification]
+│   └── ApiLog.php                     # [Monitoring]
+│
+├── Services/                          # Business logic — organized by domain
+│   ├── Auth/
+│   │   ├── AuthService.php
+│   │   └── OAuthService.php
+│   ├── User/
+│   │   ├── UserService.php
+│   │   └── AddressService.php
+│   ├── Merchant/
+│   │   └── MerchantService.php
+│   ├── Product/
+│   │   ├── ProductService.php
+│   │   └── CategoryService.php
+│   ├── Cart/
+│   │   ├── CartService.php
+│   │   └── WishlistService.php
+│   ├── Order/
+│   │   └── OrderService.php
+│   ├── Payment/
+│   │   ├── PaymentService.php
+│   │   ├── WalletService.php
+│   │   ├── PaymentGatewayInterface.php
+│   │   └── Gateways/
+│   │       └── XenditPaymentService.php
+│   ├── Shipping/
+│   │   ├── ShippingService.php
+│   │   ├── ShippingProviderInterface.php
+│   │   └── Providers/
+│   │       └── RajaOngkirService.php
+│   ├── Review/
+│   │   └── ReviewService.php
+│   ├── Voucher/
+│   │   └── VoucherService.php
+│   └── Shared/                        # Cross-cutting services used by ALL modules
+│       ├── NotificationService.php    # Orchestrator: picks channel (email/push/WA)
+│       ├── EmailService.php           # Wraps Laravel Mail — used by all modules
+│       ├── SmsService.php             # Wraps SMS/WA provider (Fonnte/Twilio)
+│       ├── PushNotificationService.php# Wraps FCM
+│       ├── MediaService.php           # File upload to S3/Cloudinary/Minio
+│       ├── OtpService.php             # Generate & verify OTP (Redis-backed)
+│       └── CacheService.php           # Typed cache helpers with TTL conventions
+│
+├── Enums/
+│   ├── OrderStatus.php                # pending|paid|processing|shipped|delivered|completed|cancelled
+│   ├── PaymentStatus.php              # pending|paid|failed|refunded|expired
+│   ├── TransactionStatus.php          # pending|paid|expired
+│   ├── ShipmentStatus.php             # pending|picked_up|in_transit|delivered|returned
+│   ├── ProductStatus.php              # draft|active|inactive|banned
+│   ├── MerchantStatus.php             # pending|active|suspended|banned
+│   └── UserRole.php                   # buyer|merchant|admin
+│
+├── Events/
+│   ├── Auth/
+│   │   └── UserRegistered.php
+│   ├── Order/
+│   │   ├── OrderPlaced.php
+│   │   └── OrderCancelled.php
+│   └── Payment/
+│       └── PaymentCaptured.php
+│
+├── Listeners/
+│   ├── Auth/
+│   │   └── SendWelcomeEmail.php
+│   ├── Order/
+│   │   └── SendOrderConfirmationEmail.php
+│   └── Payment/
+│       └── UpdateTransactionStatus.php
+│
+├── Jobs/
+│   ├── ProcessApiLog.php
+│   ├── SendEmailJob.php               # Queued email dispatch
+│   ├── SendPushNotificationJob.php    # Queued FCM dispatch
+│   └── ProcessPaymentWebhook.php
+│
+├── Mail/
+│   ├── Auth/
+│   │   ├── WelcomeMail.php
+│   │   ├── EmailVerificationMail.php
+│   │   └── PasswordResetMail.php
+│   ├── Order/
+│   │   ├── OrderConfirmationMail.php
+│   │   └── OrderShippedMail.php
+│   └── Payment/
+│       └── PaymentSuccessMail.php
+│
 └── Providers/
-    └── AppServiceProvider.php  # Service bindings, rate limiters, macro registrations
+    └── AppServiceProvider.php         # DI bindings for all interfaces
 
-database/
-├── migrations/                 # MySQL schema migrations
-├── factories/                  # Model factories for testing — required for all models
-└── seeders/
+routes/
+├── api.php                            # Loads domain route files
+└── api/
+    ├── auth.php
+    ├── user.php
+    ├── merchant.php
+    ├── product.php
+    ├── cart.php
+    ├── order.php
+    ├── payment.php
+    ├── shipping.php
+    ├── review.php
+    ├── notification.php
+    ├── voucher.php
+    └── admin.php
 
 tests/
-├── Feature/Api/                # Full HTTP integration tests — one subdirectory per domain
-│   ├── Auth/
-│   ├── Product/
-│   ├── Order/
-│   └── ...
+├── Feature/
+│   └── Api/
+│       ├── Auth/
+│       │   ├── AuthTest.php
+│       │   └── OAuthTest.php
+│       ├── User/
+│       ├── Merchant/
+│       ├── Product/
+│       ├── Cart/
+│       ├── Order/
+│       ├── Payment/
+│       │   ├── PaymentTest.php
+│       │   └── WebhookTest.php
+│       ├── Shipping/
+│       ├── Review/
+│       ├── Voucher/
+│       └── Monitoring/
+│           └── LoggingTest.php
 └── Unit/
-    ├── Services/               # Unit tests for all Service classes
-    └── Models/                 # Model relationship and scope tests
+    ├── Services/
+    │   ├── Auth/
+    │   ├── Order/
+    │   ├── Payment/
+    │   └── Shared/
+    └── Models/
 ```
+
+---
 
 ## Architecture Rules — STRICT
 
-1. **Controllers are thin.** A controller method does exactly three things: validate input (via injected FormRequest), call a Service method, return a response via `ApiResponse`. No Eloquent queries. No business logic.
+1. **Controllers are thin.** A controller method does exactly three things: validate input (via injected `FormRequest`), call a Service method, return a response via `ApiResponse`. No Eloquent queries. No business logic. No `Validator::make()`.
 
 2. **Services own all business logic.** All DB queries, cache reads/writes, event dispatches, and complex logic live in Service classes. Services can call other Services. Never call `response()->json()` from a Service.
 
 3. **Models are data containers.** Models define `$fillable`, `casts()`, relationships, and query scopes. No business logic in models.
 
-4. **FormRequests for all mutating endpoints.** Every POST, PUT, PATCH endpoint must use a dedicated `FormRequest` subclass. Never use `Validator::make()` in controllers. The existing `AuthController` uses `Validator::make()` — this is legacy and will be migrated.
+4. **Domain folder separation is mandatory.** Every new file MUST be placed in the correct domain subfolder:
+   - Controllers → `app/Http/Controllers/Api/{Domain}/`
+   - Requests → `app/Http/Requests/{Domain}/`
+   - Resources → `app/Http/Resources/{Domain}/`
+   - Services → `app/Services/{Domain}/`
+   - Tests → `tests/Feature/Api/{Domain}/`
+   - Routes → `routes/api/{domain}.php`
 
-5. **API Resources wrap all model output.** Never return an Eloquent model or collection directly. Always wrap with an `ApiResource` or `SomeResource::collection()`. Resources must use an explicit field whitelist in `toArray()`.
+5. **Shared/cross-cutting services live in `app/Services/Shared/`.** If a service is used by more than one domain (e.g., Email, SMS, OTP, File Upload, Push Notification), it MUST go in `Shared/`. Domain services inject Shared services via constructor.
 
-6. **One Service per domain entity.** `ProductService`, `OrderService`, `VendorService`, etc. Inject via constructor DI only — no `app()` or `resolve()` inside methods.
+6. **FormRequests for all mutating endpoints.** Every `POST`, `PUT`, `PATCH` endpoint must use a dedicated `FormRequest` subclass.
+
+7. **API Resources wrap all model output.** Never return an Eloquent model or collection directly. Always use a Resource with an explicit `toArray()` whitelist.
+
+8. **Routes are split per domain.** `routes/api.php` only loads domain route files. No route definitions directly in `routes/api.php` except the `require` statements.
+
+9. **One Service per domain entity.** `ProductService`, `OrderService`, etc. Inject via constructor DI only — no `app()` or `resolve()` inside methods.
+
+10. **All interfaces are bound in `AppServiceProvider`.** Payment gateways, shipping providers, and notification channels must be bound via the interface pattern.
+
+---
+
+## Shared Services SOP
+
+These services are **pre-built and ready to inject** into any domain service. Never re-implement them per-module.
+
+### `App\Services\Shared\EmailService`
+```php
+// Usage in any Service:
+public function __construct(private readonly EmailService $email) {}
+
+// Send a Mailable:
+$this->email->send($user, new OrderConfirmationMail($order));
+
+// Send a plain email without a Mailable:
+$this->email->sendRaw($user->email, 'Subject', 'Body text');
+```
+
+### `App\Services\Shared\SmsService`
+```php
+// Send OTP or transactional SMS/WhatsApp:
+$this->sms->send($user->phone, 'Your OTP is: 123456');
+```
+
+### `App\Services\Shared\PushNotificationService`
+```php
+// Send FCM push to a user's registered device tokens:
+$this->push->sendToUser($user, title: 'Pesanan Dikirim', body: 'Paket Anda sedang dalam perjalanan.');
+```
+
+### `App\Services\Shared\OtpService`
+```php
+// Generate & store OTP (Redis, TTL 5 min):
+$otp = $this->otp->generate($identifier);  // identifier = phone/email
+
+// Verify OTP:
+$valid = $this->otp->verify($identifier, $inputOtp);
+```
+
+### `App\Services\Shared\MediaService`
+```php
+// Upload a file from Request:
+$url = $this->media->upload($request->file('photo'), disk: 's3', folder: 'product-media');
+
+// Delete a file:
+$this->media->delete($url);
+```
+
+### `App\Services\Shared\NotificationService`
+Orchestrator that picks the right channel based on user preferences:
+```php
+// Sends via Email + Push if user has enabled them:
+$this->notification->notify($user, new OrderShippedNotification($order));
+```
+
+---
 
 ## Standard Response Envelope
 
 ALL API responses MUST use `App\Http\Responses\ApiResponse`. No exceptions.
 
-### Success Response
 ```json
-{
-  "success": true,
-  "message": "Human-readable message",
-  "data": { },
-  "meta": {
-    "timestamp": "2026-05-04T10:00:00Z"
-  }
-}
+// Success
+{ "success": true, "message": "...", "data": {}, "meta": { "timestamp": "..." } }
+
+// Paginated
+{ "success": true, "message": "...", "data": [], "meta": { "timestamp": "...", "pagination": { "current_page": 1, "last_page": 5, "per_page": 15, "total": 72 } } }
+
+// Error
+{ "success": false, "message": "...", "meta": { "timestamp": "..." } }
+
+// Validation Error (422 only)
+{ "success": false, "message": "...", "errors": { "field": ["message"] }, "meta": { "timestamp": "..." } }
 ```
 
-### Paginated List Response
-`data` is the items array; `meta` additionally contains:
-```json
-{
-  "meta": {
-    "timestamp": "2026-05-04T10:00:00Z",
-    "pagination": {
-      "current_page": 1,
-      "last_page": 5,
-      "per_page": 15,
-      "total": 72,
-      "from": 1,
-      "to": 15
-    }
-  }
-}
-```
-
-### Error Response
-```json
-{
-  "success": false,
-  "message": "Human-readable error summary",
-  "errors": {
-    "field_name": ["Specific validation message"]
-  },
-  "meta": {
-    "timestamp": "2026-05-04T10:00:00Z"
-  }
-}
-```
-
-`errors` is only present for 422 validation failures. Omit for 401, 403, 404, 500.
-
-### ApiResponse Helper Usage
-```php
-// In controllers:
-return ApiResponse::success('Product created.', new ProductResource($product), 201);
-return ApiResponse::success('Products retrieved.', ProductResource::collection($products)->toArray($request), 200, $paginationMeta);
-return ApiResponse::error('Not found.', 404);
-return ApiResponse::validationError('Validation failed.', $validator->errors()->toArray());
-```
-
-File: `app/Http/Responses/ApiResponse.php` — **PRIORITY 1: must be created before any controller code works.**
+---
 
 ## HTTP Status Code Conventions
 
@@ -141,10 +371,10 @@ File: `app/Http/Responses/ApiResponse.php` — **PRIORITY 1: must be created bef
 | Unauthenticated | 401 |
 | Forbidden (authenticated, no permission) | 403 |
 | Resource not found | 404 |
-| Server error | 500 |
 | Rate limit exceeded | 429 |
+| Server error | 500 |
 
-Never return 200 for a failed operation. Never return 400 for a validation error (use 422). 401 vs 403 distinction is enforced.
+---
 
 ## Auth System
 
@@ -152,19 +382,16 @@ Never return 200 for a failed operation. Never return 400 for a validation error
 - Issued as Bearer token: `$user->createToken('access_token')->plainTextToken`
 - Client sends: `Authorization: Bearer <token>`
 - Protected routes: `middleware('auth:sanctum')`
-- Lifetime: `config('sanctum.expiration')` (null = no auto-expiry)
 
 ### Refresh Token (Custom)
 - Model: `App\Models\RefreshToken`
-- Table: `refresh_tokens` — columns: `id, user_id, token (64-char unique), expires_at, revoked_at, timestamps`
-- Lifecycle: 30-day expiry, rotation on every `/api/auth/refresh` call (old token revoked, new pair issued)
-- `User` has `hasMany(RefreshToken::class)`
+- Table: `refresh_tokens` — columns: `id, user_id, token, expires_at, revoked_at, timestamps`
+- Lifecycle: 30-day expiry, rotation on every `/api/auth/refresh` call
 
 ### OAuth (Socialite)
-- Supported providers: Google, GitHub (add others via config)
+- Supported providers: Google, GitHub
 - Table: `oauth_accounts` — `user_id, provider, provider_user_id, access_token, refresh_token, expires_at`
-- Users may have `null` password (OAuth-only accounts)
-- Flow: frontend obtains provider token → POST `/api/auth/oauth/{provider}` → backend validates via Socialite → upsert User + OAuthAccount → return Sanctum token pair
+- Flow: frontend obtains provider token → POST `/api/auth/oauth/{provider}` → backend validates → return Sanctum token pair
 
 ### Auth Routes
 ```
@@ -174,131 +401,137 @@ POST /api/auth/refresh
 POST /api/auth/logout          [auth:sanctum]
 GET  /api/auth/me              [auth:sanctum]
 POST /api/auth/oauth/{provider}
+POST /api/auth/email/verify
+POST /api/auth/email/resend
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
+PUT  /api/auth/change-password [auth:sanctum]
 ```
+
+---
 
 ## Database Strategy
 
 ### MySQL (primary)
-- Relational, transactional: users, vendors, products (metadata), orders, order_items, payments, reviews
+- All relational, transactional data
 - Migrations in `database/migrations/`
 - Always: `foreignId()->constrained()->cascadeOnDelete()` for FKs
-- Always index: FK columns, `status` columns, any column in `WHERE` filters, `email` (unique), `token` (unique)
-
-### MongoDB (catalogs + logs)
-- Flexible schema: product descriptions, attributes, variant data, activity logs
-- Connection key: `mongodb` in `config/database.php`
-- Models extend `MongoDB\Laravel\Eloquent\Model`
-- Collections: `product_details`, `activity_logs`, `search_cache`
-- Install: `composer require mongodb/laravel-mongodb`
+- Always index: FK columns, `status` columns, columns used in `WHERE` filters
+- Monetary values: always store as **integer cents** (e.g. Rp 50.000 → `5000000`)
 
 ### Redis
 - Cache: `CACHE_STORE=redis`, DB 0
 - Queue: `QUEUE_CONNECTION=redis`, DB 0
 - Session: `SESSION_DRIVER=redis`
-- TTL conventions: product lists → 300s, user profile → 900s, category tree → 3600s
+- TTL conventions:
+  - Product lists → 300s
+  - Category tree → 3600s
+  - User profile → 900s
+  - OTP → 300s
+  - Cart session → 86400s
+
+---
 
 ## Payment Gateway
 
-Interface-based design in `app/Services/Payment/`:
+Interface pattern in `app/Services/Payment/`:
 ```php
 interface PaymentGatewayInterface {
-    public function createPaymentIntent(array $data): array;
+    public function createInvoice(array $data): array;
     public function capturePayment(string $paymentId): array;
     public function refundPayment(string $paymentId, int $amount): array;
     public function verifyWebhook(Request $request): bool;
 }
 ```
+Bound in `AppServiceProvider` based on `env('PAYMENT_GATEWAY', 'xendit')`.
+Webhook routes are NOT under `auth:sanctum` — use `verifyWebhook()` signature verification.
 
-Implementations: `StripePaymentService`, `MidtransPaymentService`.
-Bound in `AppServiceProvider` based on `env('PAYMENT_GATEWAY', 'stripe')`.
-Webhook routes are NOT under `auth:sanctum` — use signature verification (`verifyWebhook()`).
+---
+
+## Shipping Provider
+
+Interface pattern in `app/Services/Shipping/`:
+```php
+interface ShippingProviderInterface {
+    public function calculateCost(array $params): array;  // origin, destination, weight, courier
+    public function getAvailableCouriers(): array;
+    public function trackShipment(string $awb, string $courier): array;
+}
+```
+Bound in `AppServiceProvider` based on `env('SHIPPING_PROVIDER', 'rajaongkir')`.
+
+---
 
 ## Email Integration
 
-- All emails in `app/Mail/`, extend `Illuminate\Mail\Mailable`, implement `ShouldQueue`
-- Use Markdown Mailables: `php artisan make:mail OrderConfirmationMail --markdown`
-- Triggered via Events/Listeners pattern (not directly from Service/Controller)
+- All emails in `app/Mail/{Domain}/`, extend `Illuminate\Mail\Mailable`, implement `ShouldQueue`
+- **Never call `Mail::send()` directly from a Service or Controller.** Always use `EmailService` or fire an Event that triggers a Listener.
 - Driver set via `MAIL_MAILER` env: `smtp`, `resend`, `ses`, `log` (dev)
 
 Standard emails:
 | Class | Trigger |
 |---|---|
-| `WelcomeMail` | On registration |
-| `OrderConfirmationMail` | `OrderPlaced` event (to buyer) |
-| `VendorNewOrderMail` | `OrderPlaced` event (to vendor) |
-| `PaymentSuccessMail` | `PaymentCaptured` event |
-| `PasswordResetMail` | Password reset request |
+| `Auth\WelcomeMail` | `UserRegistered` event |
+| `Auth\EmailVerificationMail` | On register / resend verify |
+| `Auth\PasswordResetMail` | Password reset request |
+| `Order\OrderConfirmationMail` | `OrderPlaced` event (to buyer) |
+| `Order\OrderShippedMail` | Order status → shipped |
+| `Payment\PaymentSuccessMail` | `PaymentCaptured` event |
 
-## Testing Standards
+---
 
-### Structure
-- `tests/Feature/Api/{Domain}/` — one class per domain, one test file per controller
-- `tests/Unit/Services/` — one class per Service
-- `tests/Unit/Models/` — model relationship and scope tests
+## Naming Conventions
 
-### Feature Test Requirements (ALL must apply)
-1. Use `RefreshDatabase` trait
-2. Assert exact JSON structure with `assertJsonStructure()`
-3. Assert HTTP status code explicitly
-4. Test the happy path AND at least one failure path (unauthenticated, validation fail, or not found)
-5. Use factories only — never `User::create([...])` directly in tests
-6. Always call `actingAs($user)` for protected routes
-
-### Feature Test Template
-```php
-use RefreshDatabase;
-
-public function test_authenticated_user_can_create_product(): void
-{
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)
-        ->postJson('/api/products', ['name' => 'Test Product', 'price' => 10000]);
-
-    $response->assertStatus(201)
-             ->assertJsonStructure([
-                 'success', 'message',
-                 'data' => ['id', 'name', 'price'],
-                 'meta' => ['timestamp'],
-             ])
-             ->assertJson(['success' => true]);
-}
-```
-
-### Unit Test Requirements
-- Extend `PHPUnit\Framework\TestCase` (not Laravel's `TestCase`) for pure unit tests
-- Mock all dependencies (no real DB, no HTTP)
-- Test one method per test case
-
-## Code Conventions
-
-### Naming
 | Thing | Convention | Example |
 |---|---|---|
-| DB tables | `snake_case` plural | `vendor_products` |
-| Models | `PascalCase` singular | `VendorProduct` |
-| Controllers | `PascalCase + Controller` | `VendorProductController` |
-| Services | `PascalCase + Service` | `VendorProductService` |
-| FormRequests | `{Action}{Domain}Request` | `StoreVendorProductRequest` |
-| Resources | `{Domain}Resource` | `VendorProductResource` |
-| Route names | `{resource}.{action}` | `vendor-products.index` |
-| Events | `PascalCase` noun phrase | `OrderPlaced` |
-| Listeners | `{Verb}{Noun}` | `SendOrderConfirmationEmail` |
+| DB tables | `snake_case` plural | `order_items`, `product_variants` |
+| Models | `PascalCase` singular | `OrderItem`, `ProductVariant` |
+| Controllers | `{Domain}/{Name}Controller` | `Order/OrderController` |
+| Services | `{Domain}/{Name}Service` | `Order/OrderService` |
+| Shared Services | `Shared/{Name}Service` | `Shared/EmailService` |
+| FormRequests | `{Domain}/{Action}{Domain}Request` | `Order/StoreOrderRequest` |
+| Resources | `{Domain}/{Name}Resource` | `Order/OrderResource` |
+| Route names | `{domain}.{resource}.{action}` | `order.items.index` |
+| Enums | `{Domain}Status` | `OrderStatus`, `ProductStatus` |
+| Events | `{Domain}/{PascalNoun}` | `Order/OrderPlaced` |
+| Mails | `{Domain}/{Name}Mail` | `Order/OrderConfirmationMail` |
 
-### FormRequest Namespace
-`App\Http\Requests\{Domain}\{Action}{Domain}Request`
+### Namespace Patterns
+```
+App\Http\Controllers\Api\{Domain}\{Name}Controller
+App\Http\Requests\{Domain}\{Action}{Name}Request
+App\Http\Resources\{Domain}\{Name}Resource
+App\Services\{Domain}\{Name}Service
+App\Services\Shared\{Name}Service
+App\Events\{Domain}\{EventName}
+App\Mail\{Domain}\{Name}Mail
+Tests\Feature\Api\{Domain}\{Name}Test
+```
 
-### API Resource Namespace
-`App\Http\Resources\{Domain}\{Model}Resource`
+---
 
-### Enums
+## API Resource Rules
+
+- Explicit field whitelist in `toArray()` — never `parent::toArray($request)`
+- Null-safe dates: `$this->created_at?->toISOString()`
+- Relations: `$this->whenLoaded('relation', fn() => new RelationResource($this->relation))`
+- Enums: `$this->status->value`
+- Monetary: always expose both `price_cents` and `price` (formatted)
+- Never include `success`, `message`, or `meta` inside a Resource
+
+---
+
+## Enums
+
 ```php
 // app/Enums/OrderStatus.php
 enum OrderStatus: string {
-    case Pending  = 'pending';
-    case Paid     = 'paid';
-    case Shipped  = 'shipped';
+    case Pending   = 'pending';
+    case Paid      = 'paid';
+    case Processing = 'processing';
+    case Shipped   = 'shipped';
     case Delivered = 'delivered';
+    case Completed = 'completed';
     case Cancelled = 'cancelled';
 }
 // In model casts:
@@ -307,90 +540,129 @@ protected function casts(): array { return ['status' => OrderStatus::class]; }
 'status' => ['required', Rule::enum(OrderStatus::class)],
 ```
 
-### Monetary Values
-Always store as integer cents. Expose in Resources as:
+---
+
+## Testing Standards
+
+### Structure
+- `tests/Feature/Api/{Domain}/` — one test class per controller
+- `tests/Unit/Services/{Domain}/` — one class per Service
+- `tests/Unit/Models/` — model relationship and scope tests
+
+### Feature Test Requirements (ALL must apply)
+1. Use `RefreshDatabase` trait
+2. Assert exact JSON structure with `assertJsonStructure()`
+3. Assert HTTP status code explicitly
+4. Test happy path AND at least one failure path (unauthenticated, validation fail, not found)
+5. Use factories only — never `User::create([...])` directly
+6. Always call `actingAs($user)` for protected routes
+
+---
+
+## Route File Pattern
+
+`routes/api.php` must follow this pattern exactly:
 ```php
-'price_cents' => $this->price,
-'price'       => number_format($this->price / 100, 2),
+<?php
+// routes/api.php — Domain Route Loader
+
+foreach ([
+    'auth', 'user', 'merchant', 'product', 'cart',
+    'order', 'payment', 'shipping', 'review',
+    'notification', 'voucher', 'admin',
+] as $domain) {
+    require __DIR__."/api/{$domain}.php";
+}
 ```
 
-### API Resource Rules
-- Explicit field whitelist in `toArray()` — never `parent::toArray($request)` or `$this->resource->toArray()`
-- Null-safe dates: `$this->created_at?->toISOString()`
-- Relations: `$this->whenLoaded('relation', fn() => new RelationResource($this->relation))`
-- Enums: `$this->status->value`
-- Never include `success`, `message`, or `meta` inside a Resource class
+Each domain file (`routes/api/order.php`) example:
+```php
+<?php
+use App\Http\Controllers\Api\Order\OrderController;
+
+Route::middleware('auth:sanctum')->prefix('orders')->name('order.orders.')->group(function () {
+    Route::get('/', [OrderController::class, 'index'])->name('index');
+    Route::post('/', [OrderController::class, 'store'])->name('store');
+    Route::get('/{order}', [OrderController::class, 'show'])->name('show');
+    Route::post('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
+});
+```
+
+---
 
 ## Common Artisan Commands
 
 ```bash
-# Code generation
-php artisan make:model Product -mfsc        # Model + migration + factory + seeder + controller
-php artisan make:request StoreProductRequest
-php artisan make:resource ProductResource
-php artisan make:mail OrderConfirmationMail --markdown
-php artisan make:event OrderPlaced
-php artisan make:listener SendOrderConfirmation --event=OrderPlaced
-php artisan make:job ProcessPayment
+# Code generation (always run inside Docker container)
+docker compose exec app php artisan make:model Product -mfc
+docker compose exec app php artisan make:request Product/StoreProductRequest
+docker compose exec app php artisan make:resource Product/ProductResource
+docker compose exec app php artisan make:mail Order/OrderConfirmationMail --markdown
+docker compose exec app php artisan make:event Order/OrderPlaced
+docker compose exec app php artisan make:listener Order/SendOrderConfirmation --event=Order/OrderPlaced
+docker compose exec app php artisan make:job ProcessPayment
 
 # Database
-php artisan migrate
-php artisan migrate:status
-php artisan migrate:fresh --seed            # DEV ONLY — destroys all data
-php artisan db:show
-php artisan tinker
+docker compose exec app php artisan migrate
+docker compose exec app php artisan migrate:fresh --seed   # DEV ONLY
+docker compose exec app php artisan db:show
 
 # Tests
-php artisan test
-php artisan test --filter=ProductTest
-php artisan test --coverage --min=80
+docker compose exec app php artisan test
+docker compose exec app php artisan test --filter=OrderTest
+docker compose exec app php artisan test --coverage --min=80
 
 # Cache
-php artisan optimize:clear                  # Clears config + route + view + bootstrap cache
-
-# Code quality
-vendor/bin/pint                             # Format (Laravel Pint)
-vendor/bin/pint --test                      # Dry run check
+docker compose exec app php artisan optimize:clear
+docker compose exec app php artisan config:clear
 ```
+
+---
 
 ## Docker Environment
 
-| Container | Image | Host Port | Purpose |
-|---|---|---|---|
-| `laravel-app` | Custom PHP 8.4-FPM (see `docker/php/Dockerfile`) | — | PHP application |
-| `laravel-nginx` | `nginx:alpine` | `${APP_PORT:-8000}` | Web server |
-| `laravel-mysql` | `mysql:8.0` | `${FORWARD_DB_PORT:-3306}` | MySQL |
-| `laravel-redis` | `redis:alpine` | `${FORWARD_REDIS_PORT:-6379}` | Redis |
+| Container | Purpose | Host Port |
+|---|---|---|
+| `laravel-app` | PHP 8.3-FPM Application | — |
+| `laravel-worker` | Queue Worker (async jobs) | — |
+| `laravel-nginx` | Web Server | `${APP_PORT:-8000}` |
+| `laravel-mysql` | MySQL 8.0 | `${FORWARD_DB_PORT:-3306}` |
+| `laravel-redis` | Redis | `${FORWARD_REDIS_PORT:-6379}` |
+| `laravel-loki` | Log Storage (Loki) | `3100` |
+| `laravel-promtail` | Log Scraper | — |
+| `laravel-grafana` | Monitoring Dashboard | `3000` |
 
-All containers share the `laravel` bridge network. MySQL host = `mysql`, Redis host = `redis` (as in `.env`).
+All containers share the `laravel` bridge network.
 
-```bash
-# Start
-docker compose up -d
+---
 
-# Run artisan inside container
-docker compose exec app php artisan migrate
-docker compose exec app php artisan test
+## Implementation Roadmap
 
-# Logs
-docker compose logs -f app
-docker compose logs -f nginx
+Follow this priority when a new feature is requested. Never skip an earlier-priority item to do a later one.
 
-# Stop
-docker compose down
-```
+**P0 — Must have (before any other module works)**
+1. `App\Http\Responses\ApiResponse` — BLOCKER
+2. Global exception handler in `bootstrap/app.php`
+3. Auth module completion (email verify, password reset)
 
-## Implementation Roadmap (Missing Pieces)
+**P1 — Core marketplace (build in this order)**
+4. User Profile + Address Book
+5. Merchant + Store Registration
+6. Category Tree
+7. Product CRUD + Variants + Media
+8. Cart + Wishlist
+9. Order Management (checkout → status flow)
+10. Payment (multi-method + wallet + refund)
+11. Shipping (ongkir calc + tracking)
 
-Priority order — follow this sequence when building new features:
+**P2 — Growth features**
+12. Review & Rating
+13. Notification System (Email + Push + WA)
+14. Voucher + Flash Sale
+15. Admin Panel API
+16. Role/Permission (`spatie/laravel-permission`)
 
-1. **`App\Http\Responses\ApiResponse`** — BLOCKER: nothing else works without this
-2. Migrate `AuthController` to use FormRequests + `ApiResponse` (remove `Validator::make()`)
-3. OAuth implementation (`AuthController@oauth` + `OAuthAccount` model)
-4. MongoDB integration (`composer require mongodb/laravel-mongodb`)
-5. Marketplace domains (build in this order): `Category`, `Vendor`, `Product`, `Order`+`OrderItem`, `Payment`, `Review`
-6. `PaymentGatewayInterface` + Stripe implementation
-7. Email: `App\Mail\` + Event/Listener wiring
-8. Role/permission system (`spatie/laravel-permission`)
-9. Rate limiting on auth endpoints (configure in `AppServiceProvider`)
-10. Global exception handler in `bootstrap/app.php` (converts ModelNotFoundException, AuthorizationException to `ApiResponse::error()`)
+**P3 — Scale**
+17. Search (Laravel Scout + Meilisearch)
+18. Recommendation Engine
+19. Analytics & Reporting

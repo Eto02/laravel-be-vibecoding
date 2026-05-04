@@ -1,14 +1,17 @@
 ---
-description: Scaffold a complete marketplace feature — Migration, Model, Factory, Store/Update FormRequests, API Resource, Service, Controller, Route snippet, and Feature Test (10 files)
+description: Scaffold a complete marketplace feature — Migration, Model, Factory, Store/Update FormRequests, API Resource, Service, Controller, Domain Route file, and Feature Test (11 files). Uses domain-folder structure as defined in CLAUDE.md.
 ---
 
-Scaffold a complete marketplace feature for this Laravel 13 API project. The feature name is: $ARGUMENTS
+Scaffold a complete marketplace feature for this Laravel 13 API project. The feature name and domain are: $ARGUMENTS
 
-Follow ALL standards in CLAUDE.md exactly. Generate all 10 files. Use these substitutions throughout:
-- `{Feature}` = PascalCase (e.g. `Product`)
-- `{feature}` = camelCase (e.g. `product`)
-- `{features}` = snake_case plural (e.g. `products`)
-- `{Feature}s` = plural PascalCase for class plurals
+Format expected: `{Domain}/{FeatureName}` — e.g. `Order/OrderItem`, `Product/ProductVariant`, `Merchant/Store`
+
+Follow ALL standards in CLAUDE.md exactly. Use these substitutions:
+- `{Domain}` = PascalCase domain folder name (e.g. `Order`)
+- `{domain}` = lowercase (e.g. `order`)
+- `{Feature}` = PascalCase feature name (e.g. `OrderItem`)
+- `{feature}` = camelCase (e.g. `orderItem`)
+- `{features}` = snake_case plural (e.g. `order_items`)
 
 ---
 
@@ -16,19 +19,18 @@ Follow ALL standards in CLAUDE.md exactly. Generate all 10 files. Use these subs
 
 Path: `database/migrations/{YYYY_MM_DD_HHMMSS}_create_{features}_table.php`
 
-Use current timestamp. Schema:
 ```php
 Schema::create('{features}', function (Blueprint $table) {
     $table->id();
     $table->foreignId('user_id')->constrained()->cascadeOnDelete();
     // Domain-specific columns — infer sensible types from the feature name
-    // Include a 'status' column for entities with lifecycle
-    $table->string('status')->default('active');
+    // Include a 'status' column with an Enum cast for entities with lifecycle
+    $table->string('status')->default('active')->index();
     $table->softDeletes();
     $table->timestamps();
+    // Add indexes on all FK columns and 'status'
 });
 ```
-Add indexes on every FK column and the `status` column.
 
 ---
 
@@ -36,39 +38,14 @@ Add indexes on every FK column and the `status` column.
 
 Path: `app/Models/{Feature}.php`
 
-```php
-<?php
+Namespace: `App\Models`
 
-namespace App\Models;
-
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
-
-class {Feature} extends Model
-{
-    use HasFactory, SoftDeletes;
-
-    protected $fillable = [
-        // list every column except id, timestamps, deleted_at
-    ];
-
-    protected function casts(): array
-    {
-        return [
-            // 'status' => \App\Enums\{Feature}Status::class,  // if enum applies
-            // 'price'  => 'decimal:2',
-            // 'meta'   => 'array',
-        ];
-    }
-
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-}
-```
+Rules:
+- `use HasFactory, SoftDeletes;`
+- Explicit `$fillable` (every column except id, timestamps, deleted_at)
+- `casts()` with Enum for status if applicable
+- Relationships typed (BelongsTo, HasMany, etc.)
+- No business logic
 
 ---
 
@@ -76,142 +53,75 @@ class {Feature} extends Model
 
 Path: `database/factories/{Feature}Factory.php`
 
-```php
-<?php
+Namespace: `Database\Factories`
 
-namespace Database\Factories;
-
-use App\Models\{Feature};
-use App\Models\User;
-use Illuminate\Database\Eloquent\Factories\Factory;
-
-class {Feature}Factory extends Factory
-{
-    protected $model = {Feature}::class;
-
-    public function definition(): array
-    {
-        return [
-            'user_id' => User::factory(),
-            // use $this->faker for realistic data matching domain columns
-            'status'  => 'active',
-        ];
-    }
-}
-```
+Use `$this->faker` for realistic data. Always include `user_id => User::factory()`.
 
 ---
 
 ## File 4: Store FormRequest
 
-Path: `app/Http/Requests/{Feature}/Store{Feature}Request.php`
+Path: `app/Http/Requests/{Domain}/Store{Feature}Request.php`
 
-```php
-<?php
+Namespace: `App\Http\Requests\{Domain}`
 
-namespace App\Http\Requests\{Feature};
-
-use Illuminate\Foundation\Http\FormRequest;
-
-class Store{Feature}Request extends FormRequest
-{
-    public function authorize(): bool
-    {
-        return $this->user() !== null;
-    }
-
-    public function rules(): array
-    {
-        return [
-            // 'name'  => 'required|string|max:255',
-            // 'price' => 'required|integer|min:0',
-        ];
-    }
-}
-```
+`authorize()` returns `$this->user() !== null` (or ownership check if applicable).
 
 ---
 
 ## File 5: Update FormRequest
 
-Path: `app/Http/Requests/{Feature}/Update{Feature}Request.php`
+Path: `app/Http/Requests/{Domain}/Update{Feature}Request.php`
 
-```php
-<?php
+Namespace: `App\Http\Requests\{Domain}`
 
-namespace App\Http\Requests\{Feature};
+`authorize()` checks ownership: `$this->route('{feature}')?->user_id === $this->user()->id`
 
-use Illuminate\Foundation\Http\FormRequest;
-
-class Update{Feature}Request extends FormRequest
-{
-    public function authorize(): bool
-    {
-        $record = $this->route('{feature}');
-        return $record && $record->user_id === $this->user()->id;
-    }
-
-    public function rules(): array
-    {
-        return [
-            // same as Store but all prefixed with 'sometimes|'
-        ];
-    }
-}
-```
+All rules prefixed with `'sometimes|'`.
 
 ---
 
 ## File 6: API Resource
 
-Path: `app/Http/Resources/{Feature}/{Feature}Resource.php`
+Path: `app/Http/Resources/{Domain}/{Feature}Resource.php`
 
-```php
-<?php
+Namespace: `App\Http\Resources\{Domain}`
 
-namespace App\Http\Resources\{Feature};
-
-use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
-
-class {Feature}Resource extends JsonResource
-{
-    public function toArray(Request $request): array
-    {
-        return [
-            'id'         => $this->id,
-            // Explicit whitelist — list every field the API should expose
-            // Never use parent::toArray()
-            // Dates: $this->created_at?->toISOString()
-            // Enums: $this->status->value
-            // Relations: $this->whenLoaded('user', fn() => new \App\Http\Resources\User\UserResource($this->user))
-            'created_at' => $this->created_at?->toISOString(),
-            'updated_at' => $this->updated_at?->toISOString(),
-        ];
-    }
-}
-```
+Rules:
+- Explicit `toArray()` whitelist — never `parent::toArray()`
+- Dates: `$this->created_at?->toISOString()`
+- Enums: `$this->status->value`
+- Money: expose both `price_cents` and `price` (formatted string)
+- Relations: `$this->whenLoaded('relation', fn() => new RelationResource($this->relation))`
 
 ---
 
 ## File 7: Service
 
-Path: `app/Services/{Feature}Service.php`
+Path: `app/Services/{Domain}/{Feature}Service.php`
+
+Namespace: `App\Services\{Domain}`
 
 ```php
 <?php
 
-namespace App\Services;
+namespace App\Services\{Domain};
 
 use App\Models\{Feature};
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class {Feature}Service
 {
+    public function __construct(
+        // Inject Shared services if needed:
+        // private readonly \App\Services\Shared\NotificationService $notification,
+        // private readonly \App\Services\Shared\MediaService $media,
+    ) {}
+
     public function getAll(array $filters = []): LengthAwarePaginator
     {
         return {Feature}::query()
-            ->when(isset($filters['status']), fn ($q) => $q->where('status', $filters['status']))
+            ->when(isset($filters['status']), fn($q) => $q->where('status', $filters['status']))
             ->latest()
             ->paginate(15);
     }
@@ -243,20 +153,22 @@ class {Feature}Service
 
 ## File 8: Controller
 
-Path: `app/Http/Controllers/Api/{Feature}Controller.php`
+Path: `app/Http/Controllers/Api/{Domain}/{Feature}Controller.php`
+
+Namespace: `App\Http\Controllers\Api\{Domain}`
 
 ```php
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\{Domain};
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\{Feature}\Store{Feature}Request;
-use App\Http\Requests\{Feature}\Update{Feature}Request;
-use App\Http\Resources\{Feature}\{Feature}Resource;
+use App\Http\Requests\{Domain}\Store{Feature}Request;
+use App\Http\Requests\{Domain}\Update{Feature}Request;
+use App\Http\Resources\{Domain}\{Feature}Resource;
 use App\Http\Responses\ApiResponse;
 use App\Models\{Feature};
-use App\Services\{Feature}Service;
+use App\Services\{Domain}\{Feature}Service;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -269,21 +181,18 @@ class {Feature}Controller extends Controller
     public function index(Request $request): JsonResponse
     {
         $items = $this->{feature}Service->getAll($request->query());
-        $meta  = [
-            'pagination' => [
+        return ApiResponse::success(
+            '{Feature} list retrieved.',
+            {Feature}Resource::collection($items)->resolve(),
+            200,
+            ['pagination' => [
                 'current_page' => $items->currentPage(),
                 'last_page'    => $items->lastPage(),
                 'per_page'     => $items->perPage(),
                 'total'        => $items->total(),
                 'from'         => $items->firstItem(),
                 'to'           => $items->lastItem(),
-            ],
-        ];
-        return ApiResponse::success(
-            '{Feature} list retrieved.',
-            {Feature}Resource::collection($items)->resolve(),
-            200,
-            $meta,
+            ]],
         );
     }
 
@@ -307,7 +216,7 @@ class {Feature}Controller extends Controller
         return ApiResponse::success('{Feature} updated.', new {Feature}Resource($item));
     }
 
-    public function destroy({Feature} ${feature}): JsonResponse
+    public function destroy(Request $request, {Feature} ${feature}): JsonResponse
     {
         if (${feature}->user_id !== $request->user()->id) {
             return ApiResponse::error('Forbidden.', 403);
@@ -318,34 +227,45 @@ class {Feature}Controller extends Controller
 }
 ```
 
-> Note: The `destroy` method receives `$request` — add `Request $request` to its signature if ownership check is needed.
-
 ---
 
-## File 9: Route Snippet
+## File 9: Domain Route File
 
-Show this snippet to add to `routes/api.php`:
+Path: `routes/api/{domain}.php`
+
+If the file already exists, **append** to it instead of overwriting.
 
 ```php
-use App\Http\Controllers\Api\{Feature}Controller;
+<?php
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('{features}', {Feature}Controller::class);
+use App\Http\Controllers\Api\{Domain}\{Feature}Controller;
+
+Route::middleware('auth:sanctum')->prefix('{features}')->name('{domain}.{features}.')->group(function () {
+    Route::get('/', [{Feature}Controller::class, 'index'])->name('index');
+    Route::post('/', [{Feature}Controller::class, 'store'])->name('store');
+    Route::get('/{' . '{feature}' . '}', [{Feature}Controller::class, 'show'])->name('show');
+    Route::put('/{' . '{feature}' . '}', [{Feature}Controller::class, 'update'])->name('update');
+    Route::delete('/{' . '{feature}' . '}', [{Feature}Controller::class, 'destroy'])->name('destroy');
 });
 ```
 
-If an `auth:sanctum` group already exists, nest the `apiResource` line inside it.
+Also verify that `routes/api.php` includes this domain file. If not, add:
+```php
+require __DIR__.'/api/{domain}.php';
+```
 
 ---
 
 ## File 10: Feature Test
 
-Path: `tests/Feature/Api/{Feature}/{Feature}Test.php`
+Path: `tests/Feature/Api/{Domain}/{Feature}Test.php`
+
+Namespace: `Tests\Feature\Api\{Domain}`
 
 ```php
 <?php
 
-namespace Tests\Feature\Api\{Feature};
+namespace Tests\Feature\Api\{Domain};
 
 use App\Models\{Feature};
 use App\Models\User;
@@ -364,10 +284,9 @@ class {Feature}Test extends TestCase
         $this->user = User::factory()->create();
     }
 
-    public function test_unauthenticated_user_cannot_list_{features}(): void
+    public function test_unauthenticated_cannot_access_{features}(): void
     {
-        $this->getJson('/api/{features}')
-             ->assertStatus(401);
+        $this->getJson('/api/{features}')->assertStatus(401);
     }
 
     public function test_authenticated_user_can_list_{features}(): void
@@ -378,8 +297,7 @@ class {Feature}Test extends TestCase
              ->getJson('/api/{features}')
              ->assertStatus(200)
              ->assertJsonStructure([
-                 'success', 'message',
-                 'data',
+                 'success', 'message', 'data',
                  'meta' => ['timestamp', 'pagination' => ['current_page', 'total']],
              ])
              ->assertJson(['success' => true]);
@@ -387,7 +305,7 @@ class {Feature}Test extends TestCase
 
     public function test_authenticated_user_can_create_{feature}(): void
     {
-        $payload = []; // fill with valid fields
+        $payload = []; // Fill with valid required fields
 
         $this->actingAs($this->user)
              ->postJson('/api/{features}', $payload)
@@ -396,22 +314,12 @@ class {Feature}Test extends TestCase
              ->assertJson(['success' => true]);
     }
 
-    public function test_create_{feature}_fails_validation_with_empty_payload(): void
+    public function test_create_{feature}_fails_with_empty_payload(): void
     {
         $this->actingAs($this->user)
              ->postJson('/api/{features}', [])
              ->assertStatus(422)
              ->assertJson(['success' => false]);
-    }
-
-    public function test_authenticated_user_can_view_own_{feature}(): void
-    {
-        $item = {Feature}::factory()->for($this->user)->create();
-
-        $this->actingAs($this->user)
-             ->getJson("/api/{features}/{$item->id}")
-             ->assertStatus(200)
-             ->assertJson(['success' => true, 'data' => ['id' => $item->id]]);
     }
 
     public function test_user_cannot_delete_another_users_{feature}(): void
@@ -428,12 +336,46 @@ class {Feature}Test extends TestCase
 
 ---
 
+## File 11: Unit Test for Service
+
+Path: `tests/Unit/Services/{Domain}/{Feature}ServiceTest.php`
+
+Namespace: `Tests\Unit\Services\{Domain}`
+
+```php
+<?php
+
+namespace Tests\Unit\Services\{Domain};
+
+use App\Services\{Domain}\{Feature}Service;
+use PHPUnit\Framework\TestCase;
+
+class {Feature}ServiceTest extends TestCase
+{
+    private {Feature}Service $service;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->service = new {Feature}Service();
+    }
+
+    public function test_service_instantiates_correctly(): void
+    {
+        $this->assertInstanceOf({Feature}Service::class, $this->service);
+    }
+}
+```
+
+---
+
 ## Post-Generation Checklist
 
-After generating all files, output:
+After generating all 11 files, output:
 
-1. **Files created** — list all 10 with full paths
-2. **Assumptions** — any column names or types you inferred from the feature name
-3. **Route to add** — the exact `routes/api.php` snippet
-4. **Run migration** — `php artisan migrate`
-5. **Prerequisites** — flag if `app/Http/Responses/ApiResponse.php` does not yet exist (it must exist before the controller will work)
+1. **Files created** — list all with full paths
+2. **Assumptions** — any column names or types inferred from the feature name
+3. **Route to add** — if `routes/api/{domain}.php` is new, confirm it was added to `routes/api.php`
+4. **Migration command** — `docker compose exec app php artisan migrate`
+5. **Domain route loader** — confirm `routes/api.php` includes `require __DIR__.'/api/{domain}.php';`
+6. **Shared services used** — list any `App\Services\Shared\*` injected into the service
