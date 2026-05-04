@@ -222,11 +222,34 @@
             "method": "GET",
             "header": [{ "key": "Accept", "value": "application/json" }],
             "url": { "raw": "{{base_url}}/api/auth/google/redirect", "host": ["{{base_url}}"], "path": ["api", "auth", "google", "redirect"] },
-            "description": "Redirect ke Google OAuth consent screen. Ganti `google` dengan `github` untuk GitHub OAuth."
+            "description": "Redirect ke Google OAuth consent screen. Browser akan di-redirect ke halaman login Google."
           }
         },
         {
           "name": "OAuth — Google Callback",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data && body.data.access_token) {",
+                  "    pm.collectionVariables.set('access_token', body.data.access_token);",
+                  "  }",
+                  "  if (body.data && body.data.refresh_token) {",
+                  "    pm.collectionVariables.set('refresh_token', body.data.refresh_token);",
+                  "  }",
+                  "  pm.test('OAuth callback returns token pair', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.data).to.have.property('access_token');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": { "type": "noauth" },
             "method": "GET",
@@ -240,8 +263,84 @@
                 { "key": "state", "value": "STATE" }
               ]
             },
-            "description": "Callback dari Google OAuth. Laravel Socialite memproses code → return Sanctum token pair."
+            "description": "Callback dari Google OAuth. Laravel Socialite memproses `code` → return Sanctum token pair.\n\n`code` dan `state` diisi otomatis oleh Google setelah user approve di consent screen."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful.\",\n  \"data\": {\n    \"user\": { \"id\": 1, \"name\": \"Test User\", \"email\": \"test@gmail.com\" },\n    \"access_token\": \"1|abc...\",\n    \"refresh_token\": \"def...\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "OAuth — GitHub Redirect",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/github/redirect", "host": ["{{base_url}}"], "path": ["api", "auth", "github", "redirect"] },
+            "description": "Redirect ke GitHub OAuth authorization page. Browser akan di-redirect ke halaman authorize GitHub App.\n\n**Prasyarat:** `GITHUB_CLIENT_ID` dan `GITHUB_CLIENT_SECRET` harus di-set di `.env`."
           }
+        },
+        {
+          "name": "OAuth — GitHub Callback",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data && body.data.access_token) {",
+                  "    pm.collectionVariables.set('access_token', body.data.access_token);",
+                  "  }",
+                  "  if (body.data && body.data.refresh_token) {",
+                  "    pm.collectionVariables.set('refresh_token', body.data.refresh_token);",
+                  "  }",
+                  "  pm.test('GitHub OAuth callback returns token pair', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.data).to.have.property('access_token');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/auth/github/callback?code=AUTH_CODE&state=STATE",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "github", "callback"],
+              "query": [
+                { "key": "code",  "value": "AUTH_CODE" },
+                { "key": "state", "value": "STATE" }
+              ]
+            },
+            "description": "Callback dari GitHub OAuth. Laravel Socialite memproses `code` → return Sanctum token pair.\n\n`code` dan `state` diisi otomatis oleh GitHub setelah user approve authorization.\n\nJika email GitHub bersifat private, Socialite akan menggunakan `noreply@users.noreply.github.com`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful.\",\n  \"data\": {\n    \"user\": { \"id\": 2, \"name\": \"GitHub User\", \"email\": \"user@users.noreply.github.com\" },\n    \"access_token\": \"3|ghi...\",\n    \"refresh_token\": \"jkl...\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "401 OAuth Error",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"OAuth authentication failed.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
         }
       ]
     },
