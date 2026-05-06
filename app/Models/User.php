@@ -47,4 +47,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(PhoneVerification::class);
     }
+
+    public function store()
+    {
+        return $this->hasOne(Store::class);
+    }
 }
