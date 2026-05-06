@@ -5,10 +5,11 @@ namespace App\Http\Controllers\Api\Media;
 use App\Contracts\Shared\MediaServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Media\ConfirmUploadRequest;
+use App\Http\Requests\Media\DeleteMediaRequest;
 use App\Http\Requests\Media\GeneratePresignedUrlRequest;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class MediaController extends Controller
 {
@@ -24,7 +25,7 @@ class MediaController extends Controller
             $request->input('mime'),
         );
 
-        return ApiResponse::success('Presigned URL generated.', $result, 201);
+        return ApiResponse::success('Presigned URL generated.', $result);
     }
 
     public function confirm(ConfirmUploadRequest $request): JsonResponse
@@ -41,12 +42,10 @@ class MediaController extends Controller
         ]);
     }
 
-    public function delete(Request $request): JsonResponse
+    public function delete(DeleteMediaRequest $request): Response
     {
-        $request->validate(['key' => ['required', 'string', 'max:500']]);
+        $this->media->delete($request->validated()['key']);
 
-        $this->media->delete($request->input('key'));
-
-        return ApiResponse::success('File deleted.', null, 204);
+        return response()->noContent();
     }
 }

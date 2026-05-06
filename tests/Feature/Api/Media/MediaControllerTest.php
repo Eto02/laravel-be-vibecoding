@@ -48,7 +48,7 @@ class MediaControllerTest extends TestCase
                 'mime'     => 'image/jpeg',
             ]);
 
-        $response->assertStatus(201)
+        $response->assertStatus(200)
             ->assertJsonStructure([
                 'success',
                 'message',
