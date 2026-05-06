@@ -29,4 +29,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 $e->errors(),
             );
         });
+
+        $exceptions->render(function (\App\Exceptions\Otp\OtpRateLimitException $e) {
+            return \App\Http\Responses\ApiResponse::error('Too many OTP requests. Please try again later.', 429);
+        });
+
+        $exceptions->render(function (\App\Exceptions\Otp\OtpMaxRetryException $e) {
+            return \App\Http\Responses\ApiResponse::error('OTP invalidated after too many failed attempts.', 422);
+        });
+
+        $exceptions->render(function (\App\Exceptions\Otp\OtpExpiredException $e) {
+            return \App\Http\Responses\ApiResponse::error('OTP has expired. Please request a new one.', 422);
+        });
+
+        $exceptions->render(function (\App\Exceptions\User\PhoneAlreadyTakenException $e) {
+            return \App\Http\Responses\ApiResponse::error('This phone number is already registered.', 422);
+        });
     })->create();
