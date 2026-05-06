@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Auth\TokenResource;
 use App\Http\Responses\ApiResponse;
 use App\Services\Auth\OAuthService;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +24,7 @@ class OAuthController extends Controller
         try {
             $result = $this->oauthService->handleCallback($provider);
 
-            return ApiResponse::success('Login successful.', $result);
+            return ApiResponse::success('Login successful.', new TokenResource($result));
         } catch (\Exception $e) {
             return ApiResponse::error('OAuth authentication failed.', 401);
         }

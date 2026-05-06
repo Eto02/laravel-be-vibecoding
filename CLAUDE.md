@@ -772,8 +772,8 @@ Selalu ikuti alur ini untuk menjaga integritas `main` branch:
 
 Agar API mudah dicoba oleh tim Frontend atau QA:
 
-1.  **Collection File:** Gunakan file `docs/marketplace_api.postman_collection.json` untuk menyimpan semua request.
-2.  **Environment:** Sediakan `docs/marketplace_dev.postman_environment.json` yang berisi variable `base_url`, `token`, dll.
+1.  **Collection File:** Gunakan file `postman/marketplace_api.postman_collection.json` untuk menyimpan semua request.
+2.  **Environment:** Sediakan `postman/marketplace_dev.postman_environment.json` yang berisi variable `base_url`, `token`, dll.
 3.  **Authentication:** Set authorization di level folder/collection menggunakan `Bearer Token` dari variable `{{token}}`.
 4.  **Examples:** Simpan contoh response (Success & Error) di setiap request Postman agar frontend tahu struktur data tanpa harus menjalankan API.
 5.  **Automated Doc (Optional):** Kita bisa menggunakan `knuckleswtf/scribe` untuk generate dokumentasi HTML dan Postman collection secara otomatis dari DocBlock di Controller.

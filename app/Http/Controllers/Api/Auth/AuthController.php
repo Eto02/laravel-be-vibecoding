@@ -10,12 +10,14 @@ use App\Http\Requests\Auth\RefreshTokenRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\VerifyEmailRequest;
+use App\Http\Resources\Auth\TokenResource;
 use App\Http\Resources\Auth\UserResource;
 use App\Http\Responses\ApiResponse;
 use App\Services\Auth\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Exceptions\InvalidSignatureException;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -27,7 +29,7 @@ class AuthController extends Controller
     {
         $result = $this->authService->registerUser($request->validated());
 
-        return ApiResponse::success('User registered successfully.', $result, 201);
+        return ApiResponse::success('User registered successfully.', new TokenResource($result), 201);
     }
 
     public function login(LoginRequest $request): JsonResponse
@@ -35,8 +37,8 @@ class AuthController extends Controller
         try {
             $result = $this->authService->loginUser($request->validated());
 
-            return ApiResponse::success('Login successful.', $result);
-        } catch (\Exception $e) {
+            return ApiResponse::success('Login successful.', new TokenResource($result));
+        } catch (ValidationException $e) {
             return ApiResponse::error('Invalid credentials.', 401);
         }
     }
@@ -53,8 +55,8 @@ class AuthController extends Controller
         try {
             $result = $this->authService->refreshToken($request->validated()['refresh_token']);
 
-            return ApiResponse::success('Token refreshed successfully.', $result);
-        } catch (\Exception $e) {
+            return ApiResponse::success('Token refreshed successfully.', new TokenResource($result));
+        } catch (ValidationException $e) {
             return ApiResponse::error('Invalid or expired refresh token.', 401);
         }
     }
