@@ -273,17 +273,17 @@ readonly class RegisterMerchantDTO {
 
 ## Checklist Eksekusi
 
-- [ ] Buat `EnsureMerchantOwnership` middleware dan register di bootstrap/app.php
-- [ ] Buat `KycStatus` enum
-- [ ] Buat `MerchantStatus` enum
-- [ ] Buat migrations (stores, store_documents, store_followers) — stores dengan unique user_id
-- [ ] Buat Models + Factories
-- [ ] Buat `MerchantService` dengan `register()`, `update()`, `generateUniqueSlug()`, `uploadKyc()`
-- [ ] Buat DTO `RegisterMerchantDTO`
-- [ ] Buat Controllers (Merchant + Public Store + Follower)
-- [ ] Buat FormRequests
-- [ ] Buat Resources (StoreResource, StoreSummaryResource, StoreDocumentResource)
-- [ ] Buat routes/api/merchant.php
-- [ ] Buat Feature Tests dan Unit Tests
-- [ ] Update Postman collection (folder "04. Merchant")
-- [ ] Update planning/03-merchant.md → Status ✅ Selesai
+- [x] Buat `EnsureMerchantOwnership` middleware dan register di bootstrap/app.php
+- [x] Buat `KycStatus` enum
+- [x] Buat `MerchantStatus` enum
+- [x] Buat migrations (stores, store_documents, store_followers) — stores dengan unique user_id
+- [x] Buat Models + Factories
+- [x] Buat `MerchantService` dengan `register()`, `update()`, `generateUniqueSlug()`, `uploadKyc()`, logo/banner upload, KYC re-upload
+- [x] Buat DTO `RegisterMerchantDTO`
+- [x] Buat Controllers (Merchant + Public Store + Follower)
+- [x] Buat FormRequests
+- [x] Buat Resources (StoreResource, StoreSummaryResource, StoreDocumentResource)
+- [x] Buat routes/api/merchant.php (19 routes total: merchant + public stores)
+- [x] Buat Feature Tests (24) dan Unit Tests (7) — 169/169 total passing
+- [x] Update Postman collection (folder "04. Merchant", 18 requests, auto-fill scripts + mirror ke media_upload_url)
+- [x] Update planning/03-merchant.md → Status ✅ Selesai
