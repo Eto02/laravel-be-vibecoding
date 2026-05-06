@@ -1,5 +1,5 @@
 # Shared Services — Planning
-**Priority:** 🔴 P0 | **Status:** ⬜ Belum | **Sprint:** 0
+**Priority:** 🔴 P0 | **Status:** ✅ Selesai | **Sprint:** 0
 
 > Harus dibuat sebelum modul lain karena semua modul bergantung pada shared services ini.
 
@@ -8,14 +8,14 @@
 ## Improvement Backlog
 
 ### 🔴 P0 — Wajib Sebelum Production Scale
-- ⬜ **OtpService: Rate Limiting** — max 3 request OTP per identifier per 10 menit
-- ⬜ **OtpService: Retry Limit** — max 5 percobaan verify; jika gagal, OTP diinvalidasi
-- ⬜ **MediaService: Orphan Cleanup** — hapus file di R2 yang tidak pernah di-confirm dalam X menit
+- ✅ **OtpService: Rate Limiting** — max 3 request OTP per identifier per 10 menit
+- ✅ **OtpService: Retry Limit** — max 5 percobaan verify; jika gagal, OTP diinvalidasi
+- ✅ **MediaService: Orphan Cleanup** — hapus file di R2 yang tidak pernah di-confirm dalam X menit
 
 ### 🟠 P1 — Architecture Improvement
 - ⬜ **NotificationService → Event-driven** — ganti direct call dengan Laravel Events + Listeners
-- ⬜ **CacheService: Interface Opsional** — tidak wajib interface, bisa inject `Cache` facade contract langsung jika tidak perlu swap provider
-- ⬜ **MediaService: Upload Session Tracking** — track presigned URL yang sedang aktif (key, user_id, expires_at) untuk orphan detection
+- ✅ **CacheService: Interface Opsional** — inject `Illuminate\Contracts\Cache\Repository` langsung, tidak perlu wrapper
+- ✅ **MediaService: Upload Session Tracking** — track presigned URL di Redis (`media:session:{key}`, TTL 900s)
 
 ### 🟢 P2 — Scaling Optimization
 - ⬜ **Queue semua notification type** — Email, Push, WA semuanya via Queue Jobs
