@@ -1,5 +1,5 @@
 # MODULE 1 — Auth & Identity
-**Priority:** 🔴 P0 | **Status:** 🟡 Partial | **Sprint:** 1
+**Priority:** 🔴 P0 | **Status:** ✅ Selesai | **Sprint:** 1
 
 ---
 
@@ -10,14 +10,14 @@
 - `GET /api/auth/me`
 - `POST /api/auth/logout`
 
-## Yang Perlu Dibangun ⬜
-- ⬜ Email Verification — kirim link saat register, blokir login jika belum verify
-- ⬜ Resend Verification Email
-- ⬜ Forgot Password — kirim reset link via email
-- ⬜ Reset Password — validasi token + simpan password baru
-- ⬜ Change Password — untuk user yang sudah login
-- ⬜ Active Session List
-- ⬜ Logout dari device tertentu (by session ID)
+## Yang Perlu Dibangun ✅
+- ✅ Email Verification — kirim link saat register, blokir login jika belum verify
+- ✅ Resend Verification Email
+- ✅ Forgot Password — kirim reset link via email
+- ✅ Reset Password — validasi token + simpan password baru
+- ✅ Change Password — untuk user yang sudah login
+- ✅ Active Session List
+- ✅ Logout dari device tertentu (by session ID)
 
 ---
 
