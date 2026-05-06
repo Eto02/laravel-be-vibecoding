@@ -12,23 +12,19 @@ use Illuminate\Notifications\Notifiable;
 
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'avatar'])]
+#[Fillable(['name', 'email', 'password', 'avatar', 'phone', 'phone_verified_at', 'bio'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'phone_verified_at' => 'datetime',
+            'password'          => 'hashed',
         ];
     }
 
@@ -40,5 +36,15 @@ class User extends Authenticatable
     public function oauthAccounts()
     {
         return $this->hasMany(OAuthAccount::class);
+    }
+
+    public function addresses()
+    {
+        return $this->hasMany(Address::class);
+    }
+
+    public function phoneVerifications()
+    {
+        return $this->hasMany(PhoneVerification::class);
     }
 }

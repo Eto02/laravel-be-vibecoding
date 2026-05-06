@@ -6,6 +6,7 @@ use App\Contracts\Shared\EmailServiceInterface;
 use App\Contracts\Shared\IdempotencyServiceInterface;
 use App\Contracts\Shared\MediaServiceInterface;
 use App\Contracts\Shared\OtpServiceInterface;
+use App\Contracts\Shared\SmsServiceInterface;
 use App\Events\Auth\UserRegistered;
 use App\Listeners\Auth\SendEmailVerificationNotification;
 use App\Services\Payment\PaymentGatewayInterface;
@@ -14,6 +15,7 @@ use App\Services\Shared\EmailService;
 use App\Services\Shared\IdempotencyService;
 use App\Services\Shared\MediaService;
 use App\Services\Shared\OtpService;
+use App\Services\Shared\SmsService;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -29,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(OtpServiceInterface::class, OtpService::class);
         $this->app->bind(MediaServiceInterface::class, MediaService::class);
         $this->app->bind(IdempotencyServiceInterface::class, IdempotencyService::class);
+        $this->app->bind(SmsServiceInterface::class, SmsService::class);
     }
 
     public function boot(): void

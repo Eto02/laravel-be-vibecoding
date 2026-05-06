@@ -47,4 +47,9 @@ return [
         'redirect' => env('GITHUB_REDIRECT_URI'),
     ],
 
+    'sms' => [
+        'provider'     => env('SMS_PROVIDER', 'fonnte'),
+        'fonnte_token' => env('FONNTE_TOKEN'),
+    ],
+
 ];
