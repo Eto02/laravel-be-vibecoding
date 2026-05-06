@@ -1216,13 +1216,16 @@
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "  const body = pm.response.json();",
-                  "  if (body.data) {",
-                  "    pm.collectionVariables.set('avatar_upload_url', body.data.upload_url || '');",
-                  "    pm.collectionVariables.set('avatar_key', body.data.key || '');",
-                  "  }",
-                  "  pm.test('Returns 201 with upload info', () => {",
+                  "  const data = body.data || {};",
+                  "  pm.collectionVariables.set(\"avatar_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"avatar_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "  pm.test(\"Returns 201 with upload info\", () => {",
                   "    pm.response.to.have.status(201);",
-                  "    pm.expect(body.data).to.have.all.keys('upload_url', 'key', 'public_url');",
+                  "    pm.expect(data).to.have.all.keys(\"upload_url\", \"key\", \"public_url\");",
                   "  });",
                   "}"
                 ],
@@ -1965,9 +1968,13 @@
               "script": {
                 "exec": [
                   "if (pm.response.code === 201) {",
-                  "  var json = pm.response.json();",
-                  "  pm.collectionVariables.set(\"kyc_upload_url\", json.data.upload_url);",
-                  "  pm.collectionVariables.set(\"kyc_key\", json.data.key);",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"kyc_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"kyc_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -2110,8 +2117,13 @@
               "script": {
                 "exec": [
                   "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set(\"kyc_upload_url\", pm.response.json().data.upload_url);",
-                  "  pm.collectionVariables.set(\"kyc_key\", pm.response.json().data.key);",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"kyc_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"kyc_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -2179,8 +2191,13 @@
               "script": {
                 "exec": [
                   "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set(\"logo_upload_url\", pm.response.json().data.upload_url);",
-                  "  pm.collectionVariables.set(\"logo_key\", pm.response.json().data.key);",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"logo_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"logo_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -2269,8 +2286,13 @@
               "script": {
                 "exec": [
                   "if (pm.response.code === 201) {",
-                  "  pm.collectionVariables.set(\"banner_upload_url\", pm.response.json().data.upload_url);",
-                  "  pm.collectionVariables.set(\"banner_key\", pm.response.json().data.key);",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"banner_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"banner_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
                   "}"
                 ],
                 "type": "text/javascript"
