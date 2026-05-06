@@ -4,6 +4,7 @@ namespace App\Services\Shared;
 
 use App\Contracts\Shared\SmsServiceInterface;
 use Illuminate\Http\Client\Factory as HttpClient;
+use Illuminate\Support\Facades\Log;
 
 class SmsService implements SmsServiceInterface
 {
@@ -13,11 +14,12 @@ class SmsService implements SmsServiceInterface
 
     public function send(string $to, string $message): void
     {
-        $provider = config('services.sms.provider', 'fonnte');
+        $provider = config('services.sms.provider', 'log');
 
         match ($provider) {
             'fonnte' => $this->sendViaFonnte($to, $message),
-            default  => $this->sendViaFonnte($to, $message),
+            'log'    => $this->sendViaLog($to, $message),
+            default  => $this->sendViaLog($to, $message),
         };
     }
 
@@ -33,5 +35,13 @@ class SmsService implements SmsServiceInterface
                 'target'  => $to,
                 'message' => $message,
             ]);
+    }
+
+    private function sendViaLog(string $to, string $message): void
+    {
+        Log::channel('stack')->info('SMS (log driver)', [
+            'to'      => $to,
+            'message' => $message,
+        ]);
     }
 }
