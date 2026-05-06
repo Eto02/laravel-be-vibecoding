@@ -36,7 +36,7 @@ class UserTest extends TestCase
             ->assertStatus(200)
             ->assertJsonStructure([
                 'success', 'message',
-                'data' => ['id', 'name', 'email', 'email_verified_at', 'phone', 'phone_verified_at', 'avatar', 'bio', 'created_at'],
+                'data' => ['id', 'name', 'email', 'email_verified_at', 'phone', 'phone_verified_at', 'avatar_url', 'bio', 'created_at'],
             ])
             ->assertJson(['success' => true, 'data' => ['bio' => 'Hello world']]);
     }

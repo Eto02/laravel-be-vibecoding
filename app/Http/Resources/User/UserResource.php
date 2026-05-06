@@ -16,7 +16,9 @@ class UserResource extends JsonResource
             'email_verified_at' => $this->email_verified_at?->toISOString(),
             'phone'             => $this->phone,
             'phone_verified_at' => $this->phone_verified_at?->toISOString(),
-            'avatar'            => $this->avatar,
+            'avatar_url'        => $this->avatar
+                                    ? rtrim(config('filesystems.disks.r2.url'), '/') . '/' . $this->avatar
+                                    : null,
             'bio'               => $this->bio,
             'created_at'        => $this->created_at?->toISOString(),
         ];
