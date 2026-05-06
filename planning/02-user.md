@@ -1,13 +1,13 @@
 # MODULE 2 — User Profile
-**Priority:** 🟠 P1 | **Status:** 🔄 In Progress | **Sprint:** 2
+**Priority:** 🟠 P1 | **Status:** ✅ Selesai | **Sprint:** 2
 
 ---
 
 ## Yang Perlu Dibangun
-- ⬜ Get/Update profile (nama, foto profil, bio) — phone hanya via OTP flow
-- ⬜ Upload foto profil (via `MediaService` — presigned URL, resize di client)
-- ⬜ Address Book — CRUD alamat pengiriman, set default
-- ⬜ Phone Verification via OTP (SMS/WhatsApp via `SmsService`)
+- ✅ Get/Update profile (nama, foto profil, bio) — phone hanya via OTP flow
+- ✅ Upload foto profil (via `MediaService` — presigned URL, resize di client)
+- ✅ Address Book — CRUD alamat pengiriman, set default
+- ✅ Phone Verification via OTP (SMS/WhatsApp via `SmsService`)
 
 > **Defer ke modul 10:** Notification Preferences (channel mana yang aktif)
 
@@ -112,7 +112,7 @@ tests/Unit/Services/Shared/SmsServiceTest.php
 |---|---|---|
 | `MediaService` | ✅ Ada | Generate presigned URL untuk upload foto profil |
 | `OtpService` | ✅ Ada | Generate & verify OTP (Redis SHA-256, TTL 5 min) |
-| `SmsService` | ⬜ Belum | Kirim OTP via WA/SMS (Fonnte/Twilio) |
+| `SmsService` | ✅ Ada | Kirim OTP via WA/SMS — log driver (dev), Fonnte (prod) |
 
 > `SmsService` harus dibuat + di-bind di `AppServiceProvider` sebelum implementasi phone OTP.
 
@@ -126,7 +126,7 @@ tests/Unit/Services/Shared/SmsServiceTest.php
 'email_verified_at' => $this->email_verified_at?->toISOString(),
 'phone'             => $this->phone,
 'phone_verified_at' => $this->phone_verified_at?->toISOString(),
-'avatar'            => $this->avatar,
+'avatar_url'        => $this->avatar ? rtrim(config('filesystems.disks.r2.url'), '/') . '/' . $this->avatar : null,
 'bio'               => $this->bio,
 'created_at'        => $this->created_at?->toISOString(),
 ```
