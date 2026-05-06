@@ -187,4 +187,173 @@ class MerchantTest extends TestCase
             ->assertStatus(422)
             ->assertJson(['success' => false]);
     }
+
+    // ── PUT /merchant/kyc (re-upload, rejected only) ──────────────────────────
+
+    public function test_kyc_reupload_succeeds_when_rejected(): void
+    {
+        $user  = $this->actingUser();
+        $store = Store::factory()->for($user)->create(['kyc_status' => 'rejected']);
+
+        $this->mock(MediaServiceInterface::class, function ($mock) {
+            $mock->shouldReceive('generatePresignedUrl')
+                ->once()
+                ->andReturn([
+                    'upload_url' => 'https://r2.example.com/upload',
+                    'key'        => 'kyc/ktp/uuid2.jpg',
+                    'public_url' => 'https://pub.r2.dev/kyc/ktp/uuid2.jpg',
+                ]);
+        });
+
+        $this->actingAs($user)
+            ->putJson('/api/merchant/kyc', ['type' => 'ktp', 'filename' => 'ktp-baru.jpg', 'mime' => 'image/jpeg'])
+            ->assertStatus(201)
+            ->assertJsonStructure(['data' => ['upload_url', 'key', 'public_url']]);
+    }
+
+    public function test_kyc_reupload_fails_when_pending(): void
+    {
+        $user = $this->actingUser();
+        Store::factory()->for($user)->create(['kyc_status' => 'pending']);
+
+        $this->actingAs($user)
+            ->putJson('/api/merchant/kyc', ['type' => 'ktp', 'filename' => 'ktp.jpg', 'mime' => 'image/jpeg'])
+            ->assertStatus(422)
+            ->assertJson(['success' => false]);
+    }
+
+    public function test_kyc_reupload_fails_when_approved(): void
+    {
+        $user = $this->actingUser();
+        Store::factory()->for($user)->kycApproved()->create();
+
+        $this->actingAs($user)
+            ->putJson('/api/merchant/kyc', ['type' => 'ktp', 'filename' => 'ktp.jpg', 'mime' => 'image/jpeg'])
+            ->assertStatus(422)
+            ->assertJson(['success' => false]);
+    }
+
+    // ── POST /merchant/store/logo ──────────────────────────────────────────────
+
+    public function test_upload_logo_returns_presigned_url(): void
+    {
+        $user = $this->actingUser();
+        Store::factory()->for($user)->create();
+
+        $this->mock(MediaServiceInterface::class, function ($mock) {
+            $mock->shouldReceive('generatePresignedUrl')
+                ->once()
+                ->andReturn([
+                    'upload_url' => 'https://r2.example.com/upload',
+                    'key'        => 'stores/1/logo/uuid.jpg',
+                    'public_url' => 'https://pub.r2.dev/stores/1/logo/uuid.jpg',
+                ]);
+        });
+
+        $this->actingAs($user)
+            ->postJson('/api/merchant/store/logo', ['filename' => 'logo.jpg', 'mime' => 'image/jpeg'])
+            ->assertStatus(201)
+            ->assertJsonStructure(['data' => ['upload_url', 'key', 'public_url']]);
+    }
+
+    public function test_confirm_logo_saves_key_and_deletes_old(): void
+    {
+        $user  = $this->actingUser();
+        $store = Store::factory()->for($user)->create(['logo' => 'stores/1/logo/old.jpg']);
+
+        $this->mock(MediaServiceInterface::class, function ($mock) {
+            $mock->shouldReceive('confirmUpload')->once()->with('stores/1/logo/new.jpg')->andReturn(true);
+            $mock->shouldReceive('delete')->once()->with('stores/1/logo/old.jpg');
+        });
+
+        $this->actingAs($user)
+            ->postJson('/api/merchant/store/logo/confirm', ['key' => 'stores/1/logo/new.jpg'])
+            ->assertStatus(200)
+            ->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('stores', ['id' => $store->id, 'logo' => 'stores/1/logo/new.jpg']);
+    }
+
+    public function test_delete_logo_returns_204(): void
+    {
+        $user  = $this->actingUser();
+        $store = Store::factory()->for($user)->create(['logo' => 'stores/1/logo/uuid.jpg']);
+
+        $this->mock(MediaServiceInterface::class, function ($mock) {
+            $mock->shouldReceive('delete')->once()->with('stores/1/logo/uuid.jpg');
+        });
+
+        $this->actingAs($user)
+            ->deleteJson('/api/merchant/store/logo')
+            ->assertStatus(204);
+
+        $this->assertDatabaseHas('stores', ['id' => $store->id, 'logo' => null]);
+    }
+
+    // ── POST /merchant/store/banner ────────────────────────────────────────────
+
+    public function test_upload_banner_returns_presigned_url(): void
+    {
+        $user = $this->actingUser();
+        Store::factory()->for($user)->create();
+
+        $this->mock(MediaServiceInterface::class, function ($mock) {
+            $mock->shouldReceive('generatePresignedUrl')
+                ->once()
+                ->andReturn([
+                    'upload_url' => 'https://r2.example.com/upload',
+                    'key'        => 'stores/1/banner/uuid.jpg',
+                    'public_url' => 'https://pub.r2.dev/stores/1/banner/uuid.jpg',
+                ]);
+        });
+
+        $this->actingAs($user)
+            ->postJson('/api/merchant/store/banner', ['filename' => 'banner.jpg', 'mime' => 'image/jpeg'])
+            ->assertStatus(201)
+            ->assertJsonStructure(['data' => ['upload_url', 'key', 'public_url']]);
+    }
+
+    public function test_confirm_banner_saves_key_and_deletes_old(): void
+    {
+        $user  = $this->actingUser();
+        $store = Store::factory()->for($user)->create(['banner' => 'stores/1/banner/old.jpg']);
+
+        $this->mock(MediaServiceInterface::class, function ($mock) {
+            $mock->shouldReceive('confirmUpload')->once()->with('stores/1/banner/new.jpg')->andReturn(true);
+            $mock->shouldReceive('delete')->once()->with('stores/1/banner/old.jpg');
+        });
+
+        $this->actingAs($user)
+            ->postJson('/api/merchant/store/banner/confirm', ['key' => 'stores/1/banner/new.jpg'])
+            ->assertStatus(200)
+            ->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('stores', ['id' => $store->id, 'banner' => 'stores/1/banner/new.jpg']);
+    }
+
+    public function test_delete_banner_returns_204(): void
+    {
+        $user  = $this->actingUser();
+        $store = Store::factory()->for($user)->create(['banner' => 'stores/1/banner/uuid.jpg']);
+
+        $this->mock(MediaServiceInterface::class, function ($mock) {
+            $mock->shouldReceive('delete')->once()->with('stores/1/banner/uuid.jpg');
+        });
+
+        $this->actingAs($user)
+            ->deleteJson('/api/merchant/store/banner')
+            ->assertStatus(204);
+
+        $this->assertDatabaseHas('stores', ['id' => $store->id, 'banner' => null]);
+    }
+
+    public function test_upload_logo_rejects_non_image_mime(): void
+    {
+        $user = $this->actingUser();
+        Store::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->postJson('/api/merchant/store/logo', ['filename' => 'doc.pdf', 'mime' => 'application/pdf'])
+            ->assertStatus(422);
+    }
 }

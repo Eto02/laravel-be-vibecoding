@@ -74,4 +74,29 @@ class MerchantController extends Controller
 
         return ApiResponse::success('KYC document submitted successfully.', new StoreDocumentResource($document));
     }
+
+    public function reuploadKyc(UploadKycRequest $request): JsonResponse
+    {
+        $store  = $request->user()->store;
+        $result = $this->merchant->generateKycReuploadUrl(
+            $store,
+            $request->input('type'),
+            $request->input('filename'),
+            $request->input('mime'),
+        );
+
+        return ApiResponse::success('KYC re-upload URL generated.', $result, 201);
+    }
+
+    public function confirmKycReupload(ConfirmKycRequest $request): JsonResponse
+    {
+        $store    = $request->user()->store;
+        $document = $this->merchant->confirmKycUpload(
+            $store,
+            $request->input('type'),
+            $request->input('key'),
+        );
+
+        return ApiResponse::success('KYC document re-submitted successfully.', new StoreDocumentResource($document));
+    }
 }

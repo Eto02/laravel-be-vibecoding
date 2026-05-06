@@ -75,6 +75,15 @@ class MerchantService
         return $this->media->generatePresignedUrl("kyc/{$type}", $filename, $mime);
     }
 
+    public function generateKycReuploadUrl(Store $store, string $type, string $filename, string $mime): array
+    {
+        if ($store->kyc_status !== KycStatus::Rejected) {
+            throw new KycNotAllowedException();
+        }
+
+        return $this->media->generatePresignedUrl("kyc/{$type}", $filename, $mime);
+    }
+
     public function confirmKycUpload(Store $store, string $type, string $key): StoreDocument
     {
         if (! in_array($store->kyc_status, [KycStatus::Pending, KycStatus::Rejected])) {
@@ -82,6 +91,11 @@ class MerchantService
         }
 
         $this->media->confirmUpload($key);
+
+        $existing = StoreDocument::where('store_id', $store->id)->where('type', $type)->first();
+        if ($existing && $existing->file !== $key) {
+            $this->media->delete($existing->file);
+        }
 
         $document = StoreDocument::updateOrCreate(
             ['store_id' => $store->id, 'type' => $type],
@@ -91,6 +105,66 @@ class MerchantService
         $store->update(['kyc_status' => KycStatus::Submitted]);
 
         return $document;
+    }
+
+    public function generateLogoPresignedUrl(Store $store, string $filename, string $mime): array
+    {
+        return $this->media->generatePresignedUrl("stores/{$store->id}/logo", $filename, $mime);
+    }
+
+    public function confirmLogoUpload(Store $store, string $key): Store
+    {
+        if (! $this->media->confirmUpload($key)) {
+            throw new \RuntimeException('Logo file not found in storage.');
+        }
+
+        if ($store->logo && $store->logo !== $key) {
+            $this->media->delete($store->logo);
+        }
+
+        $store->update(['logo' => $key]);
+        $this->cache->forget("store:profile:{$store->slug}");
+
+        return $store->fresh();
+    }
+
+    public function deleteLogo(Store $store): void
+    {
+        if ($store->logo) {
+            $this->media->delete($store->logo);
+            $store->update(['logo' => null]);
+            $this->cache->forget("store:profile:{$store->slug}");
+        }
+    }
+
+    public function generateBannerPresignedUrl(Store $store, string $filename, string $mime): array
+    {
+        return $this->media->generatePresignedUrl("stores/{$store->id}/banner", $filename, $mime);
+    }
+
+    public function confirmBannerUpload(Store $store, string $key): Store
+    {
+        if (! $this->media->confirmUpload($key)) {
+            throw new \RuntimeException('Banner file not found in storage.');
+        }
+
+        if ($store->banner && $store->banner !== $key) {
+            $this->media->delete($store->banner);
+        }
+
+        $store->update(['banner' => $key]);
+        $this->cache->forget("store:profile:{$store->slug}");
+
+        return $store->fresh();
+    }
+
+    public function deleteBanner(Store $store): void
+    {
+        if ($store->banner) {
+            $this->media->delete($store->banner);
+            $store->update(['banner' => null]);
+            $this->cache->forget("store:profile:{$store->slug}");
+        }
     }
 
     public function follow(User $user, Store $store): void

@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api\Merchant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Merchant\ConfirmStoreMediaRequest;
 use App\Http\Requests\Merchant\UpdateStoreRequest;
+use App\Http\Requests\Merchant\UploadStoreMediaRequest;
 use App\Http\Resources\Merchant\StoreResource;
 use App\Http\Responses\ApiResponse;
 use App\Services\Merchant\MerchantService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class StoreController extends Controller
 {
@@ -21,5 +24,63 @@ class StoreController extends Controller
         $updated = $this->merchant->update($store, $request->validated());
 
         return ApiResponse::success('Store updated successfully.', new StoreResource($updated));
+    }
+
+    // ── Logo ─────────────────────────────────────────────────────────────────
+
+    public function uploadLogo(UploadStoreMediaRequest $request): JsonResponse
+    {
+        $store  = $request->user()->store;
+        $result = $this->merchant->generateLogoPresignedUrl(
+            $store,
+            $request->input('filename'),
+            $request->input('mime'),
+        );
+
+        return ApiResponse::success('Logo presigned URL generated.', $result, 201);
+    }
+
+    public function confirmLogo(ConfirmStoreMediaRequest $request): JsonResponse
+    {
+        $store   = $request->user()->store;
+        $updated = $this->merchant->confirmLogoUpload($store, $request->input('key'));
+
+        return ApiResponse::success('Logo updated successfully.', new StoreResource($updated));
+    }
+
+    public function deleteLogo(Request $request): \Illuminate\Http\Response
+    {
+        $this->merchant->deleteLogo($request->user()->store);
+
+        return response()->noContent();
+    }
+
+    // ── Banner ────────────────────────────────────────────────────────────────
+
+    public function uploadBanner(UploadStoreMediaRequest $request): JsonResponse
+    {
+        $store  = $request->user()->store;
+        $result = $this->merchant->generateBannerPresignedUrl(
+            $store,
+            $request->input('filename'),
+            $request->input('mime'),
+        );
+
+        return ApiResponse::success('Banner presigned URL generated.', $result, 201);
+    }
+
+    public function confirmBanner(ConfirmStoreMediaRequest $request): JsonResponse
+    {
+        $store   = $request->user()->store;
+        $updated = $this->merchant->confirmBannerUpload($store, $request->input('key'));
+
+        return ApiResponse::success('Banner updated successfully.', new StoreResource($updated));
+    }
+
+    public function deleteBanner(Request $request): \Illuminate\Http\Response
+    {
+        $this->merchant->deleteBanner($request->user()->store);
+
+        return response()->noContent();
     }
 }

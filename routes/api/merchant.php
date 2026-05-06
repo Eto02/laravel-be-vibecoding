@@ -11,22 +11,36 @@ Route::middleware('auth:sanctum')->prefix('merchant')->name('merchant.')->group(
     Route::post('/register', [MerchantController::class, 'register'])->name('register');
 
     Route::middleware('merchant')->group(function () {
-        Route::get('/store',              [MerchantController::class, 'show'])->name('store.show');
-        Route::put('/store',              [StoreController::class, 'update'])->name('store.update');
-        Route::get('/dashboard',          [MerchantController::class, 'dashboard'])->name('dashboard');
-        Route::post('/kyc',               [MerchantController::class, 'uploadKyc'])->name('kyc.upload');
-        Route::post('/kyc/confirm',       [MerchantController::class, 'confirmKyc'])->name('kyc.confirm');
+        Route::get('/store',                       [MerchantController::class, 'show'])->name('store.show');
+        Route::put('/store',                       [StoreController::class, 'update'])->name('store.update');
+        Route::get('/dashboard',                   [MerchantController::class, 'dashboard'])->name('dashboard');
+
+        // KYC — POST = first upload (pending/rejected), PUT = re-upload (rejected only)
+        Route::post('/kyc',                        [MerchantController::class, 'uploadKyc'])->name('kyc.upload');
+        Route::post('/kyc/confirm',                [MerchantController::class, 'confirmKyc'])->name('kyc.confirm');
+        Route::put('/kyc',                         [MerchantController::class, 'reuploadKyc'])->name('kyc.reupload');
+        Route::put('/kyc/confirm',                 [MerchantController::class, 'confirmKycReupload'])->name('kyc.reupload.confirm');
+
+        // Logo
+        Route::post('/store/logo',                 [StoreController::class, 'uploadLogo'])->name('store.logo.upload');
+        Route::post('/store/logo/confirm',         [StoreController::class, 'confirmLogo'])->name('store.logo.confirm');
+        Route::delete('/store/logo',               [StoreController::class, 'deleteLogo'])->name('store.logo.delete');
+
+        // Banner
+        Route::post('/store/banner',               [StoreController::class, 'uploadBanner'])->name('store.banner.upload');
+        Route::post('/store/banner/confirm',       [StoreController::class, 'confirmBanner'])->name('store.banner.confirm');
+        Route::delete('/store/banner',             [StoreController::class, 'deleteBanner'])->name('store.banner.delete');
     });
 });
 
 // ── Public store routes ───────────────────────────────────────────────────────
 Route::prefix('stores')->name('stores.')->group(function () {
-    Route::get('/{slug}',          [PublicStoreController::class, 'show'])->name('show');
-    Route::get('/{slug}/products', [PublicStoreController::class, 'products'])->name('products');
+    Route::get('/{slug}',           [PublicStoreController::class, 'show'])->name('show');
+    Route::get('/{slug}/products',  [PublicStoreController::class, 'products'])->name('products');
     Route::get('/{slug}/followers', [StoreFollowerController::class, 'followers'])->name('followers');
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/{slug}/follow',    [StoreFollowerController::class, 'follow'])->name('follow');
-        Route::delete('/{slug}/follow',  [StoreFollowerController::class, 'unfollow'])->name('unfollow');
+        Route::post('/{slug}/follow',   [StoreFollowerController::class, 'follow'])->name('follow');
+        Route::delete('/{slug}/follow', [StoreFollowerController::class, 'unfollow'])->name('unfollow');
     });
 });
