@@ -13,6 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\LogApiRequests::class);
+        $middleware->alias([
+            'merchant' => \App\Http\Middleware\EnsureMerchantOwnership::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -44,5 +47,17 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (\App\Exceptions\User\PhoneAlreadyTakenException $e) {
             return \App\Http\Responses\ApiResponse::error('This phone number is already registered.', 422);
+        });
+
+        $exceptions->render(function (\App\Exceptions\Merchant\StoreAlreadyExistsException $e) {
+            return \App\Http\Responses\ApiResponse::error('You already have a store.', 422);
+        });
+
+        $exceptions->render(function (\App\Exceptions\Merchant\KycNotAllowedException $e) {
+            return \App\Http\Responses\ApiResponse::error('KYC documents cannot be uploaded at this time.', 422);
+        });
+
+        $exceptions->render(function (\App\Exceptions\Merchant\AlreadyFollowingException $e) {
+            return \App\Http\Responses\ApiResponse::error('You are already following this store.', 409);
         });
     })->create();

@@ -2,31 +2,120 @@
   "info": {
     "_postman_id": "marketplace-api-v2",
     "name": "Marketplace API",
-    "description": "Laravel 13 Headless Marketplace API — multi-vendor platform. Base URL: {{base_url}}\n\n## Setup\n1. Set `base_url` variable to `http://localhost:8000`\n2. Register atau login, token akan otomatis tersimpan ke `access_token`\n3. Refresh token tersimpan di `refresh_token`\n\n## Auth\nSemua endpoint bertanda 🔒 membutuhkan Bearer token yang di-set otomatis via test scripts.",
+    "description": "Laravel 13 Headless Marketplace API \u2014 multi-vendor platform. Base URL: {{base_url}}\n\n## Setup\n1. Set `base_url` variable to `http://localhost:8000`\n2. Register atau login, token akan otomatis tersimpan ke `access_token`\n3. Refresh token tersimpan di `refresh_token`\n\n## Auth\nSemua endpoint bertanda \ud83d\udd12 membutuhkan Bearer token yang di-set otomatis via test scripts.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url",          "value": "http://localhost:8000", "type": "string" },
-    { "key": "access_token",      "value": "",                      "type": "string" },
-    { "key": "refresh_token",     "value": "",                      "type": "string" },
-    { "key": "media_upload_url",  "value": "",                      "type": "string" },
-    { "key": "media_key",         "value": "",                      "type": "string" },
-    { "key": "media_public_url",  "value": "",                      "type": "string" },
-    { "key": "session_id",        "value": "",                      "type": "string" },
-    { "key": "transaction_id",    "value": "",                      "type": "string" },
-    { "key": "invoice_url",       "value": "",                      "type": "string" },
-    { "key": "address_id",        "value": "",                      "type": "string" },
-    { "key": "avatar_upload_url", "value": "",                      "type": "string" },
-    { "key": "avatar_key",        "value": "",                      "type": "string" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "media_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "media_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "media_public_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transaction_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "invoice_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "address_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "avatar_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "avatar_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "store_slug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "kyc_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "kyc_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "logo_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "logo_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "banner_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "banner_key",
+      "value": "",
+      "type": "string"
+    }
   ],
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
   },
   "item": [
     {
       "name": "01. Auth",
-      "description": "Authentication — Register, Login, OAuth, Token Refresh, Logout, Email Verification, Password Reset, Session Management",
+      "description": "Authentication \u2014 Register, Login, OAuth, Token Refresh, Logout, Email Verification, Password Reset, Session Management",
       "item": [
         {
           "name": "Register",
@@ -52,15 +141,36 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/auth/register", "host": ["{{base_url}}"], "path": ["api", "auth", "register"] },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
             "description": "Daftarkan user baru. Access token dan refresh token otomatis tersimpan ke collection variables."
           },
           "response": [
@@ -68,14 +178,24 @@
               "name": "201 Created",
               "status": "Created",
               "code": 201,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"User registered successfully.\",\n  \"data\": {\n    \"user\": { \"id\": 1, \"name\": \"Test User\", \"email\": \"test@example.com\", \"avatar\": null, \"email_verified_at\": null },\n    \"access_token\": \"1|abc...\",\n    \"refresh_token\": \"def...\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": 3600,\n    \"provider\": \"password\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 Validation Error",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": { \"email\": [\"The email has already been taken.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
@@ -104,15 +224,36 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
             "description": "Login dan dapatkan Sanctum access token + refresh token."
           },
           "response": [
@@ -120,14 +261,24 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Login successful.\",\n  \"data\": {\n    \"user\": { \"id\": 1, \"name\": \"Test User\", \"email\": \"test@example.com\", \"avatar\": null, \"email_verified_at\": null },\n    \"access_token\": \"1|abc...\",\n    \"refresh_token\": \"def...\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": 3600,\n    \"provider\": \"password\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "401 Invalid Credentials",
               "status": "Unauthorized",
               "code": 401,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Invalid credentials.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
@@ -155,40 +306,86 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/auth/refresh", "host": ["{{base_url}}"], "path": ["api", "auth", "refresh"] },
-            "description": "Rotasi refresh token. Token lama diinvalidasi, pair baru di-return.\n\n⚠️ Tidak membutuhkan Bearer token — gunakan refresh_token di body."
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Rotasi refresh token. Token lama diinvalidasi, pair baru di-return.\n\n\u26a0\ufe0f Tidak membutuhkan Bearer token \u2014 gunakan refresh_token di body."
           },
           "response": [
             {
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Token refreshed successfully.\",\n  \"data\": {\n    \"user\": { \"id\": 1, \"name\": \"Test User\", \"email\": \"test@example.com\", \"avatar\": null, \"email_verified_at\": null },\n    \"access_token\": \"2|xyz...\",\n    \"refresh_token\": \"ghi...\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": 3600,\n    \"provider\": \"refresh\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "401 Invalid Refresh Token",
               "status": "Unauthorized",
               "code": 401,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired refresh token.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Me (Current User) 🔒",
+          "name": "Me (Current User) \ud83d\udd12",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/auth/me", "host": ["{{base_url}}"], "path": ["api", "auth", "me"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
             "description": "Ambil data user yang sedang login berdasarkan Bearer token."
           },
           "response": [
@@ -196,20 +393,30 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"User retrieved.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"avatar\": null,\n    \"email_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "401 Unauthenticated",
               "status": "Unauthorized",
               "code": 401,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"message\": \"Unauthenticated.\"\n}"
             }
           ]
         },
         {
-          "name": "Logout 🔒",
+          "name": "Logout \ud83d\udd12",
           "event": [
             {
               "listen": "test",
@@ -227,8 +434,23 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/auth/logout", "host": ["{{base_url}}"], "path": ["api", "auth", "logout"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
             "description": "Revoke current access token dan semua refresh token aktif."
           },
           "response": [
@@ -236,23 +458,46 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Logged out successfully.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "OAuth — Google Redirect",
+          "name": "OAuth \u2014 Google Redirect",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/auth/google/redirect", "host": ["{{base_url}}"], "path": ["api", "auth", "google", "redirect"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/google/redirect",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "google",
+                "redirect"
+              ]
+            },
             "description": "Redirect ke Google OAuth consent screen."
           }
         },
         {
-          "name": "OAuth — Google Callback",
+          "name": "OAuth \u2014 Google Callback",
           "event": [
             {
               "listen": "test",
@@ -273,16 +518,36 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/auth/google/callback?code=AUTH_CODE&state=STATE",
-              "host": ["{{base_url}}"],
-              "path": ["api", "auth", "google", "callback"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "google",
+                "callback"
+              ],
               "query": [
-                { "key": "code",  "value": "AUTH_CODE" },
-                { "key": "state", "value": "STATE" }
+                {
+                  "key": "code",
+                  "value": "AUTH_CODE"
+                },
+                {
+                  "key": "state",
+                  "value": "STATE"
+                }
               ]
             },
             "description": "Callback dari Google OAuth. `code` diisi otomatis oleh Google setelah user approve."
@@ -292,23 +557,46 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Login successful.\",\n  \"data\": {\n    \"user\": { \"id\": 1, \"name\": \"Test User\", \"email\": \"test@gmail.com\", \"avatar\": null, \"email_verified_at\": null },\n    \"access_token\": \"1|abc...\",\n    \"refresh_token\": \"def...\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": 3600,\n    \"provider\": \"google\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "OAuth — GitHub Redirect",
+          "name": "OAuth \u2014 GitHub Redirect",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/auth/github/redirect", "host": ["{{base_url}}"], "path": ["api", "auth", "github", "redirect"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/github/redirect",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "github",
+                "redirect"
+              ]
+            },
             "description": "Redirect ke GitHub OAuth authorization page."
           }
         },
         {
-          "name": "OAuth — GitHub Callback",
+          "name": "OAuth \u2014 GitHub Callback",
           "event": [
             {
               "listen": "test",
@@ -329,16 +617,36 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/auth/github/callback?code=AUTH_CODE&state=STATE",
-              "host": ["{{base_url}}"],
-              "path": ["api", "auth", "github", "callback"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "github",
+                "callback"
+              ],
               "query": [
-                { "key": "code",  "value": "AUTH_CODE" },
-                { "key": "state", "value": "STATE" }
+                {
+                  "key": "code",
+                  "value": "AUTH_CODE"
+                },
+                {
+                  "key": "state",
+                  "value": "STATE"
+                }
               ]
             },
             "description": "Callback dari GitHub OAuth. `code` diisi otomatis oleh GitHub setelah user approve."
@@ -348,14 +656,24 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Login successful.\",\n  \"data\": {\n    \"user\": { \"id\": 2, \"name\": \"GitHub User\", \"email\": \"user@users.noreply.github.com\", \"avatar\": null, \"email_verified_at\": null },\n    \"access_token\": \"3|ghi...\",\n    \"refresh_token\": \"jkl...\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": 3600,\n    \"provider\": \"github\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "401 OAuth Error",
               "status": "Unauthorized",
               "code": 401,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"OAuth authentication failed.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
@@ -363,67 +681,137 @@
         {
           "name": "Verify Email",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/auth/email/verify?id=1&hash=HASH&expires=EXPIRY&signature=SIG",
-              "host": ["{{base_url}}"],
-              "path": ["api", "auth", "email", "verify"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "email",
+                "verify"
+              ],
               "query": [
-                { "key": "id",        "value": "1" },
-                { "key": "hash",      "value": "HASH",   "description": "sha1(email)" },
-                { "key": "expires",   "value": "EXPIRY", "description": "Unix timestamp" },
-                { "key": "signature", "value": "SIG",    "description": "Laravel signed URL signature" }
+                {
+                  "key": "id",
+                  "value": "1"
+                },
+                {
+                  "key": "hash",
+                  "value": "HASH",
+                  "description": "sha1(email)"
+                },
+                {
+                  "key": "expires",
+                  "value": "EXPIRY",
+                  "description": "Unix timestamp"
+                },
+                {
+                  "key": "signature",
+                  "value": "SIG",
+                  "description": "Laravel signed URL signature"
+                }
               ]
             },
-            "description": "Verifikasi email menggunakan signed URL yang dikirim via email.\n\n⚠️ URL ini di-generate otomatis oleh backend dan dikirim ke email user saat register.\n⚠️ URL valid selama 60 menit.\n⚠️ Tidak membutuhkan Bearer token."
+            "description": "Verifikasi email menggunakan signed URL yang dikirim via email.\n\n\u26a0\ufe0f URL ini di-generate otomatis oleh backend dan dikirim ke email user saat register.\n\u26a0\ufe0f URL valid selama 60 menit.\n\u26a0\ufe0f Tidak membutuhkan Bearer token."
           },
           "response": [
             {
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Email verified successfully.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "403 Invalid Signature",
               "status": "Forbidden",
               "code": 403,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired verification link.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 Wrong Hash",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Email verification failed.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Resend Verification Email 🔒",
+          "name": "Resend Verification Email \ud83d\udd12",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/auth/email/resend", "host": ["{{base_url}}"], "path": ["api", "auth", "email", "resend"] },
-            "description": "Kirim ulang email verifikasi ke user yang sedang login.\n\n⚠️ Hanya berhasil jika email belum terverifikasi."
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/email/resend",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "email",
+                "resend"
+              ]
+            },
+            "description": "Kirim ulang email verifikasi ke user yang sedang login.\n\n\u26a0\ufe0f Hanya berhasil jika email belum terverifikasi."
           },
           "response": [
             {
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Verification email sent.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 Already Verified",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Email is already verified.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
@@ -431,23 +819,49 @@
         {
           "name": "Forgot Password",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"test@example.com\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/auth/forgot-password", "host": ["{{base_url}}"], "path": ["api", "auth", "forgot-password"] },
-            "description": "Kirim email reset password.\n\n⚠️ Selalu return 200 meskipun email tidak ditemukan (mencegah email enumeration)."
+            "url": {
+              "raw": "{{base_url}}/api/auth/forgot-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Kirim email reset password.\n\n\u26a0\ufe0f Selalu return 200 meskipun email tidak ditemukan (mencegah email enumeration)."
           },
           "response": [
             {
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"If that email exists, a reset link has been sent.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
@@ -455,15 +869,36 @@
         {
           "name": "Reset Password",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"test@example.com\",\n  \"token\": \"RESET_TOKEN_FROM_EMAIL\",\n  \"password\": \"newpassword123\",\n  \"password_confirmation\": \"newpassword123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/auth/reset-password", "host": ["{{base_url}}"], "path": ["api", "auth", "reset-password"] },
+            "url": {
+              "raw": "{{base_url}}/api/auth/reset-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "reset-password"
+              ]
+            },
             "description": "Reset password menggunakan token dari email.\n\n`token` didapat dari link di email Forgot Password.\nSetelah reset, semua access token dan refresh token di-revoke."
           },
           "response": [
@@ -471,29 +906,58 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Password reset successfully.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 Invalid Token",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or expired reset token.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Change Password 🔒",
+          "name": "Change Password \ud83d\udd12",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"current_password\": \"password123\",\n  \"password\": \"newpassword123\",\n  \"password_confirmation\": \"newpassword123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/auth/change-password", "host": ["{{base_url}}"], "path": ["api", "auth", "change-password"] },
+            "url": {
+              "raw": "{{base_url}}/api/auth/change-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "change-password"
+              ]
+            },
             "description": "Ubah password untuk user yang sedang login.\n\nMembutuhkan `current_password` untuk verifikasi.\nSetelah berhasil, semua sesi lain (kecuali sesi aktif) akan di-revoke."
           },
           "response": [
@@ -501,20 +965,30 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Password changed successfully.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 Wrong Current Password",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"The current password is incorrect.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "List Active Sessions 🔒",
+          "name": "List Active Sessions \ud83d\udd12",
           "event": [
             {
               "listen": "test",
@@ -533,8 +1007,23 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/auth/sessions", "host": ["{{base_url}}"], "path": ["api", "auth", "sessions"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "sessions"
+              ]
+            },
             "description": "Tampilkan daftar refresh token aktif (sesi yang belum expired dan belum di-revoke).\n\nID sesi pertama otomatis tersimpan ke `session_id` untuk request Revoke Session."
           },
           "response": [
@@ -542,20 +1031,37 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Active sessions retrieved.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"created_at\": \"2026-05-04T00:00:00.000000Z\",\n      \"expires_at\": \"2026-06-03T00:00:00.000000Z\"\n    }\n  ],\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Revoke Session 🔒",
+          "name": "Revoke Session \ud83d\udd12",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/auth/sessions/{{session_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "auth", "sessions", "{{session_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "sessions",
+                "{{session_id}}"
+              ]
             },
             "description": "Revoke (logout) satu sesi spesifik berdasarkan ID refresh token.\n\nID sesi didapat dari endpoint List Active Sessions.\nHanya bisa revoke sesi milik user yang sedang login."
           },
@@ -564,14 +1070,24 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Session revoked successfully.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "404 Session Not Found",
               "status": "Not Found",
               "code": 404,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Session not found.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
@@ -580,65 +1096,119 @@
     },
     {
       "name": "03. User Profile",
-      "description": "User profile management — GET/PUT profile, avatar upload, address book CRUD, phone verification via OTP.\n\nSemua endpoint membutuhkan Bearer token 🔒\n\n**Avatar upload flow:**\n1. `POST /users/me/avatar` → dapat `avatar_upload_url` + `avatar_key`\n2. `PUT {{avatar_upload_url}}` langsung ke R2 (tidak melalui server)\n3. `POST /users/me/avatar/confirm` → simpan key ke DB\n\n**Phone verification flow:**\n1. `POST /users/phone/send-otp` → OTP dikirim via WA/SMS\n2. `POST /users/phone/verify` → verifikasi OTP → phone tersimpan",
+      "description": "User profile management \u2014 GET/PUT profile, avatar upload, address book CRUD, phone verification via OTP.\n\nSemua endpoint membutuhkan Bearer token \ud83d\udd12\n\n**Avatar upload flow:**\n1. `POST /users/me/avatar` \u2192 dapat `avatar_upload_url` + `avatar_key`\n2. `PUT {{avatar_upload_url}}` langsung ke R2 (tidak melalui server)\n3. `POST /users/me/avatar/confirm` \u2192 simpan key ke DB\n\n**Phone verification flow:**\n1. `POST /users/phone/send-otp` \u2192 OTP dikirim via WA/SMS\n2. `POST /users/phone/verify` \u2192 verifikasi OTP \u2192 phone tersimpan",
       "item": [
         {
-          "name": "Get Profile 🔒",
+          "name": "Get Profile \ud83d\udd12",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/users/me", "host": ["{{base_url}}"], "path": ["api", "users", "me"] },
-            "description": "Ambil full profile user yang sedang login.\n\nBerbeda dari `GET /api/auth/me` (hanya basic fields) — endpoint ini return semua field profil termasuk `phone`, `bio`, `avatar`, `phone_verified_at`."
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Ambil full profile user yang sedang login.\n\nBerbeda dari `GET /api/auth/me` (hanya basic fields) \u2014 endpoint ini return semua field profil termasuk `phone`, `bio`, `avatar`, `phone_verified_at`."
           },
           "response": [
             {
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Profile retrieved.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"email_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"phone\": \"+6281234567890\",\n    \"phone_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"avatar\": \"avatars/uuid.jpg\",\n    \"bio\": \"Hello, I am a buyer.\",\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "401 Unauthenticated",
               "status": "Unauthorized",
               "code": 401,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"message\": \"Unauthenticated.\"\n}"
             }
           ]
         },
         {
-          "name": "Update Profile 🔒",
+          "name": "Update Profile \ud83d\udd12",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Updated Name\",\n  \"bio\": \"I love shopping online.\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/users/me", "host": ["{{base_url}}"], "path": ["api", "users", "me"] },
-            "description": "Update profile user.\n\n⚠️ Field `phone` tidak dapat diubah melalui endpoint ini — gunakan flow `/phone/send-otp` + `/phone/verify`.\n⚠️ Semua field bersifat `sometimes` (partial update)."
+            "url": {
+              "raw": "{{base_url}}/api/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Update profile user.\n\n\u26a0\ufe0f Field `phone` tidak dapat diubah melalui endpoint ini \u2014 gunakan flow `/phone/send-otp` + `/phone/verify`.\n\u26a0\ufe0f Semua field bersifat `sometimes` (partial update)."
           },
           "response": [
             {
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Profile updated.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Updated Name\",\n    \"email\": \"test@example.com\",\n    \"email_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"phone\": \"+6281234567890\",\n    \"phone_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"avatar\": \"avatars/uuid.jpg\",\n    \"bio\": \"I love shopping online.\",\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 Phone Field Prohibited",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": { \"phone\": [\"The phone field is prohibited.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Upload Avatar — Get Presigned URL 🔒",
+          "name": "Upload Avatar \u2014 Get Presigned URL \ud83d\udd12",
           "event": [
             {
               "listen": "test",
@@ -646,13 +1216,16 @@
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "  const body = pm.response.json();",
-                  "  if (body.data) {",
-                  "    pm.collectionVariables.set('avatar_upload_url', body.data.upload_url || '');",
-                  "    pm.collectionVariables.set('avatar_key', body.data.key || '');",
-                  "  }",
-                  "  pm.test('Returns 201 with upload info', () => {",
+                  "  const data = body.data || {};",
+                  "  pm.collectionVariables.set(\"avatar_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"avatar_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "  pm.test(\"Returns 201 with upload info\", () => {",
                   "    pm.response.to.have.status(201);",
-                  "    pm.expect(body.data).to.have.all.keys('upload_url', 'key', 'public_url');",
+                  "    pm.expect(data).to.have.all.keys(\"upload_url\", \"key\", \"public_url\");",
                   "  });",
                   "}"
                 ],
@@ -662,13 +1235,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"filename\": \"profile-photo.jpg\",\n  \"mime\": \"image/jpeg\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/users/me/avatar", "host": ["{{base_url}}"], "path": ["api", "users", "me", "avatar"] },
+            "url": {
+              "raw": "{{base_url}}/api/users/me/avatar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "avatar"
+              ]
+            },
             "description": "Step 1: Generate presigned URL untuk upload foto profil ke Cloudflare R2.\n\n**mime** options: `image/jpeg`, `image/png`, `image/webp` (PDF/video tidak diizinkan)\n\n`avatar_upload_url` dan `avatar_key` otomatis tersimpan ke collection variables."
           },
           "response": [
@@ -676,14 +1269,24 @@
               "name": "201 Created",
               "status": "Created",
               "code": 201,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Avatar presigned URL generated.\",\n  \"data\": {\n    \"upload_url\": \"https://abc.r2.cloudflarestorage.com/avatars/uuid.jpg?X-Amz-...\",\n    \"key\": \"avatars/550e8400-e29b-41d4-a716-446655440000.jpg\",\n    \"public_url\": \"https://pub-xxx.r2.dev/avatars/550e8400-e29b-41d4-a716-446655440000.jpg\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 Invalid MIME",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": { \"mime\": [\"The selected mime is invalid.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
@@ -691,25 +1294,61 @@
         {
           "name": "Upload Avatar ke R2 (Direct PUT)",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "image/jpeg" }],
-            "body": { "mode": "file", "file": {} },
-            "url": { "raw": "{{avatar_upload_url}}", "host": ["{{avatar_upload_url}}"] },
-            "description": "Step 2: Upload file foto profil langsung ke Cloudflare R2 menggunakan presigned URL.\n\n⚠️ Request dikirim LANGSUNG ke R2 — tidak melalui server Laravel.\n⚠️ `Content-Type` harus sama dengan `mime` yang dipakai saat generate presigned URL.\n⚠️ Tidak butuh Authorization header.\n⚠️ Client wajib resize gambar ke maks 500×500px sebelum upload."
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "image/jpeg"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {}
+            },
+            "url": {
+              "raw": "{{avatar_upload_url}}",
+              "host": [
+                "{{avatar_upload_url}}"
+              ]
+            },
+            "description": "Step 2: Upload file foto profil langsung ke Cloudflare R2 menggunakan presigned URL.\n\n\u26a0\ufe0f Request dikirim LANGSUNG ke R2 \u2014 tidak melalui server Laravel.\n\u26a0\ufe0f `Content-Type` harus sama dengan `mime` yang dipakai saat generate presigned URL.\n\u26a0\ufe0f Tidak butuh Authorization header.\n\u26a0\ufe0f Client wajib resize gambar ke maks 500\u00d7500px sebelum upload."
           }
         },
         {
-          "name": "Confirm Avatar Upload 🔒",
+          "name": "Confirm Avatar Upload \ud83d\udd12",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"key\": \"{{avatar_key}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/users/me/avatar/confirm", "host": ["{{base_url}}"], "path": ["api", "users", "me", "avatar", "confirm"] },
+            "url": {
+              "raw": "{{base_url}}/api/users/me/avatar/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "avatar",
+                "confirm"
+              ]
+            },
             "description": "Step 3: Konfirmasi upload avatar berhasil. Backend validasi file exists di R2 dan update `users.avatar`."
           },
           "response": [
@@ -717,98 +1356,194 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Avatar updated.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"email_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"phone\": null,\n    \"phone_verified_at\": null,\n    \"avatar\": \"avatars/550e8400-e29b-41d4-a716-446655440000.jpg\",\n    \"bio\": null,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 File Not Found",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Avatar file not found in storage.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Send Phone OTP 🔒",
+          "name": "Send Phone OTP \ud83d\udd12",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"phone\": \"081234567890\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/users/phone/send-otp", "host": ["{{base_url}}"], "path": ["api", "users", "phone", "send-otp"] },
-            "description": "Kirim OTP 6 digit ke nomor HP via WhatsApp/SMS.\n\nNomor HP dinormalisasi ke format E.164 secara otomatis:\n- `081234567890` → `+6281234567890`\n- `+6281234567890` → `+6281234567890`\n\n⚠️ Rate limit: maks 3 request per 10 menit untuk satu nomor HP."
+            "url": {
+              "raw": "{{base_url}}/api/users/phone/send-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "phone",
+                "send-otp"
+              ]
+            },
+            "description": "Kirim OTP 6 digit ke nomor HP via WhatsApp/SMS.\n\nNomor HP dinormalisasi ke format E.164 secara otomatis:\n- `081234567890` \u2192 `+6281234567890`\n- `+6281234567890` \u2192 `+6281234567890`\n\n\u26a0\ufe0f Rate limit: maks 3 request per 10 menit untuk satu nomor HP."
           },
           "response": [
             {
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"OTP sent to the provided phone number.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 Phone Already Taken",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"This phone number is already registered.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "429 Rate Limited",
               "status": "Too Many Requests",
               "code": 429,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Too many OTP requests. Please try again later.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Verify Phone OTP 🔒",
+          "name": "Verify Phone OTP \ud83d\udd12",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"phone\": \"081234567890\",\n  \"otp\": \"123456\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/users/phone/verify", "host": ["{{base_url}}"], "path": ["api", "users", "phone", "verify"] },
-            "description": "Verifikasi OTP untuk nomor HP. Setelah berhasil, `users.phone` dan `users.phone_verified_at` diupdate.\n\n⚠️ Maks 5 percobaan salah sebelum OTP diinvalidasi.\n⚠️ OTP valid selama 5 menit."
+            "url": {
+              "raw": "{{base_url}}/api/users/phone/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "phone",
+                "verify"
+              ]
+            },
+            "description": "Verifikasi OTP untuk nomor HP. Setelah berhasil, `users.phone` dan `users.phone_verified_at` diupdate.\n\n\u26a0\ufe0f Maks 5 percobaan salah sebelum OTP diinvalidasi.\n\u26a0\ufe0f OTP valid selama 5 menit."
           },
           "response": [
             {
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Phone number verified.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"email_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"phone\": \"+6281234567890\",\n    \"phone_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"avatar\": null,\n    \"bio\": null,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 OTP Expired",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"OTP has expired. Please request a new one.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 OTP Max Retry",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"OTP invalidated after too many failed attempts.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "List Addresses 🔒",
+          "name": "List Addresses \ud83d\udd12",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/users/me/addresses", "host": ["{{base_url}}"], "path": ["api", "users", "me", "addresses"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/me/addresses",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses"
+              ]
+            },
             "description": "Ambil semua alamat pengiriman milik user yang login.\nUrutan: default address di atas, lalu sisanya by created_at DESC."
           },
           "response": [
@@ -816,13 +1551,18 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Addresses retrieved.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"label\": \"Rumah\",\n      \"recipient_name\": \"John Doe\",\n      \"phone\": \"+6281234567890\",\n      \"province\": \"Jawa Barat\",\n      \"city\": \"Bandung\",\n      \"district\": \"Cicendo\",\n      \"postal_code\": \"40172\",\n      \"street\": \"Jl. Merdeka No. 1\",\n      \"lat\": -6.9147,\n      \"lng\": 107.6098,\n      \"is_default\": true,\n      \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n    }\n  ],\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Create Address 🔒",
+          "name": "Create Address \ud83d\udd12",
           "event": [
             {
               "listen": "test",
@@ -842,13 +1582,33 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"label\": \"Rumah\",\n  \"recipient_name\": \"John Doe\",\n  \"phone\": \"+6281234567890\",\n  \"province\": \"Jawa Barat\",\n  \"city\": \"Bandung\",\n  \"district\": \"Cicendo\",\n  \"postal_code\": \"40172\",\n  \"street\": \"Jl. Merdeka No. 1\",\n  \"lat\": -6.9147,\n  \"lng\": 107.6098\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/users/me/addresses", "host": ["{{base_url}}"], "path": ["api", "users", "me", "addresses"] },
+            "url": {
+              "raw": "{{base_url}}/api/users/me/addresses",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses"
+              ]
+            },
             "description": "Tambah alamat pengiriman baru.\n\nAddress ID otomatis tersimpan ke `address_id` variable.\nAlamat pertama yang dibuat otomatis menjadi default."
           },
           "response": [
@@ -856,92 +1616,165 @@
               "name": "201 Created",
               "status": "Created",
               "code": 201,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Address created.\",\n  \"data\": {\n    \"id\": 1,\n    \"label\": \"Rumah\",\n    \"recipient_name\": \"John Doe\",\n    \"phone\": \"+6281234567890\",\n    \"province\": \"Jawa Barat\",\n    \"city\": \"Bandung\",\n    \"district\": \"Cicendo\",\n    \"postal_code\": \"40172\",\n    \"street\": \"Jl. Merdeka No. 1\",\n    \"lat\": -6.9147,\n    \"lng\": 107.6098,\n    \"is_default\": true,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 Validation Error",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": { \"street\": [\"The street field is required.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Get Address 🔒",
+          "name": "Get Address \ud83d\udd12",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/users/me/addresses/{{address_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "me", "addresses", "{{address_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses",
+                "{{address_id}}"
+              ]
             },
-            "description": "Ambil detail satu alamat berdasarkan ID.\n\n⚠️ Hanya bisa akses alamat milik sendiri — alamat orang lain return 403."
+            "description": "Ambil detail satu alamat berdasarkan ID.\n\n\u26a0\ufe0f Hanya bisa akses alamat milik sendiri \u2014 alamat orang lain return 403."
           },
           "response": [
             {
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Address retrieved.\",\n  \"data\": {\n    \"id\": 1,\n    \"label\": \"Rumah\",\n    \"recipient_name\": \"John Doe\",\n    \"phone\": \"+6281234567890\",\n    \"province\": \"Jawa Barat\",\n    \"city\": \"Bandung\",\n    \"district\": \"Cicendo\",\n    \"postal_code\": \"40172\",\n    \"street\": \"Jl. Merdeka No. 1\",\n    \"lat\": -6.9147,\n    \"lng\": 107.6098,\n    \"is_default\": true,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "403 Forbidden (IDOR)",
               "status": "Forbidden",
               "code": 403,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Update Address 🔒",
+          "name": "Update Address \ud83d\udd12",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"label\": \"Kantor\",\n  \"recipient_name\": \"John Doe\",\n  \"street\": \"Jl. Sudirman No. 88\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/users/me/addresses/{{address_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "me", "addresses", "{{address_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses",
+                "{{address_id}}"
+              ]
             },
-            "description": "Update satu atau lebih field alamat (partial update — semua field `sometimes`).\n\n⚠️ Hanya bisa update alamat milik sendiri."
+            "description": "Update satu atau lebih field alamat (partial update \u2014 semua field `sometimes`).\n\n\u26a0\ufe0f Hanya bisa update alamat milik sendiri."
           },
           "response": [
             {
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Address updated.\",\n  \"data\": {\n    \"id\": 1,\n    \"label\": \"Kantor\",\n    \"recipient_name\": \"John Doe\",\n    \"phone\": \"+6281234567890\",\n    \"province\": \"Jawa Barat\",\n    \"city\": \"Bandung\",\n    \"district\": \"Cicendo\",\n    \"postal_code\": \"40172\",\n    \"street\": \"Jl. Sudirman No. 88\",\n    \"lat\": -6.9147,\n    \"lng\": 107.6098,\n    \"is_default\": true,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "403 Forbidden",
               "status": "Forbidden",
               "code": 403,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Delete Address 🔒",
+          "name": "Delete Address \ud83d\udd12",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/users/me/addresses/{{address_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "me", "addresses", "{{address_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses",
+                "{{address_id}}"
+              ]
             },
-            "description": "Hapus alamat (soft delete — data tetap ada untuk preservasi history order).\n\nReturn 204 No Content.\n⚠️ Jika yang dihapus adalah default address, alamat berikutnya otomatis dijadikan default."
+            "description": "Hapus alamat (soft delete \u2014 data tetap ada untuk preservasi history order).\n\nReturn 204 No Content.\n\u26a0\ufe0f Jika yang dihapus adalah default address, alamat berikutnya otomatis dijadikan default."
           },
           "response": [
             {
@@ -954,20 +1787,39 @@
               "name": "403 Forbidden",
               "status": "Forbidden",
               "code": 403,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Set Default Address 🔒",
+          "name": "Set Default Address \ud83d\udd12",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/users/me/addresses/{{address_id}}/set-default",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "me", "addresses", "{{address_id}}", "set-default"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses",
+                "{{address_id}}",
+                "set-default"
+              ]
             },
             "description": "Set alamat tertentu sebagai default.\n\nProses dilakukan dalam satu DB transaction:\n1. Reset semua alamat user ke `is_default = false`\n2. Set alamat yang dipilih ke `is_default = true`"
           },
@@ -976,14 +1828,24 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Default address updated.\",\n  \"data\": {\n    \"id\": 2,\n    \"label\": \"Kantor\",\n    \"recipient_name\": \"John Doe\",\n    \"phone\": \"+6281234567890\",\n    \"province\": \"DKI Jakarta\",\n    \"city\": \"Jakarta Selatan\",\n    \"district\": \"Kebayoran Baru\",\n    \"postal_code\": \"12180\",\n    \"street\": \"Jl. Sudirman No. 88\",\n    \"lat\": -6.2208,\n    \"lng\": 106.8020,\n    \"is_default\": true,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "403 Forbidden",
               "status": "Forbidden",
               "code": 403,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
@@ -991,11 +1853,534 @@
       ]
     },
     {
-      "name": "02. Media (File Upload)",
-      "description": "Upload file ke Cloudflare R2 via Presigned URL (client-side direct upload)\n\n**Flow:**\n1. `POST /api/media/presigned-url` → dapat `upload_url` + `key`\n2. `PUT {upload_url}` dari client langsung ke R2 (tidak melalui server)\n3. `POST /api/media/confirm` dengan `key` → konfirmasi upload",
+      "name": "04. Merchant",
+      "description": "Merchant & Store module \u2014 Store registration, profile management, KYC upload, followers, and public store views.",
       "item": [
         {
-          "name": "Generate Presigned URL 🔒",
+          "name": "Register Store \ud83d\udd12",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  var json = pm.response.json();",
+                  "  pm.collectionVariables.set(\"store_slug\", json.data.slug);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Toko Saya\",\n  \"description\": \"Toko terbaik di kota\",\n  \"city\": \"Bandung\",\n  \"province\": \"Jawa Barat\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Store \ud83d\udd12",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Store \ud83d\udd12",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Toko Baru\",\n  \"description\": \"Deskripsi diperbarui\",\n  \"city\": \"Jakarta\",\n  \"province\": \"DKI Jakarta\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Merchant Dashboard \ud83d\udd12",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/merchant/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "dashboard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "KYC \u2014 Request Upload URL \ud83d\udd12",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"kyc_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"kyc_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ktp\",\n  \"filename\": \"ktp-saya.jpg\",\n  \"mime\": \"image/jpeg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/kyc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "kyc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "KYC \u2014 Confirm Upload \ud83d\udd12",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ktp\",\n  \"key\": \"{{kyc_key}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/kyc/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "kyc",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Public \u2014 Get Store by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stores/{{store_slug}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "stores",
+                "{{store_slug}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Public \u2014 Get Store Followers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stores/{{store_slug}}/followers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "stores",
+                "{{store_slug}}",
+                "followers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Follow Store \ud83d\udd12",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stores/{{store_slug}}/follow",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "stores",
+                "{{store_slug}}",
+                "follow"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unfollow Store \ud83d\udd12",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stores/{{store_slug}}/follow",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "stores",
+                "{{store_slug}}",
+                "follow"
+              ]
+            }
+          }
+        },
+        {
+          "name": "KYC \u2014 Re-upload URL (PUT, rejected only) \ud83d\udd12",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"kyc_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"kyc_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ktp\",\n  \"filename\": \"ktp-baru.jpg\",\n  \"mime\": \"image/jpeg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/kyc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "kyc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "KYC \u2014 Confirm Re-upload (PUT) \ud83d\udd12",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ktp\",\n  \"key\": \"{{kyc_key}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/kyc/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "kyc",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logo \u2014 Request Upload URL \ud83d\udd12",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"logo_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"logo_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"logo.png\",\n  \"mime\": \"image/png\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/logo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "logo"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logo \u2014 Confirm Upload \ud83d\udd12",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"{{logo_key}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/logo/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "logo",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logo \u2014 Delete \ud83d\udd12",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/logo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "logo"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Banner \u2014 Request Upload URL \ud83d\udd12",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"banner_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"banner_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"banner.jpg\",\n  \"mime\": \"image/jpeg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/banner",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "banner"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Banner \u2014 Confirm Upload \ud83d\udd12",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"{{banner_key}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/banner/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "banner",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Banner \u2014 Delete \ud83d\udd12",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/banner",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "banner"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Media (File Upload)",
+      "description": "Upload file ke Cloudflare R2 via Presigned URL (client-side direct upload)\n\n**Flow:**\n1. `POST /api/media/presigned-url` \u2192 dapat `upload_url` + `key`\n2. `PUT {upload_url}` dari client langsung ke R2 (tidak melalui server)\n3. `POST /api/media/confirm` dengan `key` \u2192 konfirmasi upload",
+      "item": [
+        {
+          "name": "Generate Presigned URL \ud83d\udd12",
           "event": [
             {
               "listen": "test",
@@ -1020,13 +2405,32 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"folder\": \"products\",\n  \"filename\": \"product-photo.jpg\",\n  \"mime\": \"image/jpeg\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/media/presigned-url", "host": ["{{base_url}}"], "path": ["api", "media", "presigned-url"] },
+            "url": {
+              "raw": "{{base_url}}/api/media/presigned-url",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "presigned-url"
+              ]
+            },
             "description": "Generate presigned PUT URL untuk upload langsung ke Cloudflare R2.\n\n**folder** options: `avatars`, `store-assets`, `products`, `reviews`, `kyc-documents`\n\n**mime** options: `image/jpeg`, `image/png`, `image/webp`, `image/gif`, `video/mp4`, `application/pdf`\n\nURL yang dihasilkan valid selama 300 detik (5 menit)."
           },
           "response": [
@@ -1034,14 +2438,24 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Presigned URL generated.\",\n  \"data\": {\n    \"upload_url\": \"https://abc.r2.cloudflarestorage.com/products/uuid.jpg?X-Amz-...\",\n    \"key\": \"products/550e8400-e29b-41d4-a716-446655440000.jpg\",\n    \"public_url\": \"https://pub-xxx.r2.dev/products/550e8400-e29b-41d4-a716-446655440000.jpg\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 Invalid Folder",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": { \"folder\": [\"The selected folder is invalid.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
@@ -1049,21 +2463,31 @@
         {
           "name": "Upload File ke R2 (Direct PUT)",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "image/jpeg" }
+              {
+                "key": "Content-Type",
+                "value": "image/jpeg"
+              }
             ],
             "body": {
               "mode": "file",
               "file": {}
             },
-            "url": { "raw": "{{media_upload_url}}", "host": ["{{media_upload_url}}"] },
-            "description": "Upload file langsung ke Cloudflare R2 menggunakan presigned URL dari step sebelumnya.\n\n⚠️ Request ini dikirim LANGSUNG ke R2 — tidak melalui server Laravel.\n⚠️ `Content-Type` harus sama persis dengan `mime` yang didaftarkan saat generate presigned URL.\n⚠️ Tidak butuh Authorization header."
+            "url": {
+              "raw": "{{media_upload_url}}",
+              "host": [
+                "{{media_upload_url}}"
+              ]
+            },
+            "description": "Upload file langsung ke Cloudflare R2 menggunakan presigned URL dari step sebelumnya.\n\n\u26a0\ufe0f Request ini dikirim LANGSUNG ke R2 \u2014 tidak melalui server Laravel.\n\u26a0\ufe0f `Content-Type` harus sama persis dengan `mime` yang didaftarkan saat generate presigned URL.\n\u26a0\ufe0f Tidak butuh Authorization header."
           }
         },
         {
-          "name": "Confirm Upload 🔒",
+          "name": "Confirm Upload \ud83d\udd12",
           "event": [
             {
               "listen": "test",
@@ -1086,13 +2510,32 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"key\": \"{{media_key}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/media/confirm", "host": ["{{base_url}}"], "path": ["api", "media", "confirm"] },
+            "url": {
+              "raw": "{{base_url}}/api/media/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "confirm"
+              ]
+            },
             "description": "Konfirmasi bahwa file sudah berhasil di-upload ke R2.\nBackend akan validasi file exists di R2, hapus upload session dari Redis, dan return public URL."
           },
           "response": [
@@ -1100,29 +2543,57 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Upload confirmed.\",\n  \"data\": {\n    \"public_url\": \"https://pub-xxx.r2.dev/products/550e8400-e29b-41d4-a716-446655440000.jpg\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             },
             {
               "name": "422 File Not Found",
               "status": "Unprocessable Content",
               "code": 422,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": false,\n  \"message\": \"File not found in storage. Upload may have failed.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
         },
         {
-          "name": "Delete File 🔒",
+          "name": "Delete File \ud83d\udd12",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"key\": \"{{media_key}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/media", "host": ["{{base_url}}"], "path": ["api", "media"] },
+            "url": {
+              "raw": "{{base_url}}/api/media",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "media"
+              ]
+            },
             "description": "Hapus file dari Cloudflare R2.\n\nReturn 204 No Content (tanpa body)."
           },
           "response": [
@@ -1141,7 +2612,7 @@
       "description": "Pembayaran via Xendit gateway",
       "item": [
         {
-          "name": "Create Payment 🔒",
+          "name": "Create Payment \ud83d\udd12",
           "event": [
             {
               "listen": "test",
@@ -1164,23 +2635,48 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept",            "value": "application/json" },
-              { "key": "X-Idempotency-Key", "value": "{{$guid}}",       "description": "Unique key per request — mencegah double payment" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Unique key per request \u2014 mencegah double payment"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"amount\": 150000,\n  \"description\": \"Payment for Order #123\",\n  \"currency\": \"IDR\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/payments", "host": ["{{base_url}}"], "path": ["api", "payments"] },
-            "description": "Buat invoice pembayaran via Xendit.\n\n⚠️ Selalu sertakan header `X-Idempotency-Key` (UUID) untuk mencegah double charge.\n\n`amount` dalam **satuan Rupiah** (min: Rp 10.000 = `10000`)."
+            "url": {
+              "raw": "{{base_url}}/api/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments"
+              ]
+            },
+            "description": "Buat invoice pembayaran via Xendit.\n\n\u26a0\ufe0f Selalu sertakan header `X-Idempotency-Key` (UUID) untuk mencegah double charge.\n\n`amount` dalam **satuan Rupiah** (min: Rp 10.000 = `10000`)."
           },
           "response": [
             {
               "name": "201 Created",
               "status": "Created",
               "code": 201,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully.\",\n  \"data\": {\n    \"id\": 1,\n    \"external_id\": \"INV-xxx\",\n    \"invoice_url\": \"https://checkout.xendit.co/web/...\",\n    \"amount\": 150000,\n    \"status\": \"pending\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
             }
           ]
@@ -1189,24 +2685,47 @@
     },
     {
       "name": "Webhooks",
-      "description": "Webhook endpoints — tidak membutuhkan auth, verifikasi via signature",
+      "description": "Webhook endpoints \u2014 tidak membutuhkan auth, verifikasi via signature",
       "item": [
         {
           "name": "Xendit Webhook",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
-              { "key": "Accept",           "value": "application/json" },
-              { "key": "x-callback-token", "value": "YOUR_XENDIT_CALLBACK_TOKEN", "description": "Xendit webhook verification token dari .env XENDIT_WEBHOOK_TOKEN" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "x-callback-token",
+                "value": "YOUR_XENDIT_CALLBACK_TOKEN",
+                "description": "Xendit webhook verification token dari .env XENDIT_WEBHOOK_TOKEN"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"id\": \"invoice_xxx\",\n  \"external_id\": \"INV-order_123\",\n  \"status\": \"PAID\",\n  \"amount\": 150000,\n  \"paid_amount\": 150000,\n  \"paid_at\": \"2026-05-04T12:00:00.000Z\",\n  \"payer_email\": \"buyer@example.com\",\n  \"payment_method\": \"BANK_TRANSFER\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{base_url}}/api/webhooks/xendit", "host": ["{{base_url}}"], "path": ["api", "webhooks", "xendit"] },
-            "description": "Webhook callback dari Xendit ketika pembayaran berhasil.\n\n⚠️ Endpoint ini PUBLIC — tidak butuh Bearer token.\n⚠️ Verifikasi dilakukan via `x-callback-token` header.\n\n**status** values: `PAID`, `EXPIRED`, `SETTLEMENT`"
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/xendit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "webhooks",
+                "xendit"
+              ]
+            },
+            "description": "Webhook callback dari Xendit ketika pembayaran berhasil.\n\n\u26a0\ufe0f Endpoint ini PUBLIC \u2014 tidak butuh Bearer token.\n\u26a0\ufe0f Verifikasi dilakukan via `x-callback-token` header.\n\n**status** values: `PAID`, `EXPIRED`, `SETTLEMENT`"
           }
         }
       ]
@@ -1217,10 +2736,20 @@
         {
           "name": "Health Check",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{base_url}}/up", "host": ["{{base_url}}"], "path": ["up"] },
+            "url": {
+              "raw": "{{base_url}}/up",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "up"
+              ]
+            },
             "description": "Laravel health check endpoint. Returns 200 jika server UP."
           },
           "response": [
