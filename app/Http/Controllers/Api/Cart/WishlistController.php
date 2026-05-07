@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Cart;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Cart\AddWishlistItemRequest;
 use App\Http\Resources\Cart\WishlistResource;
 use App\Http\Responses\ApiResponse;
 use App\Services\Cart\WishlistService;
@@ -22,10 +23,8 @@ class WishlistController extends Controller
         return ApiResponse::success('Wishlist retrieved.', new WishlistResource($wishlist));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(AddWishlistItemRequest $request): JsonResponse
     {
-        $request->validate(['product_id' => ['required', 'integer', 'exists:products,id']]);
-
         $wishlist = $this->wishlist->add($request->user(), $request->integer('product_id'));
 
         return ApiResponse::success('Product added to wishlist.', new WishlistResource($wishlist), 201);
