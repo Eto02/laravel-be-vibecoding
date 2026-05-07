@@ -36,12 +36,13 @@ class StoreTest extends TestCase
 
     // ── GET /stores/{slug}/products ───────────────────────────────────────────
 
-    public function test_products_endpoint_returns_501(): void
+    public function test_public_can_view_store_products(): void
     {
         $store = Store::factory()->create();
 
         $this->getJson("/api/stores/{$store->slug}/products")
-            ->assertStatus(501);
+            ->assertStatus(200)
+            ->assertJsonStructure(['data', 'meta']);
     }
 
     // ── GET /stores/{slug}/followers ──────────────────────────────────────────
