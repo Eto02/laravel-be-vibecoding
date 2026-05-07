@@ -3103,6 +3103,23 @@
                   "code": 200,
                   "body": "{\n  \"success\": true,\n  \"message\": \"Products retrieved.\",\n  \"data\": [\n    {\n      \"id\": 1, \"name\": \"Sepatu Lari\", \"slug\": \"sepatu-lari\", \"status\": \"active\",\n      \"min_price_cents\": 25000000, \"min_price\": \"Rp 250.000\",\n      \"max_price_cents\": 50000000, \"max_price\": \"Rp 500.000\",\n      \"total_stock\": 100, \"sold_count\": 0, \"rating_avg\": 0, \"thumbnail\": null,\n      \"store\": { \"id\": 1, \"name\": \"Toko Keren\", \"slug\": \"toko-keren\" },\n      \"category\": { \"id\": 2, \"name\": \"Olahraga\", \"slug\": \"olahraga\" },\n      \"created_at\": \"2026-05-08T00:00:00.000000Z\"\n    }\n  ],\n  \"meta\": { \"timestamp\": \"2026-05-08T00:00:00.000000Z\", \"pagination\": { \"current_page\": 1, \"last_page\": 1, \"per_page\": 20, \"total\": 1 } }\n}"
                 }
+              ],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  const body = pm.response.json();",
+                      "  if (body.data && body.data.length > 0) {",
+                      "    pm.collectionVariables.set('product_slug', body.data[0].slug);",
+                      "    pm.collectionVariables.set('wishlist_product_id', body.data[0].id);",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
               ]
             },
             {
@@ -3111,15 +3128,18 @@
                 {
                   "listen": "test",
                   "script": {
-                    "type": "text/javascript",
                     "exec": [
                       "if (pm.response.code === 200) {",
                       "  const body = pm.response.json();",
                       "  if (body.data && body.data.slug) {",
                       "    pm.collectionVariables.set('product_slug', body.data.slug);",
                       "  }",
+                      "  if (body.data && body.data.id) {",
+                      "    pm.collectionVariables.set('wishlist_product_id', body.data.id);",
+                      "  }",
                       "}"
-                    ]
+                    ],
+                    "type": "text/javascript"
                   }
                 }
               ],
@@ -4157,7 +4177,7 @@
                     "items"
                   ]
                 },
-                "description": "Add a product to wishlist. product_id not variant_id \u2014 buyer hasn't chosen size/color yet.",
+                "description": "Add a product to wishlist.\n\n`product_id` (bukan variant_id) \u2014 buyer belum pilih ukuran/warna.\n\n**`{{wishlist_product_id}}`** otomatis terisi saat:\n- `GET /api/products` (List Products) \u2192 ambil produk pertama\n- `GET /api/products/{slug}` (Get Product Detail) \u2192 ambil produk yang sedang dilihat",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"product_id\": \"{{wishlist_product_id}}\"\n}",
