@@ -120,6 +120,16 @@
       "key": "category_slug",
       "value": "elektronik",
       "type": "string"
+    },
+    {
+      "key": "cart_item_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "wishlist_product_id",
+      "value": "",
+      "type": "string"
     }
   ],
   "auth": {
@@ -3760,6 +3770,521 @@
                   "status": "No Content",
                   "code": 204,
                   "body": ""
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06. Cart",
+      "item": [
+        {
+          "name": "Cart",
+          "item": [
+            {
+              "name": "[GET] Get Cart \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart"
+                  ]
+                },
+                "description": "Returns cart grouped by store. Requires auth."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Has stores array\", () => {",
+                      "    const j = pm.response.json();",
+                      "    pm.expect(j.data).to.have.property('stores');",
+                      "    pm.expect(j.data.stores).to.be.an('array');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[POST] Add Item to Cart \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items"
+                  ]
+                },
+                "description": "Add a product variant to cart. Increments quantity if variant already in cart.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"variant_id\": \"{{variant_id}}\",\n  \"quantity\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [
+                {
+                  "name": "201 \u2014 Item Added",
+                  "originalRequest": {},
+                  "status": "Created",
+                  "code": 201,
+                  "_postman_previewlanguage": "json",
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Item added to cart.\",\n  \"data\": {\n    \"total_items\": 2,\n    \"total_price_cents\": 300000,\n    \"total_price\": \"Rp 3.000\",\n    \"stores\": [\n      {\n        \"store_id\": 1,\n        \"store_name\": \"Toko A\",\n        \"store_slug\": \"toko-a\",\n        \"items\": [\n          {\n            \"id\": 12,\n            \"product_id\": 5,\n            \"product_name\": \"Sepatu Nike\",\n            \"product_slug\": \"sepatu-nike\",\n            \"variant_id\": 8,\n            \"variant_sku\": \"NK-RED-42\",\n            \"variant_attributes\": {\n              \"warna\": \"Merah\",\n              \"ukuran\": \"42\"\n            },\n            \"quantity\": 2,\n            \"price_snapshot_cents\": 150000,\n            \"price_snapshot\": \"Rp 1.500\",\n            \"subtotal_cents\": 300000,\n            \"subtotal\": \"Rp 3.000\",\n            \"current_stock\": 10,\n            \"is_available\": true,\n            \"unavailable_reason\": null,\n            \"thumbnail_url\": null\n          }\n        ],\n        \"store_subtotal_cents\": 300000,\n        \"store_subtotal\": \"Rp 3.000\"\n      }\n    ]\n  },\n  \"meta\": {\n    \"timestamp\": \"2026-05-07T12:00:00Z\"\n  }\n}"
+                },
+                {
+                  "name": "422 \u2014 Stock Exceeded",
+                  "originalRequest": {},
+                  "status": "Unprocessable Entity",
+                  "code": 422,
+                  "_postman_previewlanguage": "json",
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Stok tersedia: 3\",\n  \"meta\": {\n    \"timestamp\": \"2026-05-07T12:00:00Z\"\n  }\n}"
+                }
+              ],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                      "pm.test(\"Cart has items\", () => {",
+                      "    const j = pm.response.json();",
+                      "    pm.expect(j.data.total_items).to.be.above(0);",
+                      "    // Save first cart item id for update/delete tests",
+                      "    if (j.data.stores && j.data.stores[0] && j.data.stores[0].items[0]) {",
+                      "        pm.collectionVariables.set('cart_item_id', j.data.stores[0].items[0].id);",
+                      "    }",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[PUT] Update Cart Item Qty \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items/{{cart_item_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items",
+                    "{{cart_item_id}}"
+                  ]
+                },
+                "description": "Update quantity of a specific cart item. Min 1 \u2014 use DELETE to remove.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"quantity\": 3\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DELETE] Remove Cart Item \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart/items/{{cart_item_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart",
+                    "items",
+                    "{{cart_item_id}}"
+                  ]
+                },
+                "description": "Remove a single item from cart."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DELETE] Clear Cart \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cart",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cart"
+                  ]
+                },
+                "description": "Remove ALL items from cart. Called after checkout."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Wishlist",
+          "item": [
+            {
+              "name": "[GET] Get Wishlist \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wishlist",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wishlist"
+                  ]
+                },
+                "description": "Returns all wishlisted products with current price/stock/availability."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Has items array\", () => {",
+                      "    pm.expect(pm.response.json().data).to.have.property('items');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[POST] Add to Wishlist \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wishlist/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wishlist",
+                    "items"
+                  ]
+                },
+                "description": "Add a product to wishlist. product_id not variant_id \u2014 buyer hasn't chosen size/color yet.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"product_id\": \"{{wishlist_product_id}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [
+                {
+                  "name": "422 \u2014 Already Wishlisted",
+                  "originalRequest": {},
+                  "status": "Unprocessable Entity",
+                  "code": 422,
+                  "_postman_previewlanguage": "json",
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Product is already in your wishlist.\",\n  \"meta\": {\n    \"timestamp\": \"2026-05-07T12:00:00Z\"\n  }\n}"
+                }
+              ],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DELETE] Remove from Wishlist \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wishlist/items/{{wishlist_product_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wishlist",
+                    "items",
+                    "{{wishlist_product_id}}"
+                  ]
+                },
+                "description": "Remove a product from wishlist by product_id (not item_id)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[GET] Check Wishlist Status \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wishlist/items/{{wishlist_product_id}}/check",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wishlist",
+                    "items",
+                    "{{wishlist_product_id}}",
+                    "check"
+                  ]
+                },
+                "description": "Quick check if a product is in user's wishlist. Used for UI toggle button."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Has is_wishlisted field\", () => {",
+                      "    pm.expect(pm.response.json().data).to.have.property('is_wishlisted');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
                 }
               ]
             }

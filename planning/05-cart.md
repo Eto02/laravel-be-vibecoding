@@ -1,5 +1,5 @@
 # MODULE 5 — Cart & Wishlist
-**Priority:** 🟠 P1 | **Status:** ⬜ Belum | **Sprint:** 5
+**Priority:** 🟠 P1 | **Status:** 🟡 In Review | **Sprint:** 5
 
 ---
 
