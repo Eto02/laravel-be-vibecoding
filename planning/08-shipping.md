@@ -88,7 +88,8 @@ tests/Feature/Api/Shipping/ShippingTest.php
 | Service | Kegunaan |
 |---|---|
 | `CacheService` | Cache ongkir hasil kalkulasi (TTL 3600s), cache provinces/cities |
-| `NotificationService` | Notif saat status pengiriman berubah |
+
+> **Notifikasi:** Gunakan Event-driven approach (CLAUDE.md rule 11). Dispatch `Shipping\ShipmentStatusChanged` event. Listener `NotifyShipmentUpdate` (implements `ShouldQueue`) menangani push/email — jangan inject `NotificationService` langsung ke `ShippingService`.
 
 ---
 

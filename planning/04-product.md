@@ -116,6 +116,11 @@ PUT    /api/merchant/products/{product}/media/reorder   [auth:sanctum, merchant]
 POST   /api/merchant/products/{product}/variants        [auth:sanctum, merchant]  → tambah variant
 PUT    /api/merchant/products/{product}/variants/{variant} [auth:sanctum, merchant]
 DELETE /api/merchant/products/{product}/variants/{variant} [auth:sanctum, merchant]
+
+# ── Admin — Category Management ──────────────────────────────────────────────
+POST   /api/admin/categories                            [auth:sanctum, admin]     → create (level auto-computed)
+PUT    /api/admin/categories/{slug}                     [auth:sanctum, admin]     → update
+DELETE /api/admin/categories/{slug}                     [auth:sanctum, admin]     → 422 if has children/products, 204 on success
 ```
 
 > **Route Model Binding:**
@@ -158,6 +163,10 @@ app/Http/Controllers/Api/Product/CategoryController.php
 app/Http/Controllers/Api/Product/ProductMediaController.php
 app/Http/Controllers/Api/Product/ProductVariantController.php
 
+# Enums / Middleware
+app/Enums/UserRole.php                                         # buyer|merchant|admin (string-backed)
+app/Http/Middleware/EnsureAdminRole.php                        # alias 'admin' — checks user->isAdmin()
+
 # Form Requests
 app/Http/Requests/Product/StoreProductRequest.php
 app/Http/Requests/Product/UpdateProductRequest.php
@@ -167,6 +176,8 @@ app/Http/Requests/Product/UpdateVariantRequest.php
 app/Http/Requests/Product/StoreProductMediaRequest.php         # filename + mime
 app/Http/Requests/Product/ConfirmProductMediaRequest.php       # key
 app/Http/Requests/Product/ReorderProductMediaRequest.php       # array of {id, sort_order}
+app/Http/Requests/Product/StoreCategoryRequest.php             # name, slug (regex /^[a-z0-9-]+$/), parent_id, icon
+app/Http/Requests/Product/UpdateCategoryRequest.php            # all sometimes, slug unique ignoring current
 
 # Resources
 app/Http/Resources/Product/ProductResource.php                 # detail view
@@ -368,5 +379,11 @@ Update `PublicStoreController::products()` — saat ini return 501. Sprint 4 del
 - [x] Buat routes/api/product.php
 - [x] Update `PublicStoreController::products()` — ganti 501 stub dengan implementasi nyata
 - [x] Buat Feature Tests + Unit Tests
-- [ ] Update Postman collection (folder "05. Product")
+- [x] Buat `UserRole` enum + `role` column migration + `EnsureAdminRole` middleware + register di `bootstrap/app.php`
+- [x] Buat `StoreCategoryRequest`, `UpdateCategoryRequest`
+- [x] Tambah admin category CRUD ke `CategoryController` (`store`, `update`, `destroy`)
+- [x] Tambah admin routes ke `routes/api/product.php`
+- [x] Tambah `admin()` factory state ke `UserFactory`
+- [x] Tambah 8 admin category tests ke `CategoryTest`
+- [x] Update Postman collection (folder "05. Product")
 - [x] Update planning/04-product.md → Status ✅ Selesai

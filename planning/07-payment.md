@@ -116,7 +116,8 @@ tests/Feature/Api/Payment/WebhookTest.php        (update)
 | Service | Kegunaan |
 |---|---|
 | `EmailService` | `PaymentSuccessMail`, payment receipt |
-| `NotificationService` | Push notif pembayaran sukses/gagal |
+
+> **Notifikasi:** Gunakan Event-driven approach (CLAUDE.md rule 11). `PaymentCaptured` event sudah terdaftar — tambahkan Listener `SendPushPaymentSuccess` (implements `ShouldQueue`) yang mengirim push via FCM langsung, bukan via `NotificationService`.
 
 ---
 

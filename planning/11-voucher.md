@@ -38,14 +38,14 @@ GET  /api/loyalty/transactions                 [auth]
 POST /api/loyalty/redeem                       [auth]
 
 # Merchant
-GET|POST /api/merchant/vouchers                [auth:merchant]
-PUT|DELETE /api/merchant/vouchers/{id}         [auth:merchant]
-GET|POST /api/merchant/flash-sales             [auth:merchant]
-PUT /api/merchant/flash-sales/{id}             [auth:merchant]
+GET|POST /api/merchant/vouchers                [auth:sanctum, merchant]
+PUT|DELETE /api/merchant/vouchers/{id}         [auth:sanctum, merchant]
+GET|POST /api/merchant/flash-sales             [auth:sanctum, merchant]
+PUT /api/merchant/flash-sales/{id}             [auth:sanctum, merchant]
 
 # Admin
-GET|POST /api/admin/vouchers                   [auth:admin]
-GET|POST /api/admin/flash-sales                [auth:admin]
+GET|POST /api/admin/vouchers                   [auth:sanctum, admin]
+GET|POST /api/admin/flash-sales                [auth:sanctum, admin]
 ```
 
 ---
@@ -83,7 +83,8 @@ tests/Feature/Api/Voucher/FlashSaleTest.php
 | Service | Kegunaan |
 |---|---|
 | `CacheService` | Cache flash sale data & countdown (TTL pendek ~60s) |
-| `NotificationService` | Alert flash sale akan mulai, voucher hampir habis |
+
+> **Notifikasi:** Gunakan Event-driven approach (CLAUDE.md rule 11). Dispatch `Voucher\FlashSaleStarting` event. Listener `NotifyFlashSaleStarting` (implements `ShouldQueue`) menangani push/email — jangan inject `NotificationService` langsung ke service.
 
 ---
 

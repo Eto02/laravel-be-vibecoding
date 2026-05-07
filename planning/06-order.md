@@ -68,10 +68,10 @@ POST /api/orders/{id}/confirm-received         [auth]
 POST /api/orders/{id}/disputes                 [auth]
 
 # Merchant
-GET  /api/merchant/orders                      [auth:merchant]
-GET  /api/merchant/orders/{id}                 [auth:merchant]
-PUT  /api/merchant/orders/{id}/confirm         [auth:merchant]
-PUT  /api/merchant/orders/{id}/ship            [auth:merchant]
+GET  /api/merchant/orders                      [auth:sanctum, merchant]
+GET  /api/merchant/orders/{id}                 [auth:sanctum, merchant]
+PUT  /api/merchant/orders/{id}/confirm         [auth:sanctum, merchant]
+PUT  /api/merchant/orders/{id}/ship            [auth:sanctum, merchant]
 ```
 
 ---
