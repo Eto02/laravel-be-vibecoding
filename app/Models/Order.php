@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,6 +25,7 @@ class Order extends Model
         'total',
         'shipping_courier',
         'shipping_service',
+        'tracking_number',
         'status',
         'payment_due_at',
         'notes',
@@ -65,6 +67,11 @@ class Order extends Model
     public function dispute(): HasOne
     {
         return $this->hasOne(OrderDispute::class);
+    }
+
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->where('status', OrderStatus::Pending);
     }
 
     public function isPending(): bool
