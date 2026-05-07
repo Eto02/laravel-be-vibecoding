@@ -11,6 +11,8 @@ use App\Models\Product;
 use App\Models\ProductMedia;
 use App\Models\ProductVariant;
 use App\Models\Store;
+use App\Models\User;
+use App\Models\Wishlist;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
@@ -135,14 +137,23 @@ class ProductService
         return Product::where('store_id', $storeId)->latest()->paginate(20);
     }
 
-    public function getProductDetail(string $slug): Product
+    public function getProductDetail(string $slug, ?User $user = null): Product
     {
-        return $this->cache->remember("product:detail:{$slug}", 300, fn () =>
+        $product = $this->cache->remember("product:detail:{$slug}", 300, fn () =>
             Product::with(['store:id,name,slug', 'category:id,name,slug', 'variants', 'media'])
                 ->where('slug', $slug)
                 ->where('status', ProductStatus::Active)
                 ->firstOrFail()
         );
+
+        if ($user) {
+            $wishlist = Wishlist::where('user_id', $user->id)->first();
+            $product->is_wishlisted = $wishlist
+                ? $wishlist->items()->where('product_id', $product->id)->exists()
+                : false;
+        }
+
+        return $product;
     }
 
     // ── Media ─────────────────────────────────────────────────────────────────
