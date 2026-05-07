@@ -9,7 +9,15 @@ use App\Http\Controllers\Api\Product\ProductVariantController;
 
 Route::prefix('categories')->name('product.categories.')->group(function () {
     Route::get('/', [CategoryController::class, 'index'])->name('index');
-    Route::get('/{slug}', [CategoryController::class, 'show'])->name('show');
+    Route::get('/{category:slug}', [CategoryController::class, 'show'])->name('show');
+});
+
+// ── Admin — Category Management ───────────────────────────────────────────────
+
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin/categories')->name('admin.categories.')->group(function () {
+    Route::post('/', [CategoryController::class, 'store'])->name('store');
+    Route::put('/{category:slug}', [CategoryController::class, 'update'])->name('update');
+    Route::delete('/{category:slug}', [CategoryController::class, 'destroy'])->name('destroy');
 });
 
 Route::prefix('products')->name('product.products.')->group(function () {

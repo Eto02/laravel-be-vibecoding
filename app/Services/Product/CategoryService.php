@@ -44,10 +44,21 @@ class CategoryService
 
     public function update(Category $category, array $data): Category
     {
+        $oldSlug = $category->slug;
         $category->update($data);
         $this->cache->forget('category:tree');
-        $this->cache->forget("category:slug:{$category->slug}");
+        $this->cache->forget("category:slug:{$oldSlug}");
+        if (isset($data['slug']) && $data['slug'] !== $oldSlug) {
+            $this->cache->forget("category:slug:{$data['slug']}");
+        }
         return $category->fresh();
+    }
+
+    public function delete(Category $category): void
+    {
+        $this->cache->forget('category:tree');
+        $this->cache->forget("category:slug:{$category->slug}");
+        $category->delete();
     }
 
     private function buildTree(Collection $all, ?int $parentId): array
