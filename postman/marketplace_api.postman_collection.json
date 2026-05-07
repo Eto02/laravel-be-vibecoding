@@ -115,6 +115,11 @@
       "key": "variant_id",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "category_slug",
+      "value": "elektronik",
+      "type": "string"
     }
   ],
   "auth": {
@@ -2747,7 +2752,7 @@
     },
     {
       "name": "05. Product",
-      "description": "Product Catalog — Categories, Products (CRUD), Variants, dan Media (Presigned Upload).\n\n**Flow Media Upload:**\n1. `POST /api/merchant/products/{product}/media` → dapat `upload_url` + `key` (tersimpan ke `media_upload_url` dan `media_key`)\n2. `PUT {{media_upload_url}}` (folder Media > Upload File ke R2) — kirim langsung ke R2\n3. `POST /api/merchant/products/{product}/media/confirm` dengan `key: {{media_key}}` — simpan ke DB",
+      "description": "Product Catalog \u2014 Categories, Products (CRUD), Variants, dan Media (Presigned Upload).\n\n**Flow Media Upload:**\n1. `POST /api/merchant/products/{product}/media` \u2192 dapat `upload_url` + `key` (tersimpan ke `media_upload_url` dan `media_key`)\n2. `PUT {{media_upload_url}}` (folder Media > Upload File ke R2) \u2014 kirim langsung ke R2\n3. `POST /api/merchant/products/{product}/media/confirm` dengan `key: {{media_key}}` \u2014 simpan ke DB",
       "item": [
         {
           "name": "Categories",
@@ -2755,13 +2760,20 @@
             {
               "name": "Get Category Tree",
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "GET",
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/api/categories",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "categories"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "categories"
+                  ]
                 },
                 "description": "Mengembalikan seluruh category tree secara nested (3 level). Di-cache Redis TTL 3600s.\n\nResponse `data` adalah array of root categories, masing-masing dengan field `children`."
               },
@@ -2777,13 +2789,21 @@
             {
               "name": "Get Single Category",
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "GET",
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/api/categories/elektronik",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "categories", "elektronik"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "categories",
+                    "elektronik"
+                  ]
                 },
                 "description": "Ambil satu category beserta `children` langsung (1 level ke bawah). Ganti `elektronik` dengan slug yang sesuai."
               },
@@ -2801,6 +2821,213 @@
                   "body": "{\n  \"success\": false,\n  \"message\": \"Category not found.\",\n  \"meta\": { \"timestamp\": \"2026-05-08T00:00:00.000000Z\" }\n}"
                 }
               ]
+            },
+            {
+              "name": "Admin \u2014 Create Category \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Elektronik\",\n  \"slug\": \"elektronik\",\n  \"sort_order\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/admin/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "categories"
+                  ]
+                },
+                "description": "Admin only. Membuat root category (level 1). Tambahkan `parent_id` untuk membuat child category \u2014 level dihitung otomatis dari parent."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const body = pm.response.json();",
+                      "    pm.collectionVariables.set('category_slug', body.data.slug);",
+                      "    console.log('category_slug saved:', body.data.slug);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "response": [
+                {
+                  "name": "201 Created (root)",
+                  "status": "Created",
+                  "code": 201,
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Category created.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Elektronik\",\n    \"slug\": \"elektronik\",\n    \"icon\": null,\n    \"level\": 1,\n    \"sort_order\": 0,\n    \"parent_id\": null\n  },\n  \"meta\": {\n    \"timestamp\": \"2026-05-08T00:00:00.000000Z\"\n  }\n}"
+                },
+                {
+                  "name": "201 Created (child with parent_id)",
+                  "status": "Created",
+                  "code": 201,
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Category created.\",\n  \"data\": {\n    \"id\": 2,\n    \"name\": \"Handphone\",\n    \"slug\": \"handphone\",\n    \"icon\": null,\n    \"level\": 2,\n    \"sort_order\": 0,\n    \"parent_id\": 1\n  },\n  \"meta\": {\n    \"timestamp\": \"2026-05-08T00:00:00.000000Z\"\n  }\n}"
+                },
+                {
+                  "name": "422 Duplicate slug",
+                  "status": "Unprocessable Content",
+                  "code": 422,
+                  "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": {\n    \"slug\": [\n      \"The slug has already been taken.\"\n    ]\n  },\n  \"meta\": {\n    \"timestamp\": \"2026-05-08T00:00:00.000000Z\"\n  }\n}"
+                },
+                {
+                  "name": "403 Forbidden (non-admin)",
+                  "status": "Forbidden",
+                  "code": 403,
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden.\",\n  \"meta\": {\n    \"timestamp\": \"2026-05-08T00:00:00.000000Z\"\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Admin \u2014 Update Category \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Elektronik & Gadget\",\n  \"sort_order\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/admin/categories/{{category_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "categories",
+                    "{{category_slug}}"
+                  ]
+                },
+                "description": "Admin only. Update category berdasarkan slug. Semua field bersifat optional (`sometimes`). Jika `slug` diubah, cache lama dan baru sama-sama di-invalidate."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const body = pm.response.json();",
+                      "    pm.collectionVariables.set('category_slug', body.data.slug);",
+                      "    console.log('category_slug updated to:', body.data.slug);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Category updated.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Elektronik & Gadget\",\n    \"slug\": \"elektronik\",\n    \"icon\": null,\n    \"level\": 1,\n    \"sort_order\": 1,\n    \"parent_id\": null\n  },\n  \"meta\": {\n    \"timestamp\": \"2026-05-08T00:00:00.000000Z\"\n  }\n}"
+                },
+                {
+                  "name": "404 Not Found",
+                  "status": "Not Found",
+                  "code": 404,
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Resource not found.\",\n  \"meta\": {\n    \"timestamp\": \"2026-05-08T00:00:00.000000Z\"\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Admin \u2014 Delete Category \ud83d\udd12",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/categories/{{category_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "categories",
+                    "{{category_slug}}"
+                  ]
+                },
+                "description": "Admin only. Hapus category. Akan mengembalikan 422 jika category masih memiliki children atau products. Berhasil mengembalikan 204 No Content."
+              },
+              "response": [
+                {
+                  "name": "204 No Content",
+                  "status": "No Content",
+                  "code": 204,
+                  "body": ""
+                },
+                {
+                  "name": "422 Has Children",
+                  "status": "Unprocessable Content",
+                  "code": 422,
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Cannot delete a category that has children.\",\n  \"meta\": {\n    \"timestamp\": \"2026-05-08T00:00:00.000000Z\"\n  }\n}"
+                },
+                {
+                  "name": "422 Has Products",
+                  "status": "Unprocessable Content",
+                  "code": 422,
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Cannot delete a category that has products.\",\n  \"meta\": {\n    \"timestamp\": \"2026-05-08T00:00:00.000000Z\"\n  }\n}"
+                }
+              ]
             }
           ]
         },
@@ -2810,20 +3037,51 @@
             {
               "name": "List Products",
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "GET",
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/api/products?search=&category=&min_price=&max_price=&sort=newest&store=",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "products"],
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products"
+                  ],
                   "query": [
-                    { "key": "search", "value": "", "description": "Full-text search on name + description" },
-                    { "key": "category", "value": "", "description": "Category slug — includes all sub-categories" },
-                    { "key": "min_price", "value": "", "description": "Minimum price in Rupiah (e.g. 50000)" },
-                    { "key": "max_price", "value": "", "description": "Maximum price in Rupiah" },
-                    { "key": "sort", "value": "newest", "description": "newest | price_asc | price_desc | popular" },
-                    { "key": "store", "value": "", "description": "Store slug" }
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "Full-text search on name + description"
+                    },
+                    {
+                      "key": "category",
+                      "value": "",
+                      "description": "Category slug \u2014 includes all sub-categories"
+                    },
+                    {
+                      "key": "min_price",
+                      "value": "",
+                      "description": "Minimum price in Rupiah (e.g. 50000)"
+                    },
+                    {
+                      "key": "max_price",
+                      "value": "",
+                      "description": "Maximum price in Rupiah"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "newest",
+                      "description": "newest | price_asc | price_desc | popular"
+                    },
+                    {
+                      "key": "store",
+                      "value": "",
+                      "description": "Store slug"
+                    }
                   ]
                 },
                 "description": "Public product listing dengan filter dan pagination (20/halaman).\n\nFilter `category` otomatis include semua sub-kategori di bawahnya.\nHarga filter dalam Rupiah (bukan cents)."
@@ -2856,13 +3114,21 @@
                 }
               ],
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "GET",
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/api/products/{{product_slug}}",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "products", "{{product_slug}}"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "{{product_slug}}"
+                  ]
                 },
                 "description": "Detail produk publik. Ganti `{{product_slug}}` dengan slug produk.\n\n`product_slug` tersimpan otomatis ke collection variable saat request ini berhasil."
               },
@@ -2878,13 +3144,22 @@
             {
               "name": "Get Product Variants (Public)",
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "GET",
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/api/products/{{product_slug}}/variants",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "products", "{{product_slug}}", "variants"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "products",
+                    "{{product_slug}}",
+                    "variants"
+                  ]
                 },
                 "description": "Daftar semua variant produk. Publik, tidak butuh auth."
               },
@@ -2900,13 +3175,22 @@
             {
               "name": "Store Products (Public)",
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "GET",
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/api/stores/{{store_slug}}/products",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "stores", "{{store_slug}}", "products"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "stores",
+                    "{{store_slug}}",
+                    "products"
+                  ]
                 },
                 "description": "Semua produk aktif milik sebuah toko, paginated 20/halaman.\n\nGunakan `{{store_slug}}` dari variable atau isi manual."
               },
@@ -2922,7 +3206,7 @@
           ]
         },
         {
-          "name": "Products - Merchant 🔒",
+          "name": "Products - Merchant \ud83d\udd12",
           "item": [
             {
               "name": "List My Products",
@@ -2931,8 +3215,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products"
+                  ]
                 },
                 "description": "Daftar semua produk milik merchant yang sedang login (semua status). Paginated."
               },
@@ -2960,7 +3250,10 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -2968,10 +3261,16 @@
                 },
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products"
+                  ]
                 },
-                "description": "Buat produk baru. Status default `draft`.\n\n`product_slug` otomatis tersimpan ke collection variable.\n\n**category_id** — ID kategori yang ada di DB.\n**weight_gram** — opsional, dipakai kalkulasi ongkos kirim."
+                "description": "Buat produk baru. Status default `draft`.\n\n`product_slug` otomatis tersimpan ke collection variable.\n\n**category_id** \u2014 ID kategori yang ada di DB.\n**weight_gram** \u2014 opsional, dipakai kalkulasi ongkos kirim."
               },
               "response": [
                 {
@@ -2995,8 +3294,15 @@
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products/{{product_slug}}",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products", "{{product_slug}}"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products",
+                    "{{product_slug}}"
+                  ]
                 },
                 "description": "Detail produk milik merchant (semua status, termasuk draft)."
               },
@@ -3007,7 +3313,10 @@
               "request": {
                 "method": "PUT",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -3015,8 +3324,15 @@
                 },
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products/{{product_slug}}",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products", "{{product_slug}}"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products",
+                    "{{product_slug}}"
+                  ]
                 },
                 "description": "Update nama, deskripsi, kategori, dan berat produk.\n\nSlug tidak berubah setelah diset pertama kali."
               },
@@ -3027,7 +3343,10 @@
               "request": {
                 "method": "PUT",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -3035,20 +3354,28 @@
                 },
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products/{{product_slug}}/status",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products", "{{product_slug}}", "status"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products",
+                    "{{product_slug}}",
+                    "status"
+                  ]
                 },
-                "description": "Update status produk.\n\n**status** values yang boleh dikirim merchant: `draft`, `active`, `inactive`\n\n⚠️ `banned` hanya bisa di-set Admin — request dengan `status: banned` akan mendapat 422."
+                "description": "Update status produk.\n\n**status** values yang boleh dikirim merchant: `draft`, `active`, `inactive`\n\n\u26a0\ufe0f `banned` hanya bisa di-set Admin \u2014 request dengan `status: banned` akan mendapat 422."
               },
               "response": [
                 {
-                  "name": "200 OK — Active",
+                  "name": "200 OK \u2014 Active",
                   "status": "OK",
                   "code": 200,
                   "body": "{\n  \"success\": true,\n  \"message\": \"Status updated.\",\n  \"data\": { \"id\": 1, \"slug\": \"sepatu-lari-premium\", \"status\": \"active\" },\n  \"meta\": { \"timestamp\": \"2026-05-08T00:00:00.000000Z\" }\n}"
                 },
                 {
-                  "name": "422 — Banned Not Allowed",
+                  "name": "422 \u2014 Banned Not Allowed",
                   "status": "Unprocessable Entity",
                   "code": 422,
                   "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": { \"status\": [\"The selected status is invalid.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-08T00:00:00.000000Z\" }\n}"
@@ -3062,10 +3389,17 @@
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products/{{product_slug}}",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products", "{{product_slug}}"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products",
+                    "{{product_slug}}"
+                  ]
                 },
-                "description": "Soft-delete produk. Data tidak hilang dari DB — order history tetap valid.\n\nMengembalikan 204 No Content."
+                "description": "Soft-delete produk. Data tidak hilang dari DB \u2014 order history tetap valid.\n\nMengembalikan 204 No Content."
               },
               "response": [
                 {
@@ -3079,10 +3413,10 @@
           ]
         },
         {
-          "name": "Product Media 🔒",
+          "name": "Product Media \ud83d\udd12",
           "item": [
             {
-              "name": "Step 1 — Generate Presigned URL",
+              "name": "Step 1 \u2014 Generate Presigned URL",
               "event": [
                 {
                   "listen": "test",
@@ -3108,7 +3442,10 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -3116,10 +3453,18 @@
                 },
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products/{{product_slug}}/media",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products", "{{product_slug}}", "media"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products",
+                    "{{product_slug}}",
+                    "media"
+                  ]
                 },
-                "description": "Generate presigned URL untuk upload foto/video produk langsung ke Cloudflare R2.\n\n**mime** options: `image/jpeg`, `image/png`, `image/webp`, `video/mp4`\n\n`media_upload_url` dan `media_key` otomatis tersimpan ke collection variables.\n\n**Upload flow:**\n1. ✅ Request ini → dapat `upload_url` + `key`\n2. 🔼 PUT ke `{{media_upload_url}}` (gunakan \"Upload File ke R2\" di folder Media)\n3. ✅ Confirm via Step 3"
+                "description": "Generate presigned URL untuk upload foto/video produk langsung ke Cloudflare R2.\n\n**mime** options: `image/jpeg`, `image/png`, `image/webp`, `video/mp4`\n\n`media_upload_url` dan `media_key` otomatis tersimpan ke collection variables.\n\n**Upload flow:**\n1. \u2705 Request ini \u2192 dapat `upload_url` + `key`\n2. \ud83d\udd3c PUT ke `{{media_upload_url}}` (gunakan \"Upload File ke R2\" di folder Media)\n3. \u2705 Confirm via Step 3"
               },
               "response": [
                 {
@@ -3131,12 +3476,17 @@
               ]
             },
             {
-              "name": "Step 2 — Upload File ke R2",
+              "name": "Step 2 \u2014 Upload File ke R2",
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "PUT",
                 "header": [
-                  { "key": "Content-Type", "value": "image/jpeg" }
+                  {
+                    "key": "Content-Type",
+                    "value": "image/jpeg"
+                  }
                 ],
                 "body": {
                   "mode": "file",
@@ -3144,13 +3494,15 @@
                 },
                 "url": {
                   "raw": "{{media_upload_url}}",
-                  "host": ["{{media_upload_url}}"]
+                  "host": [
+                    "{{media_upload_url}}"
+                  ]
                 },
-                "description": "Upload file LANGSUNG ke Cloudflare R2 menggunakan presigned URL dari Step 1.\n\n⚠️ Request ini dikirim LANGSUNG ke R2 — tidak melalui server Laravel.\n⚠️ `Content-Type` harus sama dengan `mime` yang dipakai di Step 1.\n⚠️ Tidak perlu Authorization header.\n\n**Body:** pilih mode `File` dan select file dari disk."
+                "description": "Upload file LANGSUNG ke Cloudflare R2 menggunakan presigned URL dari Step 1.\n\n\u26a0\ufe0f Request ini dikirim LANGSUNG ke R2 \u2014 tidak melalui server Laravel.\n\u26a0\ufe0f `Content-Type` harus sama dengan `mime` yang dipakai di Step 1.\n\u26a0\ufe0f Tidak perlu Authorization header.\n\n**Body:** pilih mode `File` dan select file dari disk."
               },
               "response": [
                 {
-                  "name": "200 OK — R2 Upload Success",
+                  "name": "200 OK \u2014 R2 Upload Success",
                   "status": "OK",
                   "code": 200,
                   "body": ""
@@ -3158,7 +3510,7 @@
               ]
             },
             {
-              "name": "Step 3 — Confirm Upload",
+              "name": "Step 3 \u2014 Confirm Upload",
               "event": [
                 {
                   "listen": "test",
@@ -3179,7 +3531,10 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -3187,8 +3542,17 @@
                 },
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products/{{product_slug}}/media/confirm",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products", "{{product_slug}}", "media", "confirm"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products",
+                    "{{product_slug}}",
+                    "media",
+                    "confirm"
+                  ]
                 },
                 "description": "Konfirmasi upload selesai. Server memverifikasi file ada di R2 lalu menyimpan record ke DB.\n\n`key` otomatis terisi dari `{{media_key}}` yang disimpan di Step 1.\n\nMedia pertama pada produk ini otomatis di-set sebagai `is_primary: true`.\n\n`product_media_id` tersimpan ke collection variable untuk kebutuhan delete/reorder."
               },
@@ -3206,7 +3570,10 @@
               "request": {
                 "method": "PUT",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -3214,8 +3581,17 @@
                 },
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products/{{product_slug}}/media/reorder",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products", "{{product_slug}}", "media", "reorder"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products",
+                    "{{product_slug}}",
+                    "media",
+                    "reorder"
+                  ]
                 },
                 "description": "Atur ulang urutan tampilan foto produk.\n\nServer memvalidasi bahwa semua `id` yang dikirim benar-benar milik produk ini (IDOR protection)."
               },
@@ -3235,8 +3611,17 @@
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products/{{product_slug}}/media/{{product_media_id}}",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products", "{{product_slug}}", "media", "{{product_media_id}}"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products",
+                    "{{product_slug}}",
+                    "media",
+                    "{{product_media_id}}"
+                  ]
                 },
                 "description": "Hapus media: file dihapus dari R2, record dihapus dari DB.\n\nJika media yang dihapus adalah `is_primary`, media berikutnya otomatis jadi primary.\n\nReturns 204 No Content."
               },
@@ -3252,7 +3637,7 @@
           ]
         },
         {
-          "name": "Product Variants 🔒",
+          "name": "Product Variants \ud83d\udd12",
           "item": [
             {
               "name": "Add Variant",
@@ -3276,7 +3661,10 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -3284,10 +3672,18 @@
                 },
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products/{{product_slug}}/variants",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products", "{{product_slug}}", "variants"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products",
+                    "{{product_slug}}",
+                    "variants"
+                  ]
                 },
-                "description": "Tambah variant baru ke produk.\n\n**price** — dalam integer cents (Rp 250.000 = `25000000`)\n**attributes** — JSON bebas key-value. Tidak ada schema baku Sprint 4.\n\n`variant_id` otomatis tersimpan ke collection variable.\n\n⚙️ `ProductVariantObserver` otomatis update `total_stock`, `min_price`, `max_price` di tabel products."
+                "description": "Tambah variant baru ke produk.\n\n**price** \u2014 dalam integer cents (Rp 250.000 = `25000000`)\n**attributes** \u2014 JSON bebas key-value. Tidak ada schema baku Sprint 4.\n\n`variant_id` otomatis tersimpan ke collection variable.\n\n\u2699\ufe0f `ProductVariantObserver` otomatis update `total_stock`, `min_price`, `max_price` di tabel products."
               },
               "response": [
                 {
@@ -3303,7 +3699,10 @@
               "request": {
                 "method": "PUT",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -3311,10 +3710,19 @@
                 },
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products/{{product_slug}}/variants/{{variant_id}}",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products", "{{product_slug}}", "variants", "{{variant_id}}"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products",
+                    "{{product_slug}}",
+                    "variants",
+                    "{{variant_id}}"
+                  ]
                 },
-                "description": "Update variant. Semua field opsional (`sometimes`).\n\n⚙️ Observer otomatis re-sync `total_stock`, `min_price`, `max_price` setelah update."
+                "description": "Update variant. Semua field opsional (`sometimes`).\n\n\u2699\ufe0f Observer otomatis re-sync `total_stock`, `min_price`, `max_price` setelah update."
               },
               "response": [
                 {
@@ -3332,10 +3740,19 @@
                 "header": [],
                 "url": {
                   "raw": "{{base_url}}/api/merchant/products/{{product_slug}}/variants/{{variant_id}}",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "merchant", "products", "{{product_slug}}", "variants", "{{variant_id}}"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "merchant",
+                    "products",
+                    "{{product_slug}}",
+                    "variants",
+                    "{{variant_id}}"
+                  ]
                 },
-                "description": "Soft-delete variant. Data tidak hilang dari DB.\n\n⚙️ Observer otomatis re-sync counters setelah delete.\n\nReturns 204 No Content."
+                "description": "Soft-delete variant. Data tidak hilang dari DB.\n\n\u2699\ufe0f Observer otomatis re-sync counters setelah delete.\n\nReturns 204 No Content."
               },
               "response": [
                 {

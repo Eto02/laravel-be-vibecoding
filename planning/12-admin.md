@@ -44,10 +44,10 @@ PUT    /api/admin/merchants/{id}/approve       [auth:sanctum, admin]
 PUT    /api/admin/merchants/{id}/reject        [auth:sanctum, admin]
 PUT    /api/admin/merchants/{id}/suspend       [auth:sanctum, admin]
 
-# Products
+# Products (binding via slug — Product::getRouteKeyName() = 'slug')
 GET    /api/admin/products                     [auth:sanctum, admin]
-PUT    /api/admin/products/{slug}/approve      [auth:sanctum, admin]
-PUT    /api/admin/products/{slug}/ban          [auth:sanctum, admin]
+PUT    /api/admin/products/{slug}/approve      [auth:sanctum, admin]  → set status = 'active'
+PUT    /api/admin/products/{slug}/ban          [auth:sanctum, admin]  → set status = 'banned' (admin-only, merchant cannot revert)
 
 # Reviews
 GET    /api/admin/reviews?status=pending       [auth:sanctum, admin]
@@ -110,4 +110,7 @@ tests/Feature/Api/Admin/AdminTest.php
 - Revenue dashboard: aggregate dari `transactions` yang berstatus `paid`
 - GMV (Gross Merchandise Value): total nilai transaksi sebelum potongan komisi platform
 - Dispute: admin bertindak sebagai mediator — bisa refund ke buyer atau release ke merchant
-- KYC approval: ubah `store.status` dari `pending` ke `active` + kirim email notifikasi
+- KYC approval: ubah `store.status` dari `pending` ke `active` + set `store.kyc_status = 'approved'` + dispatch `Merchant\MerchantApproved` event (Listener kirim email)
+- **Admin product ban:** `AdminProductController::ban()` memanggil `ProductService::adminSetStatus($product, ProductStatus::Banned)` — bypass validasi merchant. `UpdateProductStatusRequest` hanya berlaku untuk merchant endpoint; admin endpoint punya FormRequest sendiri atau bypass validation layer.
+- **Admin users table:** `users.role` kolom sudah ada (Sprint 4, migration `add_role_to_users_table`). Untuk ban user: set `email_verified_at = null` (blokir login) atau tambahkan `banned_at` kolom terpisah di Sprint 12.
+- **Files to Create** perlu ditambahkan: `app/Http/Requests/Admin/AdminUpdateProductStatusRequest.php` (izinkan `banned`)

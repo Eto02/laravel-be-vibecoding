@@ -13,7 +13,7 @@
 - ✅ **MediaService: Orphan Cleanup** — hapus file di R2 yang tidak pernah di-confirm dalam X menit
 
 ### 🟠 P1 — Architecture Improvement
-- ⬜ **NotificationService → Event-driven** — ganti direct call dengan Laravel Events + Listeners
+- ✅ **NotificationService → Event-driven** — dihapus. Semua modul menggunakan Laravel Events + ShouldQueue Listeners. Documented di CLAUDE.md rule 11.
 - ✅ **CacheService: Interface Opsional** — inject `Illuminate\Contracts\Cache\Repository` langsung, tidak perlu wrapper
 - ✅ **MediaService: Upload Session Tracking** — track presigned URL di Redis (`media:session:{key}`, TTL 900s)
 
@@ -33,7 +33,7 @@
 | `MediaService` | ✅ Ya (R2 + orphan cleanup) | 🔴 P0 |
 | `IdempotencyService` | ✅ Ya (Redis-backed) | 🔴 P0 |
 | `CacheService` | ❌ Tidak wajib (pakai native) | 🟠 P1 |
-| `SmsService` | ✅ Ya | 🟡 P2 |
+| `SmsService` | ✅ Ya | 🟠 P1 |
 | `PushNotificationService` | ✅ Ya | 🟡 P2 |
 | `AuditLogService` | ✅ Ya | 🟡 P2 |
 
@@ -236,18 +236,23 @@ CLOUDFLARE_R2_PUBLIC_URL=https://media.yourdomain.com
 
 ---
 
-### Cache Management (Simplified)
+### Cache Management
 
-> **Keputusan Arsitektur:** Tidak perlu `CacheService` wrapper. Gunakan contract `Illuminate\Contracts\Cache\Repository` langsung di domain service.
+> **Keputusan Arsitektur (diperbarui):** Gunakan `CacheServiceInterface` (sudah ada sejak Sprint 3 via `make-shared-service`). Injection via constructor DI — bukan `\Illuminate\Contracts\Cache\Repository` langsung. Ini memudahkan swapping driver dan testing.
 
 ```php
+use App\Contracts\Shared\CacheServiceInterface;
+
 public function __construct(
-    private readonly \Illuminate\Contracts\Cache\Repository $cache
+    private readonly CacheServiceInterface $cache,
 ) {}
 
 // Usage:
 $this->cache->remember('category:tree', 3600, fn() => ...);
+$this->cache->forget('category:tree');
 ```
+
+> **Catatan:** `CacheServiceInterface` sudah di-bind di `AppServiceProvider`. Tidak perlu inject `Illuminate\Contracts\Cache\Repository` langsung.
 
 #### TTL Conventions
 | Data | TTL |

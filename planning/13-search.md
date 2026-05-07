@@ -83,7 +83,7 @@ GET /api/search/trending                       [public]
 GET /api/search/history                        [auth]
 DELETE /api/search/history                     [auth] (clear all)
 DELETE /api/search/history/{query}             [auth] (hapus satu)
-GET /api/products/{id}/recommendations         [public]
+GET /api/products/{slug}/recommendations        [public]
 ```
 
 ---

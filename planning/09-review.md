@@ -19,7 +19,7 @@
 | Tabel | Kolom Utama |
 |---|---|
 | `reviews` | `order_item_id`, `user_id`, `product_id`, `store_id`, `rating` (1-5), `comment`, `status` (pending/approved/rejected), `is_anonymous` |
-| `review_media` | `review_id`, `url`, `type` (image/video), `sort_order` |
+| `review_media` | `review_id`, `file` (storage key — bukan URL), `type` (image/video), `sort_order` |
 | `review_replies` | `review_id`, `store_id`, `content`, `replied_at` |
 | `review_votes` | `review_id`, `user_id`, `is_helpful` (boolean) |
 
