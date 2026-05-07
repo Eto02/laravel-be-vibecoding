@@ -100,6 +100,52 @@ class MerchantTest extends TestCase
             ->assertStatus(403);
     }
 
+    public function test_register_store_sets_user_role_to_merchant(): void
+    {
+        $user = $this->actingUser();
+
+        $this->actingAs($user)
+            ->postJson('/api/merchant/register', $this->storePayload())
+            ->assertStatus(201);
+
+        $this->assertDatabaseHas('users', [
+            'id'   => $user->id,
+            'role' => 'merchant',
+        ]);
+    }
+
+    public function test_suspended_store_cannot_access_merchant_endpoints(): void
+    {
+        $user = $this->actingUser();
+        Store::factory()->for($user)->suspended()->create();
+
+        $this->actingAs($user)
+            ->getJson('/api/merchant/store')
+            ->assertStatus(403)
+            ->assertJsonPath('message', 'Your store has been suspended.');
+    }
+
+    public function test_banned_store_cannot_access_merchant_endpoints(): void
+    {
+        $user = $this->actingUser();
+        Store::factory()->for($user)->banned()->create();
+
+        $this->actingAs($user)
+            ->getJson('/api/merchant/store')
+            ->assertStatus(403)
+            ->assertJsonPath('message', 'Your store has been suspended.');
+    }
+
+    public function test_pending_store_can_still_access_merchant_endpoints(): void
+    {
+        $user = $this->actingUser();
+        Store::factory()->for($user)->pending()->create();
+
+        $this->actingAs($user)
+            ->getJson('/api/merchant/store')
+            ->assertStatus(200);
+    }
+
     // ── PUT /merchant/store ───────────────────────────────────────────────────
 
     public function test_merchant_can_update_store(): void

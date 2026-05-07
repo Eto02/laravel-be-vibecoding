@@ -48,6 +48,16 @@ class StoreFactory extends Factory
         return $this->state(['status' => MerchantStatus::Active]);
     }
 
+    public function suspended(): static
+    {
+        return $this->state(['status' => MerchantStatus::Suspended]);
+    }
+
+    public function banned(): static
+    {
+        return $this->state(['status' => MerchantStatus::Banned]);
+    }
+
     public function kycApproved(): static
     {
         return $this->state(['kyc_status' => KycStatus::Approved]);

@@ -14,6 +14,8 @@ use App\Events\Merchant\StoreUnfollowed;
 use App\Listeners\Auth\SendEmailVerificationNotification;
 use App\Listeners\Merchant\DecrementFollowerCount;
 use App\Listeners\Merchant\IncrementFollowerCount;
+use App\Models\ProductVariant;
+use App\Observers\ProductVariantObserver;
 use App\Services\Payment\PaymentGatewayInterface;
 use App\Services\Payment\XenditPaymentService;
 use App\Services\Shared\CacheService;
@@ -46,5 +48,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(UserRegistered::class, SendEmailVerificationNotification::class);
         Event::listen(StoreFollowed::class, IncrementFollowerCount::class);
         Event::listen(StoreUnfollowed::class, DecrementFollowerCount::class);
+
+        ProductVariant::observe(ProductVariantObserver::class);
     }
 }

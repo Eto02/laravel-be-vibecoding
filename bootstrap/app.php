@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\LogApiRequests::class);
         $middleware->alias([
             'merchant' => \App\Http\Middleware\EnsureMerchantOwnership::class,
+            'admin'    => \App\Http\Middleware\EnsureAdminRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

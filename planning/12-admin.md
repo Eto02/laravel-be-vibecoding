@@ -16,50 +16,57 @@
 ---
 
 ## Dependencies
-- `spatie/laravel-permission` — role: `buyer`, `merchant`, `admin`
-- Role assignment via seeder atau command
-- Semua route admin wajib middleware: `auth:sanctum` + `role:admin`
+- **Tidak pakai `spatie/laravel-permission`** — sudah diimplementasi via `UserRole` enum (Sprint 4)
+- `users.role` kolom (string, default `'buyer'`) dengan cast `UserRole::class` di `User` model
+- `EnsureAdminRole` middleware (alias `admin`) terdaftar di `bootstrap/app.php` — cek `$user->isAdmin()`
+- Role assignment: `$user->update(['role' => UserRole::Admin->value])`
+- Semua route admin wajib middleware: `['auth:sanctum', 'admin']`
 
 ---
 
-## Routes (semua `[auth:admin]`)
+## Routes (semua `[auth:sanctum, admin]`)
 ```
+# Categories (sudah live sejak Sprint 4)
+POST   /api/admin/categories                  [auth:sanctum, admin]  → StoreCategoryRequest
+PUT    /api/admin/categories/{slug}            [auth:sanctum, admin]  → UpdateCategoryRequest
+DELETE /api/admin/categories/{slug}            [auth:sanctum, admin]  → 422 if has children/products
+
 # Users
-GET    /api/admin/users
-GET    /api/admin/users/{id}
-PUT    /api/admin/users/{id}/ban
-PUT    /api/admin/users/{id}/activate
+GET    /api/admin/users                        [auth:sanctum, admin]
+GET    /api/admin/users/{id}                   [auth:sanctum, admin]
+PUT    /api/admin/users/{id}/ban               [auth:sanctum, admin]
+PUT    /api/admin/users/{id}/activate          [auth:sanctum, admin]
 
 # Merchants
-GET    /api/admin/merchants
-GET    /api/admin/merchants/{id}
-PUT    /api/admin/merchants/{id}/approve
-PUT    /api/admin/merchants/{id}/reject
-PUT    /api/admin/merchants/{id}/suspend
+GET    /api/admin/merchants                    [auth:sanctum, admin]
+GET    /api/admin/merchants/{id}               [auth:sanctum, admin]
+PUT    /api/admin/merchants/{id}/approve       [auth:sanctum, admin]
+PUT    /api/admin/merchants/{id}/reject        [auth:sanctum, admin]
+PUT    /api/admin/merchants/{id}/suspend       [auth:sanctum, admin]
 
-# Products
-GET    /api/admin/products
-PUT    /api/admin/products/{id}/approve
-PUT    /api/admin/products/{id}/ban
+# Products (binding via slug — Product::getRouteKeyName() = 'slug')
+GET    /api/admin/products                     [auth:sanctum, admin]
+PUT    /api/admin/products/{slug}/approve      [auth:sanctum, admin]  → set status = 'active'
+PUT    /api/admin/products/{slug}/ban          [auth:sanctum, admin]  → set status = 'banned' (admin-only, merchant cannot revert)
 
 # Reviews
-GET    /api/admin/reviews?status=pending
-PUT    /api/admin/reviews/{id}/approve
-PUT    /api/admin/reviews/{id}/reject
+GET    /api/admin/reviews?status=pending       [auth:sanctum, admin]
+PUT    /api/admin/reviews/{id}/approve         [auth:sanctum, admin]
+PUT    /api/admin/reviews/{id}/reject          [auth:sanctum, admin]
 
 # Disputes
-GET    /api/admin/disputes
-GET    /api/admin/disputes/{id}
-PUT    /api/admin/disputes/{id}/resolve
+GET    /api/admin/disputes                     [auth:sanctum, admin]
+GET    /api/admin/disputes/{id}                [auth:sanctum, admin]
+PUT    /api/admin/disputes/{id}/resolve        [auth:sanctum, admin]
 
 # Dashboard
-GET    /api/admin/dashboard
-GET    /api/admin/revenue
-GET    /api/admin/revenue/export
+GET    /api/admin/dashboard                    [auth:sanctum, admin]
+GET    /api/admin/revenue                      [auth:sanctum, admin]
+GET    /api/admin/revenue/export               [auth:sanctum, admin]
 
 # Settings
-GET    /api/admin/settings
-PUT    /api/admin/settings
+GET    /api/admin/settings                     [auth:sanctum, admin]
+PUT    /api/admin/settings                     [auth:sanctum, admin]
 ```
 
 ---
@@ -91,15 +98,19 @@ tests/Feature/Api/Admin/AdminTest.php
 | Service | Kegunaan |
 |---|---|
 | `EmailService` | Notifikasi KYC approved/rejected ke merchant |
-| `NotificationService` | Notif user/merchant terkait tindakan admin |
 | `CacheService` | Cache dashboard metrics (TTL 300s) |
+
+> **Notifikasi:** Gunakan Event-driven approach (CLAUDE.md rule 11). Dispatch `Merchant\MerchantApproved` / `Merchant\MerchantRejected` events. Listener yang implements `ShouldQueue` menangani email — jangan inject `NotificationService` langsung ke Admin service.
 
 ---
 
 ## Business Logic Notes
-- Admin role di-assign via `spatie/laravel-permission`: `$user->assignRole('admin')`
+- Admin role di-assign via `UserRole` enum: `$user->update(['role' => UserRole::Admin->value])`
 - Platform settings disimpan di DB tabel `platform_settings` (key-value), di-cache di Redis
 - Revenue dashboard: aggregate dari `transactions` yang berstatus `paid`
 - GMV (Gross Merchandise Value): total nilai transaksi sebelum potongan komisi platform
 - Dispute: admin bertindak sebagai mediator — bisa refund ke buyer atau release ke merchant
-- KYC approval: ubah `store.status` dari `pending` ke `active` + kirim email notifikasi
+- KYC approval: ubah `store.status` dari `pending` ke `active` + set `store.kyc_status = 'approved'` + dispatch `Merchant\MerchantApproved` event (Listener kirim email)
+- **Admin product ban:** `AdminProductController::ban()` memanggil `ProductService::adminSetStatus($product, ProductStatus::Banned)` — bypass validasi merchant. `UpdateProductStatusRequest` hanya berlaku untuk merchant endpoint; admin endpoint punya FormRequest sendiri atau bypass validation layer.
+- **Admin users table:** `users.role` kolom sudah ada (Sprint 4, migration `add_role_to_users_table`). Untuk ban user: set `email_verified_at = null` (blokir login) atau tambahkan `banned_at` kolom terpisah di Sprint 12.
+- **Files to Create** perlu ditambahkan: `app/Http/Requests/Admin/AdminUpdateProductStatusRequest.php` (izinkan `banned`)
