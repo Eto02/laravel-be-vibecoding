@@ -13,6 +13,7 @@
 | File | Modul | Priority | Status |
 |---|---|---|---|
 | [00-shared-services.md](./00-shared-services.md) | Shared Services | 🔴 P0 | ✅ |
+| [00-access-control.md](./00-access-control.md) | Role & Access Control | 🔴 P0 | ✅ |
 | [01-auth.md](./01-auth.md) | Auth & Identity | 🔴 P0 | ✅ |
 | [02-user.md](./02-user.md) | User Profile | 🟠 P1 | ✅ |
 | [03-merchant.md](./03-merchant.md) | Merchant / Store | 🟠 P1 | ✅ |

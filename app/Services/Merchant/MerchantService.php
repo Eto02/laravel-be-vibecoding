@@ -7,6 +7,7 @@ use App\Contracts\Shared\MediaServiceInterface;
 use App\DTOs\Merchant\RegisterMerchantDTO;
 use App\Enums\KycStatus;
 use App\Enums\MerchantStatus;
+use App\Enums\UserRole;
 use App\Events\Merchant\StoreFollowed;
 use App\Events\Merchant\StoreUnfollowed;
 use App\Exceptions\Merchant\AlreadyFollowingException;
@@ -31,7 +32,7 @@ class MerchantService
             throw new StoreAlreadyExistsException();
         }
 
-        return Store::create([
+        $store = Store::create([
             'user_id'     => $user->id,
             'name'        => $data->name,
             'slug'        => $this->generateUniqueSlug($data->name),
@@ -42,6 +43,10 @@ class MerchantService
             'status'      => MerchantStatus::Pending,
             'kyc_status'  => KycStatus::Pending,
         ]);
+
+        $user->update(['role' => UserRole::Merchant->value]);
+
+        return $store;
     }
 
     public function update(Store $store, array $data): Store
