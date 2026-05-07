@@ -20,11 +20,12 @@ class CartService
     {
         $cacheKey = "cart:user:{$user->id}";
 
-        // Cache only the cart record (not relationships — they must be fresh to detect stock/availability changes)
-        $cart = $this->cache->remember($cacheKey, 86400, fn () =>
-            Cart::firstOrCreate(['user_id' => $user->id])
-        );
+        // Cache only the cart ID (integer) — never cache model objects to avoid unserialize failures
+        $cartId = $this->cache->remember($cacheKey, 86400, function () use ($user) {
+            return Cart::firstOrCreate(['user_id' => $user->id])->id;
+        });
 
+        $cart = Cart::findOrFail($cartId);
         $cart->load([
             'items.variant',
             'items.product' => fn ($q) => $q->withTrashed(),
