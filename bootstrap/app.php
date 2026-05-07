@@ -61,4 +61,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\App\Exceptions\Merchant\AlreadyFollowingException $e) {
             return \App\Http\Responses\ApiResponse::error('You are already following this store.', 409);
         });
+
+        $exceptions->render(function (\DomainException $e) {
+            return \App\Http\Responses\ApiResponse::error($e->getMessage(), 422);
+        });
     })->create();

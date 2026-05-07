@@ -35,6 +35,7 @@ class ProductResource extends JsonResource
             ]),
             'variants'        => $this->whenLoaded('variants', fn () => VariantResource::collection($this->variants)),
             'media'           => $this->whenLoaded('media', fn () => ProductMediaResource::collection($this->media)),
+            'is_wishlisted'   => $this->when(isset($this->is_wishlisted), $this->is_wishlisted),
             'created_at'      => $this->created_at?->toISOString(),
             'updated_at'      => $this->updated_at?->toISOString(),
         ];

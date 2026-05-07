@@ -12,6 +12,7 @@ use App\Events\Auth\UserRegistered;
 use App\Events\Merchant\StoreFollowed;
 use App\Events\Merchant\StoreUnfollowed;
 use App\Listeners\Auth\SendEmailVerificationNotification;
+use App\Listeners\Auth\SendWelcomeEmail;
 use App\Listeners\Merchant\DecrementFollowerCount;
 use App\Listeners\Merchant\IncrementFollowerCount;
 use App\Models\ProductVariant;
@@ -46,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Event::listen(UserRegistered::class, SendEmailVerificationNotification::class);
+        Event::listen(UserRegistered::class, SendWelcomeEmail::class);
         Event::listen(StoreFollowed::class, IncrementFollowerCount::class);
         Event::listen(StoreUnfollowed::class, DecrementFollowerCount::class);
 

@@ -39,9 +39,9 @@ class ProductController extends Controller
         ]);
     }
 
-    public function show(string $slug): JsonResponse
+    public function show(string $slug, Request $request): JsonResponse
     {
-        $product = $this->products->getProductDetail($slug);
+        $product = $this->products->getProductDetail($slug, $request->user());
 
         return ApiResponse::success('Product retrieved.', new ProductResource($product));
     }
