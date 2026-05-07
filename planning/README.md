@@ -18,7 +18,7 @@
 | [02-user.md](./02-user.md) | User Profile | 🟠 P1 | ✅ |
 | [03-merchant.md](./03-merchant.md) | Merchant / Store | 🟠 P1 | ✅ |
 | [04-product.md](./04-product.md) | Product Catalog | 🟠 P1 | ✅ |
-| [05-cart.md](./05-cart.md) | Cart & Wishlist | 🟠 P1 | 🟡 |
+| [05-cart.md](./05-cart.md) | Cart & Wishlist | 🟠 P1 | ✅ |
 | [06-order.md](./06-order.md) | Order Management | 🟠 P1 | ⬜ |
 | [07-payment.md](./07-payment.md) | Payment | 🟠 P1 | 🟡 |
 | [08-shipping.md](./08-shipping.md) | Shipping & Logistics | 🟠 P1 | ⬜ |
