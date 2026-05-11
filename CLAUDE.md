@@ -760,6 +760,8 @@ Alur kerja standar untuk setiap modul/sprint. **Semua perubahan kode WAJIB melal
 
 ### Slash Commands
 
+**Workflow:**
+
 | Command | Aksi |
 |---|---|
 | `/plan-review {module}` | Diskusi planning dengan user. Baca `planning/NN-module.md`, klarifikasi kalau ambigu, **tidak modifikasi file kode** |
@@ -767,6 +769,21 @@ Alur kerja standar untuk setiap modul/sprint. **Semua perubahan kode WAJIB melal
 | `/push` | Push branch aktif ke remote |
 | `/pr` | Buat Pull Request ke main |
 | `/merge-ok` | User sudah review PR dan approve — assistant merge + delete branch |
+| `/devseed` | Reset & reseed dev DB via `migrate:fresh --seed` |
+
+**Scaffolding & Diagnostics:**
+
+| Command | Aksi |
+|---|---|
+| `/make-feature {Domain}/{Feature}` | Single entry point untuk scaffold feature lengkap (11 files: migration, model, factory, requests, resource, service, controller, route, test). Untuk component-level (Request only / Resource only / Service only), lihat tabel file di dalam command — atau buat manual dengan acuan **Directory Structure** + **Naming Conventions** + **API Resource Rules** di file ini. |
+| `/make-shared-service {Name}` | Scaffold Shared Service di `app/Services/Shared/` (interface + concrete + binding + unit test) |
+| `/api-audit` | Audit semua endpoint untuk standards compliance |
+| `/db-status` | Cek migrasi, DB connectivity, schema, indexes, Redis |
+| `/test-suite [filter]` | Run test suite dengan filter optional |
+
+**Subagent:**
+
+- `laravel-reviewer` — pre-review code per Architecture Rules. Invoke via `Agent` tool dengan `subagent_type=laravel-reviewer` (bukan slash command).
 
 ### Cycle Lengkap
 
