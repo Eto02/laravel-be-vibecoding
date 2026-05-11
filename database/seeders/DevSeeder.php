@@ -201,7 +201,11 @@ class DevSeeder extends Seeder
         $variant40 = ProductVariant::where('sku', 'SKU-SLP-40')->first();
         $variantXz = ProductVariant::where('sku', 'SKU-XZ-128-BLK')->first();
 
-        if ($variant40 && ! Order::where('user_id', $buyer->id)->where('status', OrderStatus::Shipped->value)->exists()) {
+        // Always delete and recreate sample orders so dev DB is always in expected state.
+        // Cascade delete handles order_items, order_status_logs, order_disputes automatically.
+        Order::where('user_id', $buyer->id)->delete();
+
+        if ($variant40) {
             $subtotal = $variant40->price * 1;
             $fee      = 1500000;
             $order    = Order::create([
@@ -228,13 +232,13 @@ class DevSeeder extends Seeder
                 'unit_price'         => $variant40->price,
                 'subtotal'           => $variant40->price,
             ]);
-            $order->statusLogs()->create(['from_status' => null, 'to_status' => 'pending', 'note' => 'Order placed.', 'changed_by' => $buyer->id]);
-            $order->statusLogs()->create(['from_status' => 'pending', 'to_status' => 'paid', 'note' => 'Payment received.', 'changed_by' => null]);
-            $order->statusLogs()->create(['from_status' => 'paid', 'to_status' => 'processing', 'note' => 'Confirmed by merchant.', 'changed_by' => $merchant->id]);
-            $order->statusLogs()->create(['from_status' => 'processing', 'to_status' => 'shipped', 'note' => 'AWB: JNE20260501001', 'changed_by' => $merchant->id]);
+            $order->statusLogs()->create(['from_status' => null,       'to_status' => 'pending',    'note' => 'Order placed.',           'changed_by' => $buyer->id]);
+            $order->statusLogs()->create(['from_status' => 'pending',  'to_status' => 'paid',       'note' => 'Payment received.',       'changed_by' => null]);
+            $order->statusLogs()->create(['from_status' => 'paid',     'to_status' => 'processing', 'note' => 'Confirmed by merchant.',  'changed_by' => $merchant->id]);
+            $order->statusLogs()->create(['from_status' => 'processing','to_status' => 'shipped',   'note' => 'AWB: JNE20260501001',    'changed_by' => $merchant->id]);
         }
 
-        if ($variantXz && ! Order::where('user_id', $buyer->id)->where('status', OrderStatus::Pending->value)->exists()) {
+        if ($variantXz) {
             $subtotal = $variantXz->price * 2;
             $fee      = 2000000;
             $order2   = Order::create([
