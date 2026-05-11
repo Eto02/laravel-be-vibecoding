@@ -4,10 +4,14 @@ namespace Database\Seeders;
 
 use App\Enums\KycStatus;
 use App\Enums\MerchantStatus;
+use App\Enums\OrderStatus;
 use App\Enums\ProductStatus;
 use App\Enums\UserRole;
+use App\Models\Address;
 use App\Models\Cart;
 use App\Models\Category;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Store;
@@ -169,6 +173,97 @@ class DevSeeder extends Seeder
             ]);
         }
 
+        // ── Sample orders ─────────────────────────────────────────────────────
+        $buyerAddress = Address::firstOrCreate(
+            ['user_id' => $buyer->id, 'label' => 'Rumah'],
+            [
+                'recipient_name' => $buyer->name,
+                'phone'          => '081234567890',
+                'province'       => 'Jawa Barat',
+                'city'           => 'Bandung',
+                'district'       => 'Coblong',
+                'postal_code'    => '40132',
+                'street'         => 'Jl. Merdeka No. 10',
+                'is_default'     => true,
+            ]
+        );
+
+        $addressSnap = [
+            'recipient_name' => $buyerAddress->recipient_name,
+            'phone'          => $buyerAddress->phone,
+            'province'       => $buyerAddress->province,
+            'city'           => $buyerAddress->city,
+            'district'       => $buyerAddress->district,
+            'postal_code'    => $buyerAddress->postal_code,
+            'street'         => $buyerAddress->street,
+        ];
+
+        $variant40 = ProductVariant::where('sku', 'SKU-SLP-40')->first();
+        $variantXz = ProductVariant::where('sku', 'SKU-XZ-128-BLK')->first();
+
+        if ($variant40 && ! Order::where('user_id', $buyer->id)->where('status', OrderStatus::Shipped->value)->exists()) {
+            $subtotal = $variant40->price * 1;
+            $fee      = 1500000;
+            $order    = Order::create([
+                'order_number'     => null,
+                'user_id'          => $buyer->id,
+                'store_id'         => $store->id,
+                'address_snapshot' => $addressSnap,
+                'subtotal'         => $subtotal,
+                'shipping_fee'     => $fee,
+                'discount'         => 0,
+                'total'            => $subtotal + $fee,
+                'shipping_courier' => 'jne',
+                'shipping_service' => 'REG',
+                'tracking_number'  => 'JNE20260501001',
+                'status'           => OrderStatus::Shipped,
+                'payment_due_at'   => now()->subHours(12),
+                'notes'            => null,
+            ]);
+            $order->update(['order_number' => 'INV/' . now()->format('Y/m') . '/' . str_pad($order->id, 6, '0', STR_PAD_LEFT)]);
+            $order->items()->create([
+                'product_variant_id' => $variant40->id,
+                'product_snapshot'   => ['product_name' => 'Sepatu Lari Pro', 'variant_sku' => 'SKU-SLP-40', 'attributes' => ['ukuran' => '40', 'warna' => 'Hitam']],
+                'quantity'           => 1,
+                'unit_price'         => $variant40->price,
+                'subtotal'           => $variant40->price,
+            ]);
+            $order->statusLogs()->create(['from_status' => null, 'to_status' => 'pending', 'note' => 'Order placed.', 'changed_by' => $buyer->id]);
+            $order->statusLogs()->create(['from_status' => 'pending', 'to_status' => 'paid', 'note' => 'Payment received.', 'changed_by' => null]);
+            $order->statusLogs()->create(['from_status' => 'paid', 'to_status' => 'processing', 'note' => 'Confirmed by merchant.', 'changed_by' => $merchant->id]);
+            $order->statusLogs()->create(['from_status' => 'processing', 'to_status' => 'shipped', 'note' => 'AWB: JNE20260501001', 'changed_by' => $merchant->id]);
+        }
+
+        if ($variantXz && ! Order::where('user_id', $buyer->id)->where('status', OrderStatus::Pending->value)->exists()) {
+            $subtotal = $variantXz->price * 2;
+            $fee      = 2000000;
+            $order2   = Order::create([
+                'order_number'     => null,
+                'user_id'          => $buyer->id,
+                'store_id'         => $store->id,
+                'address_snapshot' => $addressSnap,
+                'subtotal'         => $subtotal,
+                'shipping_fee'     => $fee,
+                'discount'         => 0,
+                'total'            => $subtotal + $fee,
+                'shipping_courier' => 'sicepat',
+                'shipping_service' => 'REG',
+                'tracking_number'  => null,
+                'status'           => OrderStatus::Pending,
+                'payment_due_at'   => now()->addHours(20),
+                'notes'            => 'Tolong bubble wrap',
+            ]);
+            $order2->update(['order_number' => 'INV/' . now()->format('Y/m') . '/' . str_pad($order2->id, 6, '0', STR_PAD_LEFT)]);
+            $order2->items()->create([
+                'product_variant_id' => $variantXz->id,
+                'product_snapshot'   => ['product_name' => 'Smartphone XZ Pro', 'variant_sku' => 'SKU-XZ-128-BLK', 'attributes' => ['storage' => '128GB', 'warna' => 'Hitam']],
+                'quantity'           => 2,
+                'unit_price'         => $variantXz->price,
+                'subtotal'           => $subtotal,
+            ]);
+            $order2->statusLogs()->create(['from_status' => null, 'to_status' => 'pending', 'note' => 'Order placed.', 'changed_by' => $buyer->id]);
+        }
+
         $this->command->info('DevSeeder selesai:');
         $this->command->table(
             ['Role', 'Email', 'Password'],
@@ -180,6 +275,7 @@ class DevSeeder extends Seeder
             ]
         );
         $this->command->info('Cart test@example.com: 3 items dari 2 toko (multi-store)');
+        $this->command->info('Orders test@example.com: 1 shipped (JNE), 1 pending');
     }
 
     private function category(string $name, string $slug, int $sort, ?int $parentId = null): Category

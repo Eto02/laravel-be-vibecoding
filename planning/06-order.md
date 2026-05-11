@@ -1,5 +1,5 @@
 # MODULE 6 — Order Management
-**Priority:** 🟠 P1 | **Status:** ⬜ Belum | **Sprint:** 6
+**Priority:** 🟠 P1 | **Status:** ✅ Selesai | **Sprint:** 6
 
 ---
 

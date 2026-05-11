@@ -5,6 +5,7 @@ namespace App\Services\Order;
 use App\Contracts\Shared\CacheServiceInterface;
 use App\Contracts\Shared\IdempotencyServiceInterface;
 use App\DTOs\Order\CheckoutDTO;
+use App\Enums\DisputeStatus;
 use App\Enums\OrderStatus;
 use App\Events\Order\OrderCancelled;
 use App\Events\Order\OrderDelivered;
@@ -152,6 +153,7 @@ class OrderService
             'user_id'     => $user->id,
             'reason'      => $reason,
             'description' => $description,
+            'status'      => DisputeStatus::Open,
         ]);
 
         $this->logStatusChange($order, $order->status->value, OrderStatus::Disputed->value, $user->id, 'Dispute filed.');
