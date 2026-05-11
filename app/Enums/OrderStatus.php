@@ -19,8 +19,9 @@ enum OrderStatus: string
             self::Pending    => in_array($new, [self::Paid, self::Cancelled]),
             self::Paid       => in_array($new, [self::Processing, self::Cancelled]),
             self::Processing => in_array($new, [self::Shipped]),
-            self::Shipped    => in_array($new, [self::Delivered]),
-            self::Delivered  => in_array($new, [self::Completed]),
+            self::Shipped    => in_array($new, [self::Delivered, self::Disputed]),
+            self::Delivered  => in_array($new, [self::Completed, self::Disputed]),
+            self::Completed  => in_array($new, [self::Disputed]),
             default          => false,
         };
     }

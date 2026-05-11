@@ -83,7 +83,11 @@ class OrderService
             throw new \DomainException('Only shipped orders can be confirmed as received.');
         }
 
-        return $this->transition($order, OrderStatus::Delivered, $user->id, 'Received confirmed by buyer.');
+        $delivered = $this->transition($order, OrderStatus::Delivered, $user->id, 'Received confirmed by buyer.');
+
+        OrderDelivered::dispatch($delivered);
+
+        return $delivered;
     }
 
     public function getOrdersForMerchant(Store $store, ?string $status = null): LengthAwarePaginator
@@ -156,8 +160,7 @@ class OrderService
             'status'      => DisputeStatus::Open,
         ]);
 
-        $this->logStatusChange($order, $order->status->value, OrderStatus::Disputed->value, $user->id, 'Dispute filed.');
-        $order->update(['status' => OrderStatus::Disputed]);
+        $this->transition($order, OrderStatus::Disputed, $user->id, 'Dispute filed.');
 
         return $dispute;
     }
@@ -173,22 +176,34 @@ class OrderService
 
     private function processCheckout(User $user, CheckoutDTO $data): array
     {
-        $cart = \App\Models\Cart::where('user_id', $user->id)->first();
+        // Quick fail before acquiring lock
+        $cartExists = \App\Models\Cart::where('user_id', $user->id)
+            ->whereHas('items')
+            ->exists();
 
-        if (! $cart || $cart->items()->count() === 0) {
+        if (! $cartExists) {
             throw new \DomainException('Cart is empty.');
         }
 
-        $cart->load([
-            'items.variant.product',
-            'items.store:id,name',
-        ]);
-
-        $cartByStore = $cart->items->groupBy('store_id');
-
         $orderIds = [];
 
-        DB::transaction(function () use ($user, $data, $cartByStore, &$orderIds) {
+        DB::transaction(function () use ($user, $data, &$orderIds) {
+            // Reload cart with lock inside transaction to prevent race conditions
+            $cart = \App\Models\Cart::where('user_id', $user->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $cart || $cart->items()->count() === 0) {
+                throw new \DomainException('Cart is empty.');
+            }
+
+            $cart->load([
+                'items.variant.product',
+                'items.store:id,name',
+            ]);
+
+            $cartByStore = $cart->items->groupBy('store_id');
+
             foreach ($data->items as $checkoutItem) {
                 $storeItems = $cartByStore->get($checkoutItem->storeId);
 

@@ -14,12 +14,17 @@ class ProcessRefundIfPaid implements ShouldQueue
     {
         $order = $event->order;
 
-        if ($order->status !== OrderStatus::Cancelled) {
+        // Check status logs to see if order was ever paid before cancellation.
+        // Sprint 7: trigger refund via PaymentService when confirmed paid.
+        $wasPaid = $order->statusLogs()
+            ->where('to_status', OrderStatus::Paid->value)
+            ->exists();
+
+        if (! $wasPaid) {
             return;
         }
 
-        // Sprint 7: check if order was paid before cancellation and trigger refund via PaymentService.
-        Log::info('ProcessRefundIfPaid: refund stub triggered', [
+        Log::info('ProcessRefundIfPaid: order was paid — refund pending Sprint 7 implementation', [
             'order_id'     => $order->id,
             'order_number' => $order->order_number,
         ]);
