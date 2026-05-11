@@ -31,11 +31,38 @@
       "Bash(git branch *)"
     ],
     "deny": [
-      "Bash(php artisan migrate:fresh*)",
       "Bash(php artisan db:wipe*)",
       "Bash(docker compose -f docker-compose.prod.yml *)",
       "Bash(git push --force*)",
       "Bash(rm -rf *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/prevent-commit-to-main.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/auto-merge-postman.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/pint-check.sh"
+          }
+        ]
+      }
     ]
   }
 }
