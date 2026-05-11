@@ -8,13 +8,6 @@ use App\Contracts\Shared\IdempotencyServiceInterface;
 use App\Contracts\Shared\MediaServiceInterface;
 use App\Contracts\Shared\OtpServiceInterface;
 use App\Contracts\Shared\SmsServiceInterface;
-use App\Events\Auth\UserRegistered;
-use App\Events\Merchant\StoreFollowed;
-use App\Events\Merchant\StoreUnfollowed;
-use App\Listeners\Auth\SendEmailVerificationNotification;
-use App\Listeners\Auth\SendWelcomeEmail;
-use App\Listeners\Merchant\DecrementFollowerCount;
-use App\Listeners\Merchant\IncrementFollowerCount;
 use App\Models\ProductVariant;
 use App\Observers\ProductVariantObserver;
 use App\Services\Payment\PaymentGatewayInterface;
@@ -25,7 +18,6 @@ use App\Services\Shared\IdempotencyService;
 use App\Services\Shared\MediaService;
 use App\Services\Shared\OtpService;
 use App\Services\Shared\SmsService;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -46,11 +38,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Event::listen(UserRegistered::class, SendEmailVerificationNotification::class);
-        Event::listen(UserRegistered::class, SendWelcomeEmail::class);
-        Event::listen(StoreFollowed::class, IncrementFollowerCount::class);
-        Event::listen(StoreUnfollowed::class, DecrementFollowerCount::class);
-
         ProductVariant::observe(ProductVariantObserver::class);
     }
 }

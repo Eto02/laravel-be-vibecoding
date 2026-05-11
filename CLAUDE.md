@@ -348,7 +348,7 @@ public function process(CheckoutDTO $data): Order { ... }
 
 14. **Git Workflow (PR-first).** DILARANG push langsung ke `main`. Selalu buat branch `feat/nama-fitur` atau `fix/nama-bug`. Setelah selesai, push ke remote dan buat Pull Request untuk review.
 
-15. **API Documentation.** Setiap penambahan endpoint WAJIB diiringi dengan update koleksi Postman. Simpan file `postman_collection.json` di root repository atau gunakan auto-generator (Scribe).
+15. **API Documentation.** Setiap penambahan endpoint WAJIB diiringi dengan: (1) update file collection domain-nya di `postman/{nn}-{domain}.postman_collection.json` — nomor prefix selaras dengan nomor modul di tabel Domain Modules; (2) jalankan `python3 postman/merge.py`; (3) commit keduanya bersama domain file. Lihat section **API Documentation (Postman)** untuk detail lengkap.
 
 
 ---
@@ -772,8 +772,54 @@ Selalu ikuti alur ini untuk menjaga integritas `main` branch:
 
 Agar API mudah dicoba oleh tim Frontend atau QA:
 
-1.  **Collection File:** Gunakan file `postman/marketplace_api.postman_collection.json` untuk menyimpan semua request.
-2.  **Environment:** Sediakan `postman/marketplace_dev.postman_environment.json` yang berisi variable `base_url`, `token`, dll.
-3.  **Authentication:** Set authorization di level folder/collection menggunakan `Bearer Token` dari variable `{{token}}`.
-4.  **Examples:** Simpan contoh response (Success & Error) di setiap request Postman agar frontend tahu struktur data tanpa harus menjalankan API.
-5.  **Automated Doc (Optional):** Kita bisa menggunakan `knuckleswtf/scribe` untuk generate dokumentasi HTML dan Postman collection secara otomatis dari DocBlock di Controller.
+### Struktur File
+
+Setiap domain memiliki **satu file collection terpisah** di folder `postman/`. Nomor prefix **selaras persis dengan nomor modul** di tabel Domain Modules. Utilities yang tidak punya nomor modul pakai prefix `00-`.
+
+```
+postman/
+├── 00-health.postman_collection.json       ← utility (no module number)
+├── 00-media.postman_collection.json        ← utility (shared MediaService)
+├── 01-auth.postman_collection.json         ← Module 1: Auth
+├── 02-user.postman_collection.json         ← Module 2: User
+├── 03-merchant.postman_collection.json     ← Module 3: Merchant
+├── 04-product.postman_collection.json      ← Module 4: Product
+├── 05-cart.postman_collection.json         ← Module 5: Cart & Wishlist
+├── 06-order.postman_collection.json        ← Module 6: Order
+├── 07-payment.postman_collection.json      ← Module 7: Payment
+├── 07-webhooks.postman_collection.json     ← Module 7: Payment Webhooks (sub)
+├── 08-shipping.postman_collection.json     ← Module 8: Shipping  (sprint 8)
+├── 09-review.postman_collection.json       ← Module 9: Review    (sprint 9)
+├── 10-notification.postman_collection.json ← Module 10: Notification
+├── 11-voucher.postman_collection.json      ← Module 11: Voucher
+├── 12-admin.postman_collection.json        ← Module 12: Admin
+└── marketplace_dev.postman_environment.json ← satu environment untuk semua
+```
+
+### Workflow Wajib — Setiap Update Collection
+
+```bash
+# 1. Edit file domain yang relevan
+#    postman/{nn}-{domain}.postman_collection.json
+
+# 2. Jalankan merge script untuk regenerate master collection
+python3 postman/merge.py
+
+# 3. Commit KEDUANYA — domain file + master
+git add postman/{nn}-{domain}.postman_collection.json postman/marketplace_api.postman_collection.json
+git commit -m "docs(postman): update {domain} collection"
+```
+
+> **Jangan commit domain file tanpa menjalankan merge.py terlebih dahulu.**
+> `marketplace_api.postman_collection.json` harus selalu sinkron dengan domain files.
+
+### Aturan Wajib
+
+1.  **Satu file per domain.** Penamaan: `{nn}-{domain}.postman_collection.json`. Nomor prefix **harus selaras** dengan nomor modul di tabel Domain Modules. Sub-modul dari modul yang sama pakai nomor yang sama (contoh: `07-webhooks` untuk sub-modul Payment).
+2.  **File master** `postman/marketplace_api.postman_collection.json` di-generate oleh `postman/merge.py` — **jangan edit manual**. Ini yang diimport ke Postman sebagai satu collection dengan semua folder.
+3.  **Satu environment file** — `postman/marketplace_dev.postman_environment.json` — berisi semua variable (`base_url`, `access_token`, `refresh_token`, dan variable per-domain). Semua collection merujuk ke environment yang sama.
+4.  **Setiap collection menyertakan variable** yang dibutuhkan domain tersebut (minimal: `base_url`, `access_token`, `refresh_token`) di dalam field `variable` collection, sebagai fallback.
+5.  **Authentication** di level collection menggunakan `Bearer Token` dari variable `{{access_token}}`.
+6.  **Setiap sprint yang menambah endpoint WAJIB membuat atau mengupdate file collection domain-nya** lalu jalankan `merge.py`. Ini bagian dari Definition of Done tiap sprint.
+7.  **Simpan contoh response** (Success & Error) di setiap request Postman agar frontend tahu struktur data tanpa menjalankan API.
+8.  **Automated Doc (Optional):** Gunakan `knuckleswtf/scribe` untuk generate dokumentasi HTML dan Postman collection otomatis dari DocBlock di Controller (direncanakan Sprint 8+).

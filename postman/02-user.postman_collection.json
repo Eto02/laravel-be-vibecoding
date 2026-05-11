@@ -1,0 +1,799 @@
+{
+  "info": {
+    "name": "Marketplace API — User",
+    "_postman_id": "marketplace-api-v2-03-user",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "address_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "03. User Profile",
+      "description": "User profile management — GET/PUT profile, avatar upload, address book CRUD, phone verification via OTP.\n\nSemua endpoint membutuhkan Bearer token 🔒\n\n**Avatar upload flow:**\n1. `POST /users/me/avatar` → dapat `avatar_upload_url` + `avatar_key`\n2. `PUT {{avatar_upload_url}}` langsung ke R2 (tidak melalui server)\n3. `POST /users/me/avatar/confirm` → simpan key ke DB\n\n**Phone verification flow:**\n1. `POST /users/phone/send-otp` → OTP dikirim via WA/SMS\n2. `POST /users/phone/verify` → verifikasi OTP → phone tersimpan",
+      "item": [
+        {
+          "name": "Get Profile 🔒",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Ambil full profile user yang sedang login.\n\nBerbeda dari `GET /api/auth/me` (hanya basic fields) — endpoint ini return semua field profil termasuk `phone`, `bio`, `avatar`, `phone_verified_at`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile retrieved.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"email_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"phone\": \"+6281234567890\",\n    \"phone_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"avatar\": \"avatars/uuid.jpg\",\n    \"bio\": \"Hello, I am a buyer.\",\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "401 Unauthenticated",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"message\": \"Unauthenticated.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Profile 🔒",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"bio\": \"I love shopping online.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Update profile user.\n\n⚠️ Field `phone` tidak dapat diubah melalui endpoint ini — gunakan flow `/phone/send-otp` + `/phone/verify`.\n⚠️ Semua field bersifat `sometimes` (partial update)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile updated.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Updated Name\",\n    \"email\": \"test@example.com\",\n    \"email_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"phone\": \"+6281234567890\",\n    \"phone_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"avatar\": \"avatars/uuid.jpg\",\n    \"bio\": \"I love shopping online.\",\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 Phone Field Prohibited",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": { \"phone\": [\"The phone field is prohibited.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Upload Avatar — Get Presigned URL 🔒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  const data = body.data || {};",
+                  "  pm.collectionVariables.set(\"avatar_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"avatar_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "  pm.test(\"Returns 201 with upload info\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(data).to.have.all.keys(\"upload_url\", \"key\", \"public_url\");",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"profile-photo.jpg\",\n  \"mime\": \"image/jpeg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/me/avatar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "avatar"
+              ]
+            },
+            "description": "Step 1: Generate presigned URL untuk upload foto profil ke Cloudflare R2.\n\n**mime** options: `image/jpeg`, `image/png`, `image/webp` (PDF/video tidak diizinkan)\n\n`avatar_upload_url` dan `avatar_key` otomatis tersimpan ke collection variables."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Avatar presigned URL generated.\",\n  \"data\": {\n    \"upload_url\": \"https://abc.r2.cloudflarestorage.com/avatars/uuid.jpg?X-Amz-...\",\n    \"key\": \"avatars/550e8400-e29b-41d4-a716-446655440000.jpg\",\n    \"public_url\": \"https://pub-xxx.r2.dev/avatars/550e8400-e29b-41d4-a716-446655440000.jpg\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 Invalid MIME",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": { \"mime\": [\"The selected mime is invalid.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Upload Avatar ke R2 (Direct PUT)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "image/jpeg"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {}
+            },
+            "url": {
+              "raw": "{{avatar_upload_url}}",
+              "host": [
+                "{{avatar_upload_url}}"
+              ]
+            },
+            "description": "Step 2: Upload file foto profil langsung ke Cloudflare R2 menggunakan presigned URL.\n\n⚠️ Request dikirim LANGSUNG ke R2 — tidak melalui server Laravel.\n⚠️ `Content-Type` harus sama dengan `mime` yang dipakai saat generate presigned URL.\n⚠️ Tidak butuh Authorization header.\n⚠️ Client wajib resize gambar ke maks 500×500px sebelum upload."
+          }
+        },
+        {
+          "name": "Confirm Avatar Upload 🔒",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"{{avatar_key}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/me/avatar/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "avatar",
+                "confirm"
+              ]
+            },
+            "description": "Step 3: Konfirmasi upload avatar berhasil. Backend validasi file exists di R2 dan update `users.avatar`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Avatar updated.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"email_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"phone\": null,\n    \"phone_verified_at\": null,\n    \"avatar\": \"avatars/550e8400-e29b-41d4-a716-446655440000.jpg\",\n    \"bio\": null,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 File Not Found",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Avatar file not found in storage.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Send Phone OTP 🔒",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"081234567890\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/phone/send-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "phone",
+                "send-otp"
+              ]
+            },
+            "description": "Kirim OTP 6 digit ke nomor HP via WhatsApp/SMS.\n\nNomor HP dinormalisasi ke format E.164 secara otomatis:\n- `081234567890` → `+6281234567890`\n- `+6281234567890` → `+6281234567890`\n\n⚠️ Rate limit: maks 3 request per 10 menit untuk satu nomor HP."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP sent to the provided phone number.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 Phone Already Taken",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"This phone number is already registered.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "429 Rate Limited",
+              "status": "Too Many Requests",
+              "code": 429,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Too many OTP requests. Please try again later.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verify Phone OTP 🔒",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"081234567890\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/phone/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "phone",
+                "verify"
+              ]
+            },
+            "description": "Verifikasi OTP untuk nomor HP. Setelah berhasil, `users.phone` dan `users.phone_verified_at` diupdate.\n\n⚠️ Maks 5 percobaan salah sebelum OTP diinvalidasi.\n⚠️ OTP valid selama 5 menit."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Phone number verified.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"email_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"phone\": \"+6281234567890\",\n    \"phone_verified_at\": \"2026-05-04T00:00:00.000000Z\",\n    \"avatar\": null,\n    \"bio\": null,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 OTP Expired",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"OTP has expired. Please request a new one.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 OTP Max Retry",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"OTP invalidated after too many failed attempts.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Addresses 🔒",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/me/addresses",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses"
+              ]
+            },
+            "description": "Ambil semua alamat pengiriman milik user yang login.\nUrutan: default address di atas, lalu sisanya by created_at DESC."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Addresses retrieved.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"label\": \"Rumah\",\n      \"recipient_name\": \"John Doe\",\n      \"phone\": \"+6281234567890\",\n      \"province\": \"Jawa Barat\",\n      \"city\": \"Bandung\",\n      \"district\": \"Cicendo\",\n      \"postal_code\": \"40172\",\n      \"street\": \"Jl. Merdeka No. 1\",\n      \"lat\": -6.9147,\n      \"lng\": 107.6098,\n      \"is_default\": true,\n      \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n    }\n  ],\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Address 🔒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data && body.data.id) {",
+                  "    pm.collectionVariables.set('address_id', String(body.data.id));",
+                  "  }",
+                  "  pm.test('Create address returns 201', () => pm.response.to.have.status(201));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Rumah\",\n  \"recipient_name\": \"John Doe\",\n  \"phone\": \"+6281234567890\",\n  \"province\": \"Jawa Barat\",\n  \"city\": \"Bandung\",\n  \"district\": \"Cicendo\",\n  \"postal_code\": \"40172\",\n  \"street\": \"Jl. Merdeka No. 1\",\n  \"lat\": -6.9147,\n  \"lng\": 107.6098\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/me/addresses",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses"
+              ]
+            },
+            "description": "Tambah alamat pengiriman baru.\n\nAddress ID otomatis tersimpan ke `address_id` variable.\nAlamat pertama yang dibuat otomatis menjadi default."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Address created.\",\n  \"data\": {\n    \"id\": 1,\n    \"label\": \"Rumah\",\n    \"recipient_name\": \"John Doe\",\n    \"phone\": \"+6281234567890\",\n    \"province\": \"Jawa Barat\",\n    \"city\": \"Bandung\",\n    \"district\": \"Cicendo\",\n    \"postal_code\": \"40172\",\n    \"street\": \"Jl. Merdeka No. 1\",\n    \"lat\": -6.9147,\n    \"lng\": 107.6098,\n    \"is_default\": true,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 Validation Error",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": { \"street\": [\"The street field is required.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Address 🔒",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/me/addresses/{{address_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses",
+                "{{address_id}}"
+              ]
+            },
+            "description": "Ambil detail satu alamat berdasarkan ID.\n\n⚠️ Hanya bisa akses alamat milik sendiri — alamat orang lain return 403."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Address retrieved.\",\n  \"data\": {\n    \"id\": 1,\n    \"label\": \"Rumah\",\n    \"recipient_name\": \"John Doe\",\n    \"phone\": \"+6281234567890\",\n    \"province\": \"Jawa Barat\",\n    \"city\": \"Bandung\",\n    \"district\": \"Cicendo\",\n    \"postal_code\": \"40172\",\n    \"street\": \"Jl. Merdeka No. 1\",\n    \"lat\": -6.9147,\n    \"lng\": 107.6098,\n    \"is_default\": true,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "403 Forbidden (IDOR)",
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Address 🔒",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Kantor\",\n  \"recipient_name\": \"John Doe\",\n  \"street\": \"Jl. Sudirman No. 88\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/me/addresses/{{address_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses",
+                "{{address_id}}"
+              ]
+            },
+            "description": "Update satu atau lebih field alamat (partial update — semua field `sometimes`).\n\n⚠️ Hanya bisa update alamat milik sendiri."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Address updated.\",\n  \"data\": {\n    \"id\": 1,\n    \"label\": \"Kantor\",\n    \"recipient_name\": \"John Doe\",\n    \"phone\": \"+6281234567890\",\n    \"province\": \"Jawa Barat\",\n    \"city\": \"Bandung\",\n    \"district\": \"Cicendo\",\n    \"postal_code\": \"40172\",\n    \"street\": \"Jl. Sudirman No. 88\",\n    \"lat\": -6.9147,\n    \"lng\": 107.6098,\n    \"is_default\": true,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "403 Forbidden",
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Address 🔒",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/me/addresses/{{address_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses",
+                "{{address_id}}"
+              ]
+            },
+            "description": "Hapus alamat (soft delete — data tetap ada untuk preservasi history order).\n\nReturn 204 No Content.\n⚠️ Jika yang dihapus adalah default address, alamat berikutnya otomatis dijadikan default."
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "body": ""
+            },
+            {
+              "name": "403 Forbidden",
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Set Default Address 🔒",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/me/addresses/{{address_id}}/set-default",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "addresses",
+                "{{address_id}}",
+                "set-default"
+              ]
+            },
+            "description": "Set alamat tertentu sebagai default.\n\nProses dilakukan dalam satu DB transaction:\n1. Reset semua alamat user ke `is_default = false`\n2. Set alamat yang dipilih ke `is_default = true`"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Default address updated.\",\n  \"data\": {\n    \"id\": 2,\n    \"label\": \"Kantor\",\n    \"recipient_name\": \"John Doe\",\n    \"phone\": \"+6281234567890\",\n    \"province\": \"DKI Jakarta\",\n    \"city\": \"Jakarta Selatan\",\n    \"district\": \"Kebayoran Baru\",\n    \"postal_code\": \"12180\",\n    \"street\": \"Jl. Sudirman No. 88\",\n    \"lat\": -6.2208,\n    \"lng\": 106.8020,\n    \"is_default\": true,\n    \"created_at\": \"2026-05-04T00:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "403 Forbidden",
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

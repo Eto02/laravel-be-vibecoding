@@ -19,7 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->render(function (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        // Laravel 11 maps ModelNotFoundException → NotFoundHttpException via mapException()
+        // before render callbacks run, so we must handle NotFoundHttpException directly.
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e) {
             return \App\Http\Responses\ApiResponse::error('Resource not found.', 404);
         });
 

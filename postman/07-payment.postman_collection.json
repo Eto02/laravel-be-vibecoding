@@ -1,0 +1,132 @@
+{
+  "info": {
+    "name": "Marketplace API — Payment",
+    "_postman_id": "marketplace-api-v2-08-payment",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transaction_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "invoice_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "07. Payment",
+      "description": "Pembayaran via Xendit gateway",
+      "item": [
+        {
+          "name": "Create Payment 🔒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data) {",
+                  "    pm.collectionVariables.set('transaction_id', String(body.data.id || ''));",
+                  "    pm.collectionVariables.set('invoice_url', body.data.invoice_url || '');",
+                  "  }",
+                  "  pm.test('Create payment returns 201', () => pm.response.to.have.status(201));",
+                  "  pm.test('Response has invoice_url', () => pm.expect(body.data).to.have.property('invoice_url'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Unique key per request — mencegah double payment"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 150000,\n  \"description\": \"Payment for Order #123\",\n  \"currency\": \"IDR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments"
+              ]
+            },
+            "description": "Buat invoice pembayaran via Xendit.\n\n⚠️ Selalu sertakan header `X-Idempotency-Key` (UUID) untuk mencegah double charge.\n\n`amount` dalam **satuan Rupiah** (min: Rp 10.000 = `10000`)."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully.\",\n  \"data\": {\n    \"id\": 1,\n    \"external_id\": \"INV-xxx\",\n    \"invoice_url\": \"https://checkout.xendit.co/web/...\",\n    \"amount\": 150000,\n    \"status\": \"pending\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
