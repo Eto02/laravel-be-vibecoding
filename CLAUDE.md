@@ -346,9 +346,9 @@ public function process(CheckoutDTO $data): Order { ... }
 
 13. **Service Return Type.** Service harus mengembalikan Model, DTO, atau boolean. Gunakan **Exceptions** untuk alur error (misal: `InsufficientStockException`), jangan return `['error' => '...']`.
 
-14. **Git Workflow (PR-first).** DILARANG push langsung ke `main`. Selalu buat branch `feat/nama-fitur` atau `fix/nama-bug`. Setelah selesai, push ke remote dan buat Pull Request untuk review.
+14. **Sprint Execution Workflow.** Semua perubahan kode WAJIB mengikuti **Sprint Execution Workflow** — plan-first → `/execute` (issue + branch) → kerjakan modul → self-review report → STOP. Push, PR, dan merge HANYA via slash command user (`/push`, `/pr`, `/merge-ok`). Detail lengkap di section terpisah.
 
-15. **API Documentation.** Setiap penambahan endpoint WAJIB diiringi dengan: (1) update file collection domain-nya di `postman/{nn}-{domain}.postman_collection.json` — nomor prefix selaras dengan nomor modul di tabel Domain Modules; (2) jalankan `python3 postman/merge.py`; (3) commit keduanya bersama domain file. Lihat section **API Documentation (Postman)** untuk detail lengkap.
+15. **API Documentation.** Setiap penambahan endpoint WAJIB ditambah ke `postman/{nn}-{domain}.postman_collection.json` (nomor prefix selaras dengan tabel Domain Modules) dan `python3 postman/merge.py` dijalankan sebelum stop. Ini bagian dari **Definition of Done** modul (lihat Sprint Execution Workflow).
 
 
 ---
@@ -754,17 +754,165 @@ Follow this priority when a new feature is requested. Never skip an earlier-prio
 
 ---
 
-## Git & Contribution Workflow
+## Sprint Execution Workflow
 
-Selalu ikuti alur ini untuk menjaga integritas `main` branch:
+Alur kerja standar untuk setiap modul/sprint. **Semua perubahan kode WAJIB melalui flow ini.** User mengontrol setiap transisi via slash command — assistant tidak boleh push, buat PR, atau merge tanpa command eksplisit.
 
-1.  **Sync:** `git checkout main && git pull origin main`
-2.  **Branch:** `git checkout -b feat/feature-name` (Gunakan prefix `feat/`, `fix/`, `refactor/`, atau `chore/`)
-3.  **Code:** Lakukan perubahan dan commit secara atomik.
-4.  **Test:** Pastikan `php artisan test` lulus semua.
-5.  **Push:** `git push origin feat/feature-name`
-6.  **PR:** Buka Pull Request di GitHub. Berikan deskripsi perubahan dan lampirkan screenshot/recording jika ada perubahan UI/logic signifikan.
-7.  **Merge:** Dilakukan setelah review atau jika CI/CD lulus.
+### Slash Commands
+
+| Command | Aksi |
+|---|---|
+| `/plan-review {module}` | Diskusi planning dengan user. Baca `planning/NN-module.md`, klarifikasi kalau ambigu, **tidak modifikasi file kode** |
+| `/execute {module}` | Mulai eksekusi: buat GitHub issue → branch dari main → kerjakan modul → stop di akhir dengan self-review report |
+| `/push` | Push branch aktif ke remote |
+| `/pr` | Buat Pull Request ke main |
+| `/merge-ok` | User sudah review PR dan approve — assistant merge + delete branch |
+
+### Cycle Lengkap
+
+```
+1. /plan-review 07-payment
+   → Baca planning, klarifikasi kalau ambigu, no code changes
+
+2. /execute 07-payment
+   → gh issue create (link planning doc, scope ringkas)
+   → git checkout main && git pull
+   → git checkout -b feat/sprint-7-payment
+   → Kerjakan FULL modul (semua phase sekaligus)
+   → Commit lokal atomic per logical unit (NO push)
+   → Update Postman: postman/07-payment.postman_collection.json + jalankan merge.py
+   → Update planning/07-payment.md: centang checkbox + status ✅ Selesai
+   → Update DevSeeder kalau ada entity baru
+   → Pastikan php artisan test lulus
+   → Kirim self-review report (format di bawah)
+   → STOP — tunggu user review
+
+3. User review manual file-by-file di IDE
+
+4. /push
+   → git push -u origin feat/sprint-7-payment
+
+5. /pr
+   → gh pr create --base main --head feat/sprint-7-payment
+
+6. (Optional) /ultrareview {PR-number}
+   → User trigger sendiri di UI (assistant tidak bisa)
+
+7. /merge-ok
+   → gh pr merge {N} --squash --delete-branch
+   → Update memory/project_state.md
+```
+
+### Aturan Wajib
+
+1.  **Plan-first.** Dilarang eksekusi sebelum `/plan-review` dijalankan untuk modul tersebut, kecuali user eksplisit minta skip.
+2.  **Issue per modul.** `/execute` selalu diawali dengan `gh issue create` — link ke planning doc, deskripsi singkat scope.
+3.  **Branch dari main.** Selalu `git checkout main && git pull origin main` sebelum buat branch. Penamaan: `feat/sprint-N-{module}` untuk sprint/modul, `fix/{short-description}` untuk bug fix.
+4.  **Local commits OK, no push.** Selama eksekusi boleh commit atomic per logical unit (mis: `feat(order): enums + migrations`, `feat(order): service + events`). Push HANYA setelah `/push`.
+5.  **Definition of Done per modul** — sebelum stop dan minta review, harus selesai SEMUA:
+    - `php artisan test` lulus semua
+    - File Postman domain diupdate + `python3 postman/merge.py` dijalankan
+    - `planning/NN-module.md` — checkbox dicentang sesuai yang dikerjakan, status diubah ke `✅ Selesai`
+    - DevSeeder ditambah sample data untuk entity baru (jika ada)
+    - Self-review report dikirim ke user
+6.  **Tidak push tanpa command.** Assistant TIDAK BOLEH push ke remote, buat PR, atau merge tanpa user menjalankan `/push`, `/pr`, atau `/merge-ok`.
+7.  **Merge butuh approval.** `/merge-ok` adalah satu-satunya cara assistant merge ke main. Tanpa command itu, PR tetap open.
+8.  **Bug fix workflow.** Bug di luar konteks sprint butuh issue + branch terpisah `fix/...` + PR (workflow yang sama). Bug yang ditemukan SAAT eksekusi sprint difix langsung di branch sprint itu (inline).
+9.  **Conflict handling.** Kalau `main` advance saat assistant kerja di branch, assistant yang rebase. Lapor kalau ada conflict yang butuh keputusan user.
+
+### Meta-Change Workflow (Rules, Skills, Commands, Docs, Config)
+
+Untuk perubahan yang **BUKAN feature code** — rule (`CLAUDE.md`), `.claude/` config (skills, slash commands, agents), planning docs, Docker/ENV config, script utility (mis: `postman/merge.py`) — pakai alur ringan ini:
+
+```
+1. Branch dari main: chore/{short-description}
+   (mis: chore/sprint-workflow-rules, chore/update-postman-merge)
+2. Lakukan perubahan
+3. Commit lokal (no push)
+4. Short summary ke user (bukan full Self-Review Report)
+5. STOP — tunggu /push, /pr, /merge-ok
+```
+
+**Yang TIDAK perlu untuk meta-change:**
+- ❌ GitHub issue
+- ❌ `/plan-review` (tidak ada planning doc)
+- ❌ Test suite run (kecuali perubahan mempengaruhi test config)
+- ❌ Postman update
+- ❌ DevSeeder update
+- ❌ Full Self-Review Report
+
+**Tetap berlaku:**
+- ✅ Branch dari main (TIDAK BOLEH commit langsung ke main)
+- ✅ Tidak push tanpa `/push`
+- ✅ Tidak merge tanpa `/merge-ok`
+- ✅ PR untuk review user
+
+### Short Summary Format (Meta-Change)
+
+```markdown
+## 🔧 Meta-Change Summary — {branch name}
+
+**Scope:** {Rule update / Skill / Command / Config / Docs}
+
+**Changes:**
+- `path/to/file` — {what changed in 1 line}
+- ...
+
+**Rationale:** {1-2 sentences}
+
+Ready for review. Run `/push` to push, then `/pr` to create PR.
+```
+
+### Self-Review Report Format
+
+Saat stop di akhir modul, kirim report dengan format konsisten ini:
+
+```markdown
+## 🤖 Self-Review Report — {Sprint N: Module Name}
+
+### Files Changed ({total})
+
+- **Models** ({n}): `Order.php`, `OrderItem.php`, ...
+- **Migrations** ({n}): ...
+- **Enums/DTOs** ({n}): ...
+- **Services** ({n}): ...
+- **Controllers** ({n}): ...
+- **Requests** ({n}): ...
+- **Resources** ({n}): ...
+- **Events/Listeners** ({n}): ...
+- **Jobs/Commands** ({n}): ...
+- **Mails/Views** ({n}): ...
+- **Tests** ({n}): ...
+- **Routes** ({n}): ...
+- **Postman** ({n}): ...
+- **Other** ({n}): ...
+
+### Tests
+
+- {X} passed, {Y} failed, {Z} skipped — duration {T}s
+
+### New Endpoints in Postman
+
+- `{METHOD} {path}` — {short description}
+
+### Potential Issues / Known Gaps
+
+- **[severity]** {issue description + file:line}
+
+### Pending Dependencies for Future Sprints
+
+- {dependency note, e.g. "ProcessRefundIfPaid stub — aktif di Sprint N"}
+
+### Done Criteria Status
+
+- [x] Tests pass
+- [x] Postman updated + merge.py run
+- [x] Planning doc updated (✅ Selesai)
+- [x] DevSeeder updated (if applicable)
+- [x] Local commits atomic ({N} commits)
+
+**Ready for review.** Run `/push` to push to remote, then `/pr` to create PR.
+```
 
 ---
 
