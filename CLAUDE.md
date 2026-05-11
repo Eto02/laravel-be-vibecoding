@@ -348,7 +348,7 @@ public function process(CheckoutDTO $data): Order { ... }
 
 14. **Git Workflow (PR-first).** DILARANG push langsung ke `main`. Selalu buat branch `feat/nama-fitur` atau `fix/nama-bug`. Setelah selesai, push ke remote dan buat Pull Request untuk review.
 
-15. **API Documentation.** Setiap penambahan endpoint WAJIB diiringi dengan update file collection domain-nya di `postman/{nn}-{domain}.postman_collection.json`. Satu file per domain, tidak ada file master gabungan. Lihat section **API Documentation (Postman)** untuk detail lengkap.
+15. **API Documentation.** Setiap penambahan endpoint WAJIB diiringi dengan update file collection domain-nya di `postman/{nn}-{domain}.postman_collection.json` — nomor prefix selaras dengan nomor modul di tabel Domain Modules. Satu file per domain, tidak ada file master gabungan. Lihat section **API Documentation (Postman)** untuk detail lengkap.
 
 
 ---
@@ -774,30 +774,35 @@ Agar API mudah dicoba oleh tim Frontend atau QA:
 
 ### Struktur File
 
-Setiap domain memiliki **satu file collection terpisah** di folder `postman/`. Tidak ada file master gabungan.
+Setiap domain memiliki **satu file collection terpisah** di folder `postman/`. Nomor prefix **selaras persis dengan nomor modul** di tabel Domain Modules. Utilities yang tidak punya nomor modul pakai prefix `00-`.
 
 ```
 postman/
-├── 00-health.postman_collection.json
-├── 01-auth.postman_collection.json
-├── 02-media.postman_collection.json
-├── 03-user.postman_collection.json
-├── 04-merchant.postman_collection.json
-├── 05-product.postman_collection.json
-├── 06-cart.postman_collection.json
-├── 07-order.postman_collection.json
-├── 08-payment.postman_collection.json
-├── 08-webhooks.postman_collection.json
-└── marketplace_dev.postman_environment.json   ← satu environment untuk semua
+├── 00-health.postman_collection.json       ← utility (no module number)
+├── 00-media.postman_collection.json        ← utility (shared MediaService)
+├── 01-auth.postman_collection.json         ← Module 1: Auth
+├── 02-user.postman_collection.json         ← Module 2: User
+├── 03-merchant.postman_collection.json     ← Module 3: Merchant
+├── 04-product.postman_collection.json      ← Module 4: Product
+├── 05-cart.postman_collection.json         ← Module 5: Cart & Wishlist
+├── 06-order.postman_collection.json        ← Module 6: Order
+├── 07-payment.postman_collection.json      ← Module 7: Payment
+├── 07-webhooks.postman_collection.json     ← Module 7: Payment Webhooks (sub)
+├── 08-shipping.postman_collection.json     ← Module 8: Shipping  (sprint 8)
+├── 09-review.postman_collection.json       ← Module 9: Review    (sprint 9)
+├── 10-notification.postman_collection.json ← Module 10: Notification
+├── 11-voucher.postman_collection.json      ← Module 11: Voucher
+├── 12-admin.postman_collection.json        ← Module 12: Admin
+└── marketplace_dev.postman_environment.json ← satu environment untuk semua
 ```
 
 ### Aturan Wajib
 
-1.  **Satu file per domain.** Penamaan: `{nn}-{domain}.postman_collection.json`. Urutan angka mengikuti nomor modul di Implementation Roadmap.
+1.  **Satu file per domain.** Penamaan: `{nn}-{domain}.postman_collection.json`. Nomor prefix **harus selaras** dengan nomor modul di tabel Domain Modules. Sub-modul dari modul yang sama pakai nomor yang sama (contoh: `07-webhooks` untuk sub-modul Payment).
 2.  **Tidak ada file master gabungan.** Import langsung semua file ke Postman sekaligus — Postman mendukung multi-file import, setiap file menjadi collection terpisah.
 3.  **Satu environment file** — `postman/marketplace_dev.postman_environment.json` — berisi semua variable (`base_url`, `access_token`, `refresh_token`, dan variable per-domain). Semua collection merujuk ke environment yang sama.
 4.  **Setiap collection menyertakan variable** yang dibutuhkan domain tersebut (minimal: `base_url`, `access_token`, `refresh_token`) di dalam field `variable` collection, sebagai fallback jika environment tidak di-set.
 5.  **Authentication** di level collection menggunakan `Bearer Token` dari variable `{{access_token}}`.
-6.  **Setiap sprint yang menambah endpoint WAJIB membuat atau mengupdate file collection domain-nya.** Jangan skip — ini bagian dari Definition of Done tiap sprint.
+6.  **Setiap sprint yang menambah endpoint WAJIB membuat atau mengupdate file collection domain-nya.** Ini bagian dari Definition of Done tiap sprint — jangan skip.
 7.  **Simpan contoh response** (Success & Error) di setiap request Postman agar frontend tahu struktur data tanpa menjalankan API.
 8.  **Automated Doc (Optional):** Gunakan `knuckleswtf/scribe` untuk generate dokumentasi HTML dan Postman collection otomatis dari DocBlock di Controller (direncanakan Sprint 8+).

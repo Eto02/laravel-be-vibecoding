@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "Marketplace API — Health",
+    "name": "Marketplace API — Health Check",
     "_postman_id": "marketplace-api-v2-00-health",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
