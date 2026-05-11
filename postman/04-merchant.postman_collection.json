@@ -1,0 +1,594 @@
+{
+  "info": {
+    "name": "Marketplace API — Merchant",
+    "_postman_id": "marketplace-api-v2-04-merchant",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "store_slug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "kyc_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "kyc_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "logo_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "logo_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "banner_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "banner_key",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "04. Merchant",
+      "description": "Merchant & Store module — Store registration, profile management, KYC upload, followers, and public store views.",
+      "item": [
+        {
+          "name": "Register Store 🔒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  var json = pm.response.json();",
+                  "  pm.collectionVariables.set(\"store_slug\", json.data.slug);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Toko Saya\",\n  \"description\": \"Toko terbaik di kota\",\n  \"city\": \"Bandung\",\n  \"province\": \"Jawa Barat\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Store 🔒",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Store 🔒",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Toko Baru\",\n  \"description\": \"Deskripsi diperbarui\",\n  \"city\": \"Jakarta\",\n  \"province\": \"DKI Jakarta\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Merchant Dashboard 🔒",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/merchant/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "dashboard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "KYC — Request Upload URL 🔒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"kyc_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"kyc_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ktp\",\n  \"filename\": \"ktp-saya.jpg\",\n  \"mime\": \"image/jpeg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/kyc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "kyc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "KYC — Confirm Upload 🔒",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ktp\",\n  \"key\": \"{{kyc_key}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/kyc/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "kyc",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Public — Get Store by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stores/{{store_slug}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "stores",
+                "{{store_slug}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Public — Get Store Followers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stores/{{store_slug}}/followers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "stores",
+                "{{store_slug}}",
+                "followers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Follow Store 🔒",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stores/{{store_slug}}/follow",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "stores",
+                "{{store_slug}}",
+                "follow"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unfollow Store 🔒",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stores/{{store_slug}}/follow",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "stores",
+                "{{store_slug}}",
+                "follow"
+              ]
+            }
+          }
+        },
+        {
+          "name": "KYC — Re-upload URL (PUT, rejected only) 🔒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"kyc_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"kyc_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ktp\",\n  \"filename\": \"ktp-baru.jpg\",\n  \"mime\": \"image/jpeg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/kyc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "kyc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "KYC — Confirm Re-upload (PUT) 🔒",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ktp\",\n  \"key\": \"{{kyc_key}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/kyc/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "kyc",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logo — Request Upload URL 🔒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"logo_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"logo_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"logo.png\",\n  \"mime\": \"image/png\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/logo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "logo"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logo — Confirm Upload 🔒",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"{{logo_key}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/logo/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "logo",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logo — Delete 🔒",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/logo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "logo"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Banner — Request Upload URL 🔒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data || {};",
+                  "  pm.collectionVariables.set(\"banner_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"banner_key\", data.key || \"\");",
+                  "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
+                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
+                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
+                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"banner.jpg\",\n  \"mime\": \"image/jpeg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/banner",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "banner"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Banner — Confirm Upload 🔒",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"{{banner_key}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/banner/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "banner",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Banner — Delete 🔒",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/merchant/store/banner",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "merchant",
+                "store",
+                "banner"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

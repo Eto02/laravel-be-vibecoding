@@ -1,0 +1,328 @@
+{
+  "info": {
+    "name": "Marketplace API — Media (File Upload)",
+    "_postman_id": "marketplace-api-v2-02-media",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "media_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "media_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "media_public_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "avatar_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "avatar_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "kyc_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "kyc_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "logo_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "logo_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "banner_upload_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "banner_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "product_media_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "02. Media (File Upload)",
+      "description": "Upload file ke Cloudflare R2 via Presigned URL (client-side direct upload)\n\n**Flow:**\n1. `POST /api/media/presigned-url` → dapat `upload_url` + `key`\n2. `PUT {upload_url}` dari client langsung ke R2 (tidak melalui server)\n3. `POST /api/media/confirm` dengan `key` → konfirmasi upload",
+      "item": [
+        {
+          "name": "Generate Presigned URL 🔒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data) {",
+                  "    pm.collectionVariables.set('media_upload_url', body.data.upload_url || '');",
+                  "    pm.collectionVariables.set('media_key', body.data.key || '');",
+                  "    pm.collectionVariables.set('media_public_url', body.data.public_url || '');",
+                  "  }",
+                  "  pm.test('Returns 200 with upload info', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.data).to.have.all.keys('upload_url', 'key', 'public_url');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"folder\": \"products\",\n  \"filename\": \"product-photo.jpg\",\n  \"mime\": \"image/jpeg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/media/presigned-url",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "presigned-url"
+              ]
+            },
+            "description": "Generate presigned PUT URL untuk upload langsung ke Cloudflare R2.\n\n**folder** options: `avatars`, `store-assets`, `products`, `reviews`, `kyc-documents`\n\n**mime** options: `image/jpeg`, `image/png`, `image/webp`, `image/gif`, `video/mp4`, `application/pdf`\n\nURL yang dihasilkan valid selama 300 detik (5 menit)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Presigned URL generated.\",\n  \"data\": {\n    \"upload_url\": \"https://abc.r2.cloudflarestorage.com/products/uuid.jpg?X-Amz-...\",\n    \"key\": \"products/550e8400-e29b-41d4-a716-446655440000.jpg\",\n    \"public_url\": \"https://pub-xxx.r2.dev/products/550e8400-e29b-41d4-a716-446655440000.jpg\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 Invalid Folder",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": { \"folder\": [\"The selected folder is invalid.\"] },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Upload File ke R2 (Direct PUT)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "image/jpeg"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {}
+            },
+            "url": {
+              "raw": "{{media_upload_url}}",
+              "host": [
+                "{{media_upload_url}}"
+              ]
+            },
+            "description": "Upload file langsung ke Cloudflare R2 menggunakan presigned URL dari step sebelumnya.\n\n⚠️ Request ini dikirim LANGSUNG ke R2 — tidak melalui server Laravel.\n⚠️ `Content-Type` harus sama persis dengan `mime` yang didaftarkan saat generate presigned URL.\n⚠️ Tidak butuh Authorization header."
+          }
+        },
+        {
+          "name": "Confirm Upload 🔒",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data && body.data.public_url) {",
+                  "    pm.collectionVariables.set('media_public_url', body.data.public_url);",
+                  "  }",
+                  "  pm.test('Confirm returns 200 with public_url', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(body.data).to.have.property('public_url');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"{{media_key}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/media/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "confirm"
+              ]
+            },
+            "description": "Konfirmasi bahwa file sudah berhasil di-upload ke R2.\nBackend akan validasi file exists di R2, hapus upload session dari Redis, dan return public URL."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Upload confirmed.\",\n  \"data\": {\n    \"public_url\": \"https://pub-xxx.r2.dev/products/550e8400-e29b-41d4-a716-446655440000.jpg\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            },
+            {
+              "name": "422 File Not Found",
+              "status": "Unprocessable Content",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"File not found in storage. Upload may have failed.\",\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete File 🔒",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"{{media_key}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/media",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "media"
+              ]
+            },
+            "description": "Hapus file dari Cloudflare R2.\n\nReturn 204 No Content (tanpa body)."
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "body": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

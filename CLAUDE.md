@@ -348,7 +348,7 @@ public function process(CheckoutDTO $data): Order { ... }
 
 14. **Git Workflow (PR-first).** DILARANG push langsung ke `main`. Selalu buat branch `feat/nama-fitur` atau `fix/nama-bug`. Setelah selesai, push ke remote dan buat Pull Request untuk review.
 
-15. **API Documentation.** Setiap penambahan endpoint WAJIB diiringi dengan update koleksi Postman. Simpan file `postman_collection.json` di root repository atau gunakan auto-generator (Scribe).
+15. **API Documentation.** Setiap penambahan endpoint WAJIB diiringi dengan update file collection domain-nya di `postman/{nn}-{domain}.postman_collection.json`. Satu file per domain, tidak ada file master gabungan. Lihat section **API Documentation (Postman)** untuk detail lengkap.
 
 
 ---
@@ -772,8 +772,32 @@ Selalu ikuti alur ini untuk menjaga integritas `main` branch:
 
 Agar API mudah dicoba oleh tim Frontend atau QA:
 
-1.  **Collection File:** Gunakan file `postman/marketplace_api.postman_collection.json` untuk menyimpan semua request.
-2.  **Environment:** Sediakan `postman/marketplace_dev.postman_environment.json` yang berisi variable `base_url`, `token`, dll.
-3.  **Authentication:** Set authorization di level folder/collection menggunakan `Bearer Token` dari variable `{{token}}`.
-4.  **Examples:** Simpan contoh response (Success & Error) di setiap request Postman agar frontend tahu struktur data tanpa harus menjalankan API.
-5.  **Automated Doc (Optional):** Kita bisa menggunakan `knuckleswtf/scribe` untuk generate dokumentasi HTML dan Postman collection secara otomatis dari DocBlock di Controller.
+### Struktur File
+
+Setiap domain memiliki **satu file collection terpisah** di folder `postman/`. Tidak ada file master gabungan.
+
+```
+postman/
+├── 00-health.postman_collection.json
+├── 01-auth.postman_collection.json
+├── 02-media.postman_collection.json
+├── 03-user.postman_collection.json
+├── 04-merchant.postman_collection.json
+├── 05-product.postman_collection.json
+├── 06-cart.postman_collection.json
+├── 07-order.postman_collection.json
+├── 08-payment.postman_collection.json
+├── 08-webhooks.postman_collection.json
+└── marketplace_dev.postman_environment.json   ← satu environment untuk semua
+```
+
+### Aturan Wajib
+
+1.  **Satu file per domain.** Penamaan: `{nn}-{domain}.postman_collection.json`. Urutan angka mengikuti nomor modul di Implementation Roadmap.
+2.  **Tidak ada file master gabungan.** Import langsung semua file ke Postman sekaligus — Postman mendukung multi-file import, setiap file menjadi collection terpisah.
+3.  **Satu environment file** — `postman/marketplace_dev.postman_environment.json` — berisi semua variable (`base_url`, `access_token`, `refresh_token`, dan variable per-domain). Semua collection merujuk ke environment yang sama.
+4.  **Setiap collection menyertakan variable** yang dibutuhkan domain tersebut (minimal: `base_url`, `access_token`, `refresh_token`) di dalam field `variable` collection, sebagai fallback jika environment tidak di-set.
+5.  **Authentication** di level collection menggunakan `Bearer Token` dari variable `{{access_token}}`.
+6.  **Setiap sprint yang menambah endpoint WAJIB membuat atau mengupdate file collection domain-nya.** Jangan skip — ini bagian dari Definition of Done tiap sprint.
+7.  **Simpan contoh response** (Success & Error) di setiap request Postman agar frontend tahu struktur data tanpa menjalankan API.
+8.  **Automated Doc (Optional):** Gunakan `knuckleswtf/scribe` untuk generate dokumentasi HTML dan Postman collection otomatis dari DocBlock di Controller (direncanakan Sprint 8+).
