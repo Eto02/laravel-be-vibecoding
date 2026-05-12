@@ -30,4 +30,18 @@ readonly class InitiatePaymentDTO
             idempotencyKey:     $request->header('X-Idempotency-Key'),
         );
     }
+
+    public static function fromSwitchRequest(FormRequest $request, int $orderId): self
+    {
+        return new self(
+            orderId:            $orderId,
+            gateway:            $request->string('gateway')->toString(),
+            method:             $request->string('method')->toString(),
+            bankCode:           $request->input('bank_code'),
+            ewalletType:        $request->input('ewallet_type'),
+            phone:              $request->input('phone'),
+            successRedirectUrl: $request->input('success_redirect_url'),
+            idempotencyKey:     null, // switch always creates fresh — no idempotency
+        );
+    }
 }

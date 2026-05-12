@@ -46,11 +46,29 @@ class MidtransPaymentService implements PaymentGatewayInterface
             'gateway_ref'     => $data['external_id'],
             'redirect_url'    => $body['redirect_url'],
             'payment_details' => [
+                'external_id'  => $data['external_id'],
                 'snap_token'   => $body['token'],
                 'redirect_url' => $body['redirect_url'],
             ],
             'expires_at' => null,
         ];
+    }
+
+    public function cancelCharge(string $chargeRef, string $method): bool
+    {
+        $baseUrl = config('midtrans.is_production', false)
+            ? 'https://api.midtrans.com'
+            : 'https://api.sandbox.midtrans.com';
+
+        try {
+            $response = Http::withBasicAuth($this->serverKey, '')
+                ->post("{$baseUrl}/v2/{$chargeRef}/cancel");
+
+            // 412 = transaction cannot be cancelled (already expired/settled) — treat as success
+            return $response->successful() || in_array($response->status(), [404, 412]);
+        } catch (\Throwable) {
+            return false; // best-effort
+        }
     }
 
     public function getPaymentStatus(string $externalId): array
@@ -112,9 +130,10 @@ class MidtransPaymentService implements PaymentGatewayInterface
             || $transactionStatus === 'settlement';
 
         $status = match (true) {
-            $isPaid                          => 'paid',
+            $isPaid                                             => 'paid',
             in_array($transactionStatus, ['cancel', 'expire']) => 'expired',
-            default                          => 'failed',
+            $transactionStatus === 'pending'                    => 'pending', // risk review — no state change
+            default                                             => 'failed',
         };
 
         return [

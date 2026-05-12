@@ -27,83 +27,54 @@ class PaymentService
 
     public function initiatePayment(InitiatePaymentDTO $data): Payment
     {
-        // Idempotency: if key provided, check Redis for existing payment ID
         if ($data->idempotencyKey) {
-            $cached = $this->idempotency->check(
-                $data->idempotencyKey,
-                fn() => null // placeholder — we'll store the ID after creation
+            $result = $this->idempotency->check(
+                "pay:init:{$data->idempotencyKey}",
+                fn () => ['payment_id' => $this->createPayment($data)->id]
             );
-            if (is_array($cached) && isset($cached['payment_id'])) {
-                $existing = Payment::find($cached['payment_id']);
-                if ($existing) {
-                    return $existing;
-                }
+            $payment = Payment::find($result['payment_id'] ?? null);
+            if ($payment) {
+                return $payment;
             }
         }
 
-        $order = Order::where('id', $data->orderId)
-            ->where('status', OrderStatus::Pending)
-            ->firstOrFail();
+        return $this->createPayment($data);
+    }
 
-        // Guard: one active payment per order at a time
-        $active = Payment::where('order_id', $order->id)
-            ->whereIn('status', [PaymentStatus::Pending, PaymentStatus::Paid])
-            ->first();
-
-        if ($active) {
-            if ($active->status === PaymentStatus::Paid) {
-                throw new \DomainException('This order has already been paid.');
-            }
-            return $active; // Return existing pending payment — no new gateway charge
+    public function switchPayment(Payment $currentPayment, InitiatePaymentDTO $newData): Payment
+    {
+        if ($currentPayment->status !== PaymentStatus::Pending) {
+            throw new \DomainException('Can only switch a pending payment.');
         }
 
-        $externalId = 'PAY-' . strtoupper(Str::random(10)) . '-' . $order->id;
+        // Cancel old charge on gateway (best-effort — don't fail if already expired)
+        try {
+            $oldGateway = app("payment.{$currentPayment->gateway}");
+            $oldGateway->cancelCharge($currentPayment->gateway_ref, $currentPayment->method);
+        } catch (\Throwable) {}
 
-        $chargeData = [
-            'external_id'          => $externalId,
-            'amount'               => $order->total,
-            'method'               => $data->method,
-            'bank_code'            => $data->bankCode,
-            'ewallet_type'         => $data->ewalletType,
-            'phone'                => $data->phone,
-            'success_redirect_url' => $data->successRedirectUrl,
-            'expires_at'           => $order->payment_due_at?->toISOString(),
-            'customer_name'        => $order->user->name,
-            'customer_email'       => $order->user->email,
-        ];
+        $currentPayment->update(['status' => PaymentStatus::Expired]);
+        $currentPayment->transaction?->update(['status' => TransactionStatus::Expired]);
 
-        $result = $this->gateway->createCharge($chargeData);
+        // Create new payment with the requested method (no idempotency key — switch is always fresh)
+        return $this->createPayment($newData);
+    }
 
-        // Gateway log (Transaction)
-        $transaction = Transaction::create([
-            'external_id' => $externalId,
-            'amount'      => $order->total,
-            'status'      => TransactionStatus::Pending,
-            'invoice_url' => $result['redirect_url'],
-        ]);
+    public function cancelPendingPaymentsForOrder(Order $order): void
+    {
+        $payments = Payment::where('order_id', $order->id)
+            ->where('status', PaymentStatus::Pending)
+            ->get();
 
-        // Domain payment record
-        $payment = Payment::create([
-            'order_id'        => $order->id,
-            'transaction_id'  => $transaction->id,
-            'gateway'         => $data->gateway,
-            'method'          => $data->method,
-            'gateway_ref'     => $result['gateway_ref'],
-            'amount'          => $order->total,
-            'status'          => PaymentStatus::Pending,
-            'payment_details' => $result['payment_details'],
-            'expires_at'      => $result['expires_at'] ? now()->parse($result['expires_at']) : $order->payment_due_at,
-        ]);
+        foreach ($payments as $payment) {
+            try {
+                $gateway = app("payment.{$payment->gateway}");
+                $gateway->cancelCharge($payment->gateway_ref, $payment->method);
+            } catch (\Throwable) {}
 
-        // Store payment ID in idempotency cache for future dedup
-        if ($data->idempotencyKey) {
-            $this->idempotency->check(
-                $data->idempotencyKey . ':stored',
-                fn() => ['payment_id' => $payment->id]
-            );
+            $payment->update(['status' => PaymentStatus::Expired]);
+            $payment->transaction?->update(['status' => TransactionStatus::Expired]);
         }
-
-        return $payment;
     }
 
     public function getStatus(Payment $payment): Payment
@@ -113,21 +84,21 @@ class PaymentService
 
     public function handleWebhook(Request $request, string $provider): void
     {
-        if (! $this->gateway->verifyWebhook($request)) {
+        $gateway = app("payment.{$provider}");
+
+        if (! $gateway->verifyWebhook($request)) {
             throw new \DomainException('Invalid webhook signature.', 403);
         }
 
-        $normalized  = $this->gateway->parseWebhookPayload($request);
+        $normalized  = $gateway->parseWebhookPayload($request);
         $externalId  = $normalized['external_id'];
         $status      = $normalized['status'];
 
-        // Idempotency — skip if gateway_ref already processed
         $payment = Payment::where('gateway_ref', $externalId)
             ->orWhereHas('transaction', fn ($q) => $q->where('external_id', $externalId))
             ->first();
 
         if (! $payment) {
-            // Try transaction lookup fallback
             $transaction = Transaction::where('external_id', $externalId)->first();
             if ($transaction) {
                 $payment = Payment::where('transaction_id', $transaction->id)->first();
@@ -146,7 +117,7 @@ class PaymentService
         match ($status) {
             'paid'    => $this->markPaid($payment, $normalized['amount']),
             'expired' => $this->markExpired($payment),
-            'pending' => null, // informational callback (e.g. VA registered) — no state change
+            'pending' => null, // informational callback — no state change
             default   => $this->markFailed($payment),
         };
     }
@@ -154,12 +125,12 @@ class PaymentService
     public function requestRefund(Payment $payment, string $reason): Refund
     {
         if ($payment->status === PaymentStatus::Paid) {
-            // Existing pending refund guard
             if ($payment->refund()->where('status', RefundStatus::Pending)->exists()) {
                 throw new \DomainException('A refund is already pending for this payment.');
             }
 
-            $gatewayResult = $this->gateway->refundPayment($payment->gateway_ref, $payment->amount);
+            $gateway       = app("payment.{$payment->gateway}");
+            $gatewayResult = $gateway->refundPayment($payment->gateway_ref, $payment->amount);
 
             $refund = Refund::create([
                 'payment_id'  => $payment->id,
@@ -178,13 +149,12 @@ class PaymentService
             return $refund;
         }
 
-        // Not yet paid — just cancel
         if (in_array($payment->status, [PaymentStatus::Pending, PaymentStatus::Failed, PaymentStatus::Expired])) {
             $refund = Refund::create([
-                'payment_id' => $payment->id,
-                'amount'     => $payment->amount,
-                'reason'     => $reason,
-                'status'     => RefundStatus::Processed,
+                'payment_id'  => $payment->id,
+                'amount'      => $payment->amount,
+                'reason'      => $reason,
+                'status'      => RefundStatus::Processed,
                 'refunded_at' => now(),
             ]);
 
@@ -207,6 +177,62 @@ class PaymentService
         }
 
         return $expired->count();
+    }
+
+    private function createPayment(InitiatePaymentDTO $data): Payment
+    {
+        $order = Order::where('id', $data->orderId)
+            ->where('status', OrderStatus::Pending)
+            ->firstOrFail();
+
+        // Guard: one active payment per order at a time
+        $active = Payment::where('order_id', $order->id)
+            ->whereIn('status', [PaymentStatus::Pending, PaymentStatus::Paid])
+            ->first();
+
+        if ($active) {
+            if ($active->status === PaymentStatus::Paid) {
+                throw new \DomainException('This order has already been paid.');
+            }
+            return $active;
+        }
+
+        $externalId = 'PAY-' . strtoupper(Str::random(10)) . '-' . $order->id;
+
+        $chargeData = [
+            'external_id'          => $externalId,
+            'amount'               => $order->total,
+            'method'               => $data->method,
+            'bank_code'            => $data->bankCode,
+            'ewallet_type'         => $data->ewalletType,
+            'phone'                => $data->phone,
+            'success_redirect_url' => $data->successRedirectUrl,
+            'expires_at'           => $order->payment_due_at?->toISOString(),
+            'customer_name'        => $order->user->name,
+            'customer_email'       => $order->user->email,
+        ];
+
+        $gateway = app("payment.{$data->gateway}");
+        $result  = $gateway->createCharge($chargeData);
+
+        $transaction = Transaction::create([
+            'external_id' => $externalId,
+            'amount'      => $order->total,
+            'status'      => TransactionStatus::Pending,
+            'invoice_url' => $result['redirect_url'],
+        ]);
+
+        return Payment::create([
+            'order_id'        => $order->id,
+            'transaction_id'  => $transaction->id,
+            'gateway'         => $data->gateway,
+            'method'          => $data->method,
+            'gateway_ref'     => $result['gateway_ref'],
+            'amount'          => $order->total,
+            'status'          => PaymentStatus::Pending,
+            'payment_details' => $result['payment_details'],
+            'expires_at'      => $result['expires_at'] ? now()->parse($result['expires_at']) : $order->payment_due_at,
+        ]);
     }
 
     private function markPaid(Payment $payment, int $amount): void

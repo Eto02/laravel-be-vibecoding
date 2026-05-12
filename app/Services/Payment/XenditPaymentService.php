@@ -155,6 +155,54 @@ class XenditPaymentService implements PaymentGatewayInterface
         };
     }
 
+    public function cancelCharge(string $chargeRef, string $method): bool
+    {
+        try {
+            return match ($method) {
+                'virtual_account' => $this->cancelVirtualAccount($chargeRef),
+                'ewallet'         => $this->cancelEWalletCharge($chargeRef),
+                'qris'            => $this->deactivateQris($chargeRef),
+                default           => $this->expireInvoice($chargeRef),
+            };
+        } catch (\Throwable) {
+            return false; // best-effort — gateway already expired or ref invalid
+        }
+    }
+
+    private function cancelVirtualAccount(string $id): bool
+    {
+        $response = Http::withBasicAuth($this->secretKey, '')
+            ->patch("{$this->baseUrl}/callback_virtual_accounts/{$id}", [
+                'expiration_date' => now()->subSecond()->toISOString(),
+            ]);
+
+        return $response->successful() || in_array($response->status(), [404, 422]);
+    }
+
+    private function cancelEWalletCharge(string $id): bool
+    {
+        $response = Http::withBasicAuth($this->secretKey, '')
+            ->post("{$this->baseUrl}/ewallets/charges/{$id}/cancel");
+
+        return $response->successful() || in_array($response->status(), [404, 409]);
+    }
+
+    private function deactivateQris(string $id): bool
+    {
+        $response = Http::withBasicAuth($this->secretKey, '')
+            ->patch("{$this->baseUrl}/qr_codes/{$id}", ['status' => 'INACTIVE']);
+
+        return $response->successful() || in_array($response->status(), [404, 422]);
+    }
+
+    private function expireInvoice(string $id): bool
+    {
+        $response = Http::withBasicAuth($this->secretKey, '')
+            ->post("{$this->baseUrl}/v2/invoices/{$id}/expire!");
+
+        return $response->successful() || in_array($response->status(), [404, 422]);
+    }
+
     public function getPaymentStatus(string $externalId): array
     {
         $response = Http::withBasicAuth($this->secretKey, '')

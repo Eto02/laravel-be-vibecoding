@@ -31,6 +31,8 @@ class WebhookTest extends TestCase
         ]);
 
         $this->app->instance(PaymentGatewayInterface::class, $mock);
+        $this->app->instance('payment.xendit', $mock);
+        $this->app->instance('payment.midtrans', $mock);
     }
 
     private function mockInvalidGateway(): void
@@ -39,6 +41,8 @@ class WebhookTest extends TestCase
         $mock->method('verifyWebhook')->willReturn(false);
 
         $this->app->instance(PaymentGatewayInterface::class, $mock);
+        $this->app->instance('payment.xendit', $mock);
+        $this->app->instance('payment.midtrans', $mock);
     }
 
     private function paymentWithOrder(string $gatewayRef = 'PAY-TEST'): array

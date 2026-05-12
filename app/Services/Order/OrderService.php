@@ -4,6 +4,7 @@ namespace App\Services\Order;
 
 use App\Contracts\Shared\CacheServiceInterface;
 use App\Contracts\Shared\IdempotencyServiceInterface;
+use App\Services\Payment\PaymentService;
 use App\DTOs\Order\CheckoutDTO;
 use App\Enums\DisputeStatus;
 use App\Enums\OrderStatus;
@@ -24,8 +25,9 @@ use Illuminate\Support\Facades\DB;
 class OrderService
 {
     public function __construct(
-        private readonly CacheServiceInterface      $cache,
+        private readonly CacheServiceInterface       $cache,
         private readonly IdempotencyServiceInterface $idempotency,
+        private readonly PaymentService              $paymentService,
     ) {}
 
     /** @return Order[] */
@@ -70,6 +72,9 @@ class OrderService
         if (! $order->isPending()) {
             throw new \DomainException('Only pending orders can be cancelled.');
         }
+
+        // Cancel any active gateway charge so the VA/QR is deactivated immediately
+        $this->paymentService->cancelPendingPaymentsForOrder($order);
 
         return $this->cancel($order, $user->id, 'Cancelled by buyer.');
     }

@@ -20,8 +20,15 @@ interface PaymentGatewayInterface
     public function verifyWebhook(Request $request): bool;
 
     /**
+     * Cancel / void a pending charge before it is paid.
+     * $method is needed because Xendit has different endpoints per payment method.
+     * Should be best-effort: if gateway already expired the charge, return true silently.
+     */
+    public function cancelCharge(string $chargeRef, string $method): bool;
+
+    /**
      * Normalize gateway webhook payload to a standard format.
-     * Returns: ['event' => string, 'external_id' => string, 'status' => 'paid'|'failed'|'expired', 'amount' => int]
+     * Returns: ['event' => string, 'external_id' => string, 'status' => 'paid'|'failed'|'expired'|'pending', 'amount' => int]
      */
     public function parseWebhookPayload(Request $request): array;
 }
