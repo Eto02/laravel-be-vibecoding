@@ -10,7 +10,6 @@ use App\Http\Requests\Payment\SwitchPaymentRequest;
 use App\Http\Resources\Payment\PaymentResource;
 use App\Http\Resources\Payment\RefundResource;
 use App\Http\Responses\ApiResponse;
-use App\Models\Payment;
 use App\Services\Payment\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,10 +31,7 @@ class PaymentController extends Controller
 
     public function status(Request $request, int $id): JsonResponse
     {
-        $payment = Payment::where('id', $id)
-            ->whereHas('order', fn ($q) => $q->where('user_id', $request->user()->id))
-            ->firstOrFail();
-
+        $payment = $this->paymentService->findForUser($request->user(), $id);
         $payment = $this->paymentService->getStatus($payment);
 
         return ApiResponse::success('Payment status retrieved.', new PaymentResource($payment));
@@ -43,10 +39,7 @@ class PaymentController extends Controller
 
     public function switch(SwitchPaymentRequest $request, int $id): JsonResponse
     {
-        $payment = Payment::where('id', $id)
-            ->whereHas('order', fn ($q) => $q->where('user_id', $request->user()->id))
-            ->firstOrFail();
-
+        $payment    = $this->paymentService->findForUser($request->user(), $id);
         $newPayment = $this->paymentService->switchPayment(
             $payment,
             InitiatePaymentDTO::fromSwitchRequest($request, $payment->order_id)
@@ -57,11 +50,8 @@ class PaymentController extends Controller
 
     public function refund(RefundPaymentRequest $request, int $id): JsonResponse
     {
-        $payment = Payment::where('id', $id)
-            ->whereHas('order', fn ($q) => $q->where('user_id', $request->user()->id))
-            ->firstOrFail();
-
-        $refund = $this->paymentService->requestRefund($payment, $request->input('reason', ''));
+        $payment = $this->paymentService->findForUser($request->user(), $id);
+        $refund  = $this->paymentService->requestRefund($payment, $request->input('reason', ''));
 
         return ApiResponse::success('Refund processed successfully.', new RefundResource($refund));
     }

@@ -15,6 +15,7 @@ use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\Transaction;
 use App\Contracts\Shared\IdempotencyServiceInterface;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -75,6 +76,13 @@ class PaymentService
             $payment->update(['status' => PaymentStatus::Expired]);
             $payment->transaction?->update(['status' => TransactionStatus::Expired]);
         }
+    }
+
+    public function findForUser(User $user, int $id): Payment
+    {
+        return Payment::where('id', $id)
+            ->whereHas('order', fn ($q) => $q->where('user_id', $user->id))
+            ->firstOrFail();
     }
 
     public function getStatus(Payment $payment): Payment
