@@ -11,5 +11,7 @@ readonly class CheckoutItemDTO
         public string  $shippingService,
         public int     $shippingFee,
         public ?string $notes,
+        /** @var int[]|null Specific cart_item IDs to checkout. Null = all items from this store. */
+        public ?array  $itemIds = null,
     ) {}
 }
