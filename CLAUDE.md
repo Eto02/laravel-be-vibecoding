@@ -263,7 +263,7 @@ tests/
 
 ## API Response Standard
 
-Semua Controller WAJIB menggunakan `ApiResponse` trait. Format JSON harus konsisten:
+Semua Controller WAJIB menggunakan `ApiResponse` class (static methods). Format JSON harus konsisten:
 
 ### Success Response (200/201)
 ```json

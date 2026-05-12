@@ -38,35 +38,39 @@ class ApiResponse
         string $message,
         mixed $data = null,
         int $status = 200,
-        array $extraMeta = [],
+        array $paginationMeta = [],
     ): JsonResponse {
+        $meta = ['timestamp' => now()->toISOString()];
+
+        if (!empty($paginationMeta)) {
+            $meta['pagination'] = $paginationMeta;
+        }
+
         return response()->json([
             'success' => true,
             'message' => $message,
             'data'    => $data,
-            'meta'    => array_merge(['timestamp' => now()->toISOString()], $extraMeta),
+            'meta'    => $meta,
         ], $status);
     }
 
-    public static function error(
-        string $message,
-        int $status = 400,
-        array $errors = [],
-    ): JsonResponse {
-        $body = [
+    public static function error(string $message, int $status = 400): JsonResponse
+    {
+        return response()->json([
             'success' => false,
             'message' => $message,
             'meta'    => ['timestamp' => now()->toISOString()],
-        ];
-        if (!empty($errors)) {
-            $body['errors'] = $errors;
-        }
-        return response()->json($body, $status);
+        ], $status);
     }
 
     public static function validationError(string $message, array $errors): JsonResponse
     {
-        return self::error($message, 422, $errors);
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+            'errors'  => $errors,
+            'meta'    => ['timestamp' => now()->toISOString()],
+        ], 422);
     }
 }
 ```

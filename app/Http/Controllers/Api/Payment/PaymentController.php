@@ -53,6 +53,6 @@ class PaymentController extends Controller
         $payment = $this->paymentService->findForUser($request->user(), $id);
         $refund  = $this->paymentService->requestRefund($payment, $request->input('reason', ''));
 
-        return ApiResponse::success('Refund processed successfully.', new RefundResource($refund));
+        return ApiResponse::success('Refund processed successfully.', new RefundResource($refund), 201);
     }
 }

@@ -69,6 +69,14 @@ class CategoryService
 
     public function delete(Category $category): void
     {
+        if ($category->children()->count() > 0) {
+            throw new \DomainException('Cannot delete a category that has children.');
+        }
+
+        if ($category->products()->count() > 0) {
+            throw new \DomainException('Cannot delete a category that has products.');
+        }
+
         $this->cache->forget('category:tree');
         $this->cache->forget("category:slug:{$category->slug}");
         $category->delete();

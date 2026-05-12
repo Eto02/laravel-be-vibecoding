@@ -51,16 +51,8 @@ class CategoryController extends Controller
         return ApiResponse::success('Category updated.', new CategoryResource($updated));
     }
 
-    public function destroy(Category $category): \Illuminate\Http\Response|\Illuminate\Http\JsonResponse
+    public function destroy(Category $category): \Illuminate\Http\Response
     {
-        if ($category->children()->count() > 0) {
-            return ApiResponse::error('Cannot delete a category that has children.', 422);
-        }
-
-        if ($category->products()->count() > 0) {
-            return ApiResponse::error('Cannot delete a category that has products.', 422);
-        }
-
         $this->categories->delete($category);
 
         return response()->noContent();
