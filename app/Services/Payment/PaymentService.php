@@ -199,8 +199,26 @@ class PaymentService
 
     public function expireUnpaidPayments(): int
     {
+        $graceConfig = config('payment.expiry_grace_minutes', []);
+        $defaultGrace = 30;
+
         $expired = Payment::where('status', PaymentStatus::Pending)
-            ->where('expires_at', '<', now())
+            ->where(function ($query) use ($graceConfig, $defaultGrace) {
+                foreach ($graceConfig as $gateway => $graceMinutes) {
+                    $query->orWhere(function ($q) use ($gateway, $graceMinutes) {
+                        $q->where('gateway', $gateway)
+                          ->where('expires_at', '<', now()->subMinutes($graceMinutes));
+                    });
+                }
+                // Fallback: any gateway not explicitly configured uses default grace
+                $knownGateways = array_keys($graceConfig);
+                if (! empty($knownGateways)) {
+                    $query->orWhere(function ($q) use ($knownGateways, $defaultGrace) {
+                        $q->whereNotIn('gateway', $knownGateways)
+                          ->where('expires_at', '<', now()->subMinutes($defaultGrace));
+                    });
+                }
+            })
             ->get();
 
         foreach ($expired as $payment) {
