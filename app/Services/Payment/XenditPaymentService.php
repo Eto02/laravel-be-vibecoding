@@ -25,12 +25,16 @@ class XenditPaymentService implements PaymentGatewayInterface
 
     private function createInvoice(array $data): array
     {
+        $invoiceDuration = isset($data['expires_at'])
+            ? max(60, (int) now()->diffInSeconds(now()->parse($data['expires_at'])))
+            : config('payment.expiry_minutes', 15) * 60;
+
         $response = Http::withBasicAuth($this->secretKey, '')
             ->post("{$this->baseUrl}/v2/invoices", [
                 'external_id'      => $data['external_id'],
                 'amount'           => $this->toIDR($data['amount']),
                 'description'      => $data['description'] ?? 'Payment',
-                'invoice_duration' => 86400,
+                'invoice_duration' => $invoiceDuration,
                 'currency'         => 'IDR',
                 'customer'         => [
                     'given_names' => $data['customer_name'] ?? 'Customer',

@@ -20,10 +20,15 @@ class MidtransPaymentService implements PaymentGatewayInterface
     {
         $grossAmount = (int) round($data['amount'] / 100);
 
+        $expiryDurationMinutes = config('payment.expiry_minutes', 15);
+        if (isset($data['expires_at'])) {
+            $expiryDurationMinutes = max(1, (int) now()->diffInMinutes(now()->parse($data['expires_at'])));
+        }
+
         $response = Http::withBasicAuth($this->serverKey, '')
             ->post($this->snapUrl, [
                 'transaction_details' => [
-                    'order_id'    => $data['external_id'],
+                    'order_id'     => $data['external_id'],
                     'gross_amount' => $grossAmount,
                 ],
                 'customer_details' => [
@@ -33,6 +38,10 @@ class MidtransPaymentService implements PaymentGatewayInterface
                 ],
                 'callbacks' => [
                     'finish' => $data['success_redirect_url'] ?? config('app.url'),
+                ],
+                'expiry' => [
+                    'unit'     => 'minutes',
+                    'duration' => $expiryDurationMinutes,
                 ],
             ]);
 

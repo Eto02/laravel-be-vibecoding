@@ -204,10 +204,17 @@ class PaymentService
             default    => 'invoice',
         };
 
+        // Payment session expires in PAYMENT_EXPIRY_MINUTES — capped by order's payment_due_at
+        $expiryMinutes  = config('payment.expiry_minutes', 15);
+        $paymentExpiresAt = now()->addMinutes($expiryMinutes);
+        if ($order->payment_due_at && $order->payment_due_at->lt($paymentExpiresAt)) {
+            $paymentExpiresAt = $order->payment_due_at;
+        }
+
         $chargeData = [
             'external_id'    => $externalId,
             'amount'         => $order->total,
-            'expires_at'     => $order->payment_due_at?->toISOString(),
+            'expires_at'     => $paymentExpiresAt->toISOString(),
             'customer_name'  => $order->user->name,
             'customer_email' => $order->user->email,
             'description'    => "Payment for order {$order->order_number}",
@@ -232,7 +239,7 @@ class PaymentService
             'amount'          => $order->total,
             'status'          => PaymentStatus::Pending,
             'payment_details' => $result['payment_details'],
-            'expires_at'      => $result['expires_at'] ? now()->parse($result['expires_at']) : $order->payment_due_at,
+            'expires_at'      => $result['expires_at'] ? now()->parse($result['expires_at']) : $paymentExpiresAt,
         ]);
     }
 
