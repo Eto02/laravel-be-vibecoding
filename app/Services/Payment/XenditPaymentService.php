@@ -70,6 +70,7 @@ class XenditPaymentService implements PaymentGatewayInterface
             'gateway_ref'     => $body['id'],
             'redirect_url'    => null,
             'payment_details' => [
+                'external_id'        => $data['external_id'], // needed for sandbox simulate API
                 'bank_code'          => $body['bank_code'],
                 'account_number'     => $body['account_number'],
                 'virtual_account_id' => $body['id'],
@@ -96,8 +97,12 @@ class XenditPaymentService implements PaymentGatewayInterface
         return [
             'gateway_ref'     => $body['id'],
             'redirect_url'    => null,
-            'payment_details' => ['qr_id' => $body['id'], 'qr_string' => $body['qr_string'] ?? null],
-            'expires_at'      => $body['expires_at'] ?? null,
+            'payment_details' => [
+                'external_id' => $data['external_id'], // needed for sandbox simulate API
+                'qr_id'       => $body['id'],
+                'qr_string'   => $body['qr_string'] ?? null,
+            ],
+            'expires_at' => $body['expires_at'] ?? null,
         ];
     }
 
@@ -129,6 +134,7 @@ class XenditPaymentService implements PaymentGatewayInterface
             'gateway_ref'     => $body['id'],
             'redirect_url'    => $checkoutUrl,
             'payment_details' => [
+                'external_id'  => $data['external_id'], // needed for sandbox simulate API
                 'ewallet_type' => $ewalletType,
                 'charge_id'    => $body['id'],
                 'checkout_url' => $checkoutUrl,
