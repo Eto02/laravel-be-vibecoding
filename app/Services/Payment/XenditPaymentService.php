@@ -87,13 +87,12 @@ class XenditPaymentService implements PaymentGatewayInterface
     private function createQrisCharge(array $data): array
     {
         $response = Http::withBasicAuth($this->secretKey, '')
+            ->withHeaders(['api-version' => '2022-07-31'])
             ->post("{$this->baseUrl}/qr_codes", [
-                'external_id'     => $data['external_id'],
-                'type'            => 'DYNAMIC',
-                'currency'        => 'IDR',
-                'amount'          => $this->toIDR($data['amount']),
-                'expires_at'      => now()->addSeconds($data['qris_ttl_seconds'] ?? 300)->toISOString(),
-                'callback_url'    => $data['callback_url'] ?? config('xendit.webhook_url'),
+                'reference_id' => $data['external_id'],
+                'type'         => 'DYNAMIC',
+                'currency'     => 'IDR',
+                'amount'       => $this->toIDR($data['amount']),
             ]);
 
         $this->assertSuccess($response, 'Failed to create Xendit QRIS charge');
@@ -103,9 +102,9 @@ class XenditPaymentService implements PaymentGatewayInterface
             'gateway_ref'     => $body['id'],
             'redirect_url'    => null,
             'payment_details' => [
-                'external_id' => $data['external_id'], // needed for sandbox simulate API
-                'qr_id'       => $body['id'],
-                'qr_string'   => $body['qr_string'] ?? null,
+                'reference_id' => $data['external_id'], // reference_id sent to Xendit
+                'qr_id'        => $body['id'],          // id from response — used for simulate
+                'qr_string'    => $body['qr_string'] ?? null,
             ],
             'expires_at' => $body['expires_at'] ?? null,
         ];
@@ -269,13 +268,14 @@ class XenditPaymentService implements PaymentGatewayInterface
             ];
         }
 
-        // QRIS payment
-        if (str_contains($event, 'qr_code')) {
+        // QRIS payment — api-version 2022-07-31 nests data under 'data' key
+        if (str_contains($event, 'qr_code') || str_contains($event, 'qr.payment')) {
+            $qrisData = $payload['data'] ?? $payload;
             return [
                 'event'       => 'payment.succeeded',
-                'external_id' => $payload['external_id'] ?? $payload['reference_id'] ?? '',
+                'external_id' => $qrisData['reference_id'] ?? $qrisData['external_id'] ?? '',
                 'status'      => 'paid',
-                'amount'      => (int) ($payload['amount'] ?? 0),
+                'amount'      => (int) ($qrisData['amount'] ?? 0),
             ];
         }
 
