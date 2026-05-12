@@ -2,6 +2,7 @@
 
 namespace App\Services\Payment;
 
+use App\Contracts\Shared\IdempotencyServiceInterface;
 use App\DTOs\Payment\InitiatePaymentDTO;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
@@ -14,9 +15,9 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\Transaction;
-use App\Contracts\Shared\IdempotencyServiceInterface;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PaymentService
@@ -24,6 +25,7 @@ class PaymentService
     public function __construct(
         private readonly PaymentGatewayInterface $gateway,
         private readonly IdempotencyServiceInterface $idempotency,
+        private readonly WalletService $wallet,
     ) {}
 
     public function initiatePayment(InitiatePaymentDTO $data): Payment
@@ -52,7 +54,14 @@ class PaymentService
         try {
             $oldGateway = app("payment.{$currentPayment->gateway}");
             $oldGateway->cancelCharge($currentPayment->gateway_ref, $currentPayment->method);
-        } catch (\Throwable) {}
+        } catch (\Throwable $e) {
+            Log::warning('Failed to cancel old gateway charge on payment switch', [
+                'payment_id'  => $currentPayment->id,
+                'gateway_ref' => $currentPayment->gateway_ref,
+                'gateway'     => $currentPayment->gateway,
+                'error'       => $e->getMessage(),
+            ]);
+        }
 
         $currentPayment->update(['status' => PaymentStatus::Expired]);
         $currentPayment->transaction?->update(['status' => TransactionStatus::Expired]);
@@ -117,8 +126,37 @@ class PaymentService
             return; // Unknown payment — skip silently
         }
 
-        // Skip if already in a terminal state
+        // Hard-terminal: Paid and Refunded are truly final — no recovery possible
         if (in_array($payment->status, [PaymentStatus::Paid, PaymentStatus::Refunded])) {
+            return;
+        }
+
+        // Soft-terminal: Expired or Failed — a paid webhook means money reached the gateway.
+        // This happens when: (a) scheduler expired locally before gateway did, or
+        // (b) a switched-away invoice's cancelCharge failed and the user paid on the old one.
+        // If the order is still unfulfilled we can recover; otherwise it's a true double-charge.
+        if (in_array($payment->status, [PaymentStatus::Expired, PaymentStatus::Failed])) {
+            if ($status === 'paid') {
+                $order = $payment->order;
+
+                if ($order && $order->status === OrderStatus::Pending) {
+                    Log::warning('Paid webhook for locally-expired payment — order still pending, recovering', [
+                        'payment_id'   => $payment->id,
+                        'order_id'     => $order->id,
+                        'gateway_ref'  => $externalId,
+                        'gateway'      => $payment->gateway,
+                        'local_status' => $payment->status->value,
+                    ]);
+                    // Expire any other pending payments for this order (e.g. Payment B from switch)
+                    $this->cancelPendingPaymentsForOrder($order);
+                    $this->markPaid($payment, $normalized['amount']);
+                    return;
+                }
+
+                // Order already fulfilled — this is a duplicate payment.
+                // Auto-credit the user's wallet so the money is not lost.
+                $this->refundDoubleChargeToWallet($payment, $normalized['amount'], $externalId);
+            }
             return;
         }
 
@@ -176,8 +214,26 @@ class PaymentService
 
     public function expireUnpaidPayments(): int
     {
+        $graceConfig = config('payment.expiry_grace_minutes', []);
+        $defaultGrace = 30;
+
         $expired = Payment::where('status', PaymentStatus::Pending)
-            ->where('expires_at', '<', now())
+            ->where(function ($query) use ($graceConfig, $defaultGrace) {
+                foreach ($graceConfig as $gateway => $graceMinutes) {
+                    $query->orWhere(function ($q) use ($gateway, $graceMinutes) {
+                        $q->where('gateway', $gateway)
+                          ->where('expires_at', '<', now()->subMinutes($graceMinutes));
+                    });
+                }
+                // Fallback: any gateway not explicitly configured uses default grace
+                $knownGateways = array_keys($graceConfig);
+                if (! empty($knownGateways)) {
+                    $query->orWhere(function ($q) use ($knownGateways, $defaultGrace) {
+                        $q->whereNotIn('gateway', $knownGateways)
+                          ->where('expires_at', '<', now()->subMinutes($defaultGrace));
+                    });
+                }
+            })
             ->get();
 
         foreach ($expired as $payment) {
@@ -248,6 +304,46 @@ class PaymentService
             'status'          => PaymentStatus::Pending,
             'payment_details' => $result['payment_details'],
             'expires_at'      => $result['expires_at'] ? now()->parse($result['expires_at']) : $paymentExpiresAt,
+        ]);
+    }
+
+    private function refundDoubleChargeToWallet(Payment $payment, int $amount, string $gatewayRef): void
+    {
+        $user = $payment->order?->user;
+
+        if (! $user) {
+            Log::critical('Double payment detected but could not resolve user — manual refund required', [
+                'payment_id'  => $payment->id,
+                'gateway_ref' => $gatewayRef,
+                'gateway'     => $payment->gateway,
+                'amount'      => $amount,
+            ]);
+            return;
+        }
+
+        Refund::create([
+            'payment_id'  => $payment->id,
+            'amount'      => $amount,
+            'reason'      => "Duplicate payment auto-refunded to wallet (gateway ref: {$gatewayRef})",
+            'status'      => RefundStatus::Processed,
+            'refunded_at' => now(),
+        ]);
+
+        $this->wallet->creditUser(
+            $user,
+            $amount,
+            "Duplicate payment refunded to wallet (ref: {$gatewayRef})",
+            Payment::class,
+            $payment->id,
+        );
+
+        Log::critical('Double payment detected — auto-credited user wallet', [
+            'payment_id'  => $payment->id,
+            'order_id'    => $payment->order_id,
+            'user_id'     => $user->id,
+            'gateway_ref' => $gatewayRef,
+            'gateway'     => $payment->gateway,
+            'amount'      => $amount,
         ]);
     }
 

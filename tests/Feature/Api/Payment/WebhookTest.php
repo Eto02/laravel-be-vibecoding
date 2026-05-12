@@ -162,6 +162,90 @@ class WebhookTest extends TestCase
         Mail::assertQueued(PaymentExpiredMail::class, fn ($mail) => $mail->payment->id === $payment->id);
     }
 
+    public function test_expire_webhook_cancels_pending_order(): void
+    {
+        $this->mockGateway('expired', 'PAY-CANCEL-TEST');
+        ['order' => $order] = $this->paymentWithOrder('PAY-CANCEL-TEST');
+
+        $this->postJson('/api/webhooks/xendit', ['external_id' => 'PAY-CANCEL-TEST', 'status' => 'EXPIRED'])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('orders', [
+            'id'     => $order->id,
+            'status' => OrderStatus::Cancelled->value,
+        ]);
+    }
+
+    public function test_expire_webhook_does_not_cancel_non_pending_order(): void
+    {
+        $this->mockGateway('expired', 'PAY-PAID-CANCEL');
+        $user    = User::factory()->create(['email_verified_at' => now()]);
+        $order   = Order::factory()->create(['user_id' => $user->id, 'status' => OrderStatus::Paid, 'total' => 10000000]);
+        $payment = Payment::factory()->paid()->create(['order_id' => $order->id, 'gateway_ref' => 'PAY-PAID-CANCEL']);
+
+        // Paid order — PaymentFailed won't be dispatched (terminal state guard)
+        $this->postJson('/api/webhooks/xendit', ['external_id' => 'PAY-PAID-CANCEL', 'status' => 'EXPIRED'])
+            ->assertStatus(200);
+
+        // Order must stay Paid
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => OrderStatus::Paid->value]);
+    }
+
+    // ── Recovery: paid webhook on locally-expired payment ────────────────────
+
+    public function test_paid_webhook_recovers_locally_expired_payment_when_order_is_pending(): void
+    {
+        Event::fake();
+        $this->mockGateway('paid', 'PAY-RECOVER');
+        $user    = User::factory()->create(['email_verified_at' => now()]);
+        $order   = Order::factory()->create(['user_id' => $user->id, 'status' => OrderStatus::Pending, 'total' => 10000000]);
+        // Simulate scheduler having expired the payment locally (soft-terminal)
+        $payment = Payment::factory()->create([
+            'order_id'    => $order->id,
+            'gateway_ref' => 'PAY-RECOVER',
+            'status'      => PaymentStatus::Expired,
+            'amount'      => 10000000,
+        ]);
+
+        $this->postJson('/api/webhooks/xendit', ['external_id' => 'PAY-RECOVER', 'status' => 'PAID'])
+            ->assertStatus(200);
+
+        // Payment must be recovered to Paid
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => PaymentStatus::Paid->value]);
+        // Order must be fulfilled
+        Event::assertDispatched(PaymentCaptured::class);
+    }
+
+    public function test_double_charge_webhook_auto_credits_user_wallet(): void
+    {
+        Event::fake();
+        $this->mockGateway('paid', 'PAY-DOUBLEP');
+        $user    = User::factory()->create(['email_verified_at' => now()]);
+        $order   = Order::factory()->create(['user_id' => $user->id, 'status' => OrderStatus::Paid, 'total' => 10000000]);
+        $payment = Payment::factory()->create([
+            'order_id'    => $order->id,
+            'gateway_ref' => 'PAY-DOUBLEP',
+            'status'      => PaymentStatus::Expired,
+            'amount'      => 10000000,
+        ]);
+
+        $this->postJson('/api/webhooks/xendit', ['external_id' => 'PAY-DOUBLEP', 'status' => 'PAID'])
+            ->assertStatus(200);
+
+        // No PaymentCaptured — order already paid
+        Event::assertNotDispatched(PaymentCaptured::class);
+        // Order stays Paid
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => OrderStatus::Paid->value]);
+        // Refund record created for audit
+        $this->assertDatabaseHas('refunds', ['payment_id' => $payment->id]);
+        // User wallet credited with duplicate amount
+        $this->assertDatabaseHas('wallet_transactions', [
+            'type'         => 'credit',
+            'amount'       => 10000000,
+            'reference_id' => $payment->id,
+        ]);
+    }
+
     // ── Midtrans webhook ──────────────────────────────────────────────────────
 
     public function test_midtrans_webhook_marks_payment_paid(): void
