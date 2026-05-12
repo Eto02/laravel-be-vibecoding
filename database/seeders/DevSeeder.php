@@ -239,9 +239,10 @@ class DevSeeder extends Seeder
             $order->statusLogs()->create(['from_status' => 'processing','to_status' => 'shipped',   'note' => 'AWB: JNE20260501001',    'changed_by' => $merchant->id]);
         }
 
-        if ($variantXz) {
-            $subtotal = $variantXz->price * 2;
-            $fee      = 2000000;
+        $variantKaos = ProductVariant::where('sku', 'SKU-KPP-M-PTH')->first();
+        if ($variantKaos) {
+            $subtotal = $variantKaos->price * 2; // 2× Rp 89.000 = Rp 178.000 — well within QRIS/VA limits
+            $fee      = 1500000;                 // Rp 15.000 shipping
             $order2   = Order::create([
                 'order_number'     => null,
                 'user_id'          => $buyer->id,
@@ -260,10 +261,10 @@ class DevSeeder extends Seeder
             ]);
             $order2->update(['order_number' => 'INV/' . now()->format('Y/m') . '/' . str_pad($order2->id, 6, '0', STR_PAD_LEFT)]);
             $order2->items()->create([
-                'product_variant_id' => $variantXz->id,
-                'product_snapshot'   => ['product_name' => 'Smartphone XZ Pro', 'variant_sku' => 'SKU-XZ-128-BLK', 'attributes' => ['storage' => '128GB', 'warna' => 'Hitam']],
+                'product_variant_id' => $variantKaos->id,
+                'product_snapshot'   => ['product_name' => 'Kaos Polos Premium', 'variant_sku' => 'SKU-KPP-M-PTH', 'attributes' => ['ukuran' => 'M', 'warna' => 'Putih']],
                 'quantity'           => 2,
-                'unit_price'         => $variantXz->price,
+                'unit_price'         => $variantKaos->price,
                 'subtotal'           => $subtotal,
             ]);
             $order2->statusLogs()->create(['from_status' => null, 'to_status' => 'pending', 'note' => 'Order placed.', 'changed_by' => $buyer->id]);

@@ -86,13 +86,25 @@ class XenditPaymentService implements PaymentGatewayInterface
 
     private function createQrisCharge(array $data): array
     {
+        $amountIdr = $this->toIDR($data['amount']);
+
+        if ($amountIdr > 10_000_000) {
+            throw new \DomainException(
+                'QRIS tidak mendukung transaksi di atas Rp 10.000.000. Gunakan metode pembayaran lain (VA atau Invoice).'
+            );
+        }
+
+        if ($amountIdr < 1) {
+            throw new \DomainException('Nominal order tidak valid untuk pembayaran QRIS.');
+        }
+
         $response = Http::withBasicAuth($this->secretKey, '')
             ->withHeaders(['api-version' => '2022-07-31'])
             ->post("{$this->baseUrl}/qr_codes", [
                 'reference_id' => $data['external_id'],
                 'type'         => 'DYNAMIC',
                 'currency'     => 'IDR',
-                'amount'       => $this->toIDR($data['amount']),
+                'amount'       => $amountIdr,
             ]);
 
         $this->assertSuccess($response, 'Failed to create Xendit QRIS charge');
