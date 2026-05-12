@@ -5081,6 +5081,103 @@
               ]
             },
             {
+              "name": "Switch Payment Method 🔒",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  const body = pm.response.json();",
+                      "  pm.collectionVariables.set('payment_id', String(body.data.id || ''));",
+                      "  const extId = body.data.payment_details?.external_id || '';",
+                      "  pm.collectionVariables.set('payment_external_id', extId);",
+                      "  pm.test('Switch returns 201', () => pm.response.to.have.status(201));",
+                      "  pm.test('New payment created', () => {",
+                      "    pm.expect(body.data).to.have.property('id');",
+                      "    pm.expect(body.data.status).to.equal('pending');",
+                      "  });",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"gateway\": \"xendit\",\n  \"method\": \"qris\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/payments/{{payment_id}}/switch",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "payments",
+                    "{{payment_id}}",
+                    "switch"
+                  ]
+                },
+                "description": "Ganti metode pembayaran untuk payment yang sedang **pending**.\n\nMekanisme:\n1. Cancel gateway charge lama (VA di-deactivate, e-wallet charge di-cancel)\n2. Payment lama → status `expired`\n3. Buat gateway charge baru dengan metode yang diminta\n4. Return Payment baru\n\n**Order tidak dibatalkan** — tetap `pending` sampai timer habis.\n\n**Hanya bekerja untuk payment berstatus `pending`.** Paid/expired/refunded → 422.\n\nSame validation as Initiate: `bank_code` required for VA, `ewallet_type` for ewallet, `phone` for OVO."
+              },
+              "response": [
+                {
+                  "name": "201 Created — Switched to QRIS",
+                  "status": "Created",
+                  "code": 201,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment method switched.\",\n  \"data\": {\n    \"id\": 2,\n    \"order_id\": 5,\n    \"gateway\": \"xendit\",\n    \"method\": \"qris\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"pending\",\n    \"payment_details\": {\n      \"external_id\": \"PAY-XXXXXXXXXX-5\",\n      \"qr_id\": \"qr-xxx\",\n      \"qr_string\": \"00020101021226...\"\n    },\n    \"redirect_url\": null,\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:01:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:01:00.000000Z\" }\n}"
+                },
+                {
+                  "name": "422 Unprocessable — Payment Not Pending",
+                  "status": "Unprocessable Entity",
+                  "code": 422,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Can only switch a pending payment.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                },
+                {
+                  "name": "404 Not Found — Wrong User",
+                  "status": "Not Found",
+                  "code": 404,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"No query results for model [App\\\\Models\\\\Payment].\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                }
+              ]
+            },
+            {
               "name": "Request Refund 🔒",
               "event": [
                 {

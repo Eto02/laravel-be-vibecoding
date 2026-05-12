@@ -91,7 +91,8 @@ enum RefundStatus: string {
 
 ```
 POST /api/payments/initiate                    [auth] — buat Payment + gateway charge
-GET  /api/payments/{id}/status                 [auth] — poll status payment
+GET  /api/payments/{id}/status                 [auth] — poll status payment (ownership-checked)
+POST /api/payments/{id}/switch                 [auth] — ganti metode pembayaran (cancel old + create new)
 POST /api/payments/{id}/refund                 [auth] — request refund
 
 POST /api/webhooks/{provider}                  [public, signature-verified]
@@ -127,6 +128,13 @@ interface PaymentGatewayInterface {
      */
     public function createCharge(array $data): array;
 
+    /**
+     * Cancel / void a pending charge before it is paid.
+     * $method needed because Xendit has different endpoints per method.
+     * Best-effort: if gateway already expired the charge, return true silently.
+     */
+    public function cancelCharge(string $chargeRef, string $method): bool;
+
     public function getPaymentStatus(string $externalId): array;
 
     public function refundPayment(string $chargeRef, int $amount): array;
@@ -136,7 +144,7 @@ interface PaymentGatewayInterface {
     /**
      * Normalize gateway webhook payload to standard format:
      * ['event' => string, 'external_id' => string, 'status' => string, 'amount' => int]
-     * status values: 'paid' | 'failed' | 'expired'
+     * status values: 'paid' | 'failed' | 'expired' | 'pending' (no-op)
      */
     public function parseWebhookPayload(Request $request): array;
 }
@@ -412,7 +420,21 @@ Named binding `payment.xendit` / `payment.midtrans` sengaja diekspos agar Sprint
 - [x] PaymentSuccessMail
 - [x] ExpireUnpaidPayments job + scheduler
 - [x] config/platform.php
-- [x] Routes updated
-- [x] Tests: PaymentTest + WalletTest + WebhookTest
+- [x] Routes updated (+ switch endpoint)
+- [x] Tests: PaymentTest + WalletTest + WebhookTest (258 pass total)
 - [x] Postman updated + merge.py run
 - [x] DevSeeder updated (wallet balance untuk test user)
+
+## Post-Sprint Fixes (Session 2)
+
+- [x] `cancelCharge()` ditambah ke interface + Xendit (VA/ewallet/QRIS/invoice) + Midtrans (best-effort)
+- [x] `PaymentService::switchPayment()` — cancel gateway lama + initiate baru
+- [x] `PaymentService::cancelPendingPaymentsForOrder()` — digunakan saat order dibatalkan buyer
+- [x] `OrderService::cancelByBuyer()` memanggil `cancelPendingPaymentsForOrder()` sebelum cancel order
+- [x] `ProcessRefundIfPaid` listener: implementasi aktual (replace stub) via `PaymentService::requestRefund()`
+- [x] `PaymentController::status()` — tambah ownership check (was queryable by any authenticated user)
+- [x] Fix idempotency key: wrap full `createPayment()` dalam idempotency check (bukan null-caching lookup)
+- [x] `handleWebhook()` dan `requestRefund()` resolve gateway by provider/`payment.gateway` (fix multi-gateway routing)
+- [x] Midtrans `pending` status webhook → no-op (sebelumnya: mapped ke failed)
+- [x] Midtrans `payment_details` ditambah `external_id`
+- [x] 5 test baru: switch (4) + status ownership (1)
