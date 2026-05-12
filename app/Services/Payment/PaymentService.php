@@ -134,6 +134,7 @@ class PaymentService
         match ($status) {
             'paid'    => $this->markPaid($payment, $normalized['amount']),
             'expired' => $this->markExpired($payment),
+            'pending' => null, // informational callback (e.g. VA registered) — no state change
             default   => $this->markFailed($payment),
         };
     }

@@ -175,9 +175,13 @@ class XenditPaymentService implements PaymentGatewayInterface
 
     public function verifyWebhook(Request $request): bool
     {
+        if (empty($this->webhookToken)) {
+            return false; // Reject all webhooks when token is not configured
+        }
+
         $callbackToken = $request->header('X-CALLBACK-TOKEN', '');
 
-        return hash_equals($this->webhookToken, (string) $callbackToken);
+        return hash_equals($this->webhookToken, $callbackToken);
     }
 
     public function parseWebhookPayload(Request $request): array
@@ -185,13 +189,24 @@ class XenditPaymentService implements PaymentGatewayInterface
         $payload = $request->json()->all();
         $event   = $payload['event'] ?? '';
 
-        // Virtual account paid
+        // Virtual account — payment received (has both payment_id and account_number)
         if (isset($payload['payment_id']) && isset($payload['account_number'])) {
             return [
                 'event'       => 'payment.succeeded',
                 'external_id' => $payload['external_id'] ?? '',
                 'status'      => 'paid',
                 'amount'      => (int) ($payload['amount'] ?? 0),
+            ];
+        }
+
+        // Virtual account — creation/update notification (has account_number but no payment_id)
+        // Xendit fires this when a VA is first registered. It is NOT a payment event.
+        if (isset($payload['account_number']) && ! isset($payload['payment_id'])) {
+            return [
+                'event'       => 'va.registered',
+                'external_id' => $payload['external_id'] ?? '',
+                'status'      => 'pending',
+                'amount'      => 0,
             ];
         }
 
