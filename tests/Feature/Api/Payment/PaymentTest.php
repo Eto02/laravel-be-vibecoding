@@ -1,0 +1,257 @@
+<?php
+
+namespace Tests\Feature\Api\Payment;
+
+use App\Enums\KycStatus;
+use App\Enums\MerchantStatus;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
+use App\Enums\ProductStatus;
+use App\Enums\UserRole;
+use App\Models\Order;
+use App\Models\Payment;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\Store;
+use App\Models\User;
+use App\Services\Payment\PaymentGatewayInterface;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
+use Tests\TestCase;
+
+class PaymentTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function buyer(): User
+    {
+        return User::factory()->create([
+            'role'              => UserRole::Buyer,
+            'email_verified_at' => now(),
+        ]);
+    }
+
+    private function pendingOrder(User $buyer): Order
+    {
+        $merchant = User::factory()->create(['role' => UserRole::Merchant, 'email_verified_at' => now()]);
+        $store    = Store::factory()->create([
+            'user_id'    => $merchant->id,
+            'status'     => MerchantStatus::Active,
+            'kyc_status' => KycStatus::Approved,
+        ]);
+        $product = Product::factory()->create(['store_id' => $store->id, 'status' => ProductStatus::Active]);
+        ProductVariant::factory()->create(['product_id' => $product->id, 'stock' => 5, 'price' => 10000000]);
+
+        return Order::factory()->create([
+            'user_id'  => $buyer->id,
+            'store_id' => $store->id,
+            'status'   => OrderStatus::Pending,
+            'total'    => 10000000,
+        ]);
+    }
+
+    private function mockGateway(array $result = []): void
+    {
+        $default = [
+            'gateway_ref'     => 'inv-ref-123',
+            'redirect_url'    => 'https://gateway.test/invoice/pay',
+            'payment_details' => ['invoice_id' => 'inv-123', 'invoice_url' => 'https://gateway.test/invoice/pay'],
+            'expires_at'      => now()->addHours(24)->toISOString(),
+        ];
+
+        $mock = $this->createMock(PaymentGatewayInterface::class);
+        $mock->method('createCharge')->willReturn(array_merge($default, $result));
+        $mock->method('verifyWebhook')->willReturn(true);
+        $mock->method('parseWebhookPayload')->willReturn([
+            'event'       => 'payment.succeeded',
+            'external_id' => 'PAY-TEST-123',
+            'status'      => 'paid',
+            'amount'      => 10000000,
+        ]);
+        $mock->method('refundPayment')->willReturn(['id' => 'ref-123']);
+
+        $this->app->instance(PaymentGatewayInterface::class, $mock);
+        $this->app->instance('payment.xendit', $mock);
+        $this->app->instance('payment.midtrans', $mock);
+    }
+
+    // ── initiate ──────────────────────────────────────────────────────────────
+
+    public function test_buyer_can_initiate_invoice_payment(): void
+    {
+        Event::fake();
+        $this->mockGateway();
+        $buyer = $this->buyer();
+        $order = $this->pendingOrder($buyer);
+
+        $response = $this->actingAs($buyer)->postJson('/api/payments/initiate', [
+            'order_id' => $order->id,
+            'gateway'  => 'xendit',
+        ], ['X-Idempotency-Key' => 'test-key-1']);
+
+        $response->assertStatus(201)->assertJsonStructure([
+            'success', 'message', 'data' => ['id', 'order_id', 'gateway', 'method', 'amount_cents', 'amount', 'status', 'redirect_url', 'payment_details'],
+        ]);
+        $this->assertNotNull($response->json('data.redirect_url'), 'redirect_url must not be null for Xendit invoice');
+        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'method' => 'invoice']);
+    }
+
+    public function test_initiate_returns_existing_payment_when_pending_exists(): void
+    {
+        Event::fake();
+        $this->mockGateway();
+        $buyer    = $this->buyer();
+        $order    = $this->pendingOrder($buyer);
+        $existing = Payment::factory()->create([
+            'order_id' => $order->id,
+            'status'   => PaymentStatus::Pending,
+        ]);
+
+        $response = $this->actingAs($buyer)->postJson('/api/payments/initiate', [
+            'order_id' => $order->id,
+            'gateway'  => 'xendit',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertSame($existing->id, $response->json('data.id'));
+        $this->assertDatabaseCount('payments', 1);
+    }
+
+    public function test_initiate_returns_422_for_wrong_order(): void
+    {
+        $buyer      = $this->buyer();
+        $otherBuyer = $this->buyer();
+        $order      = $this->pendingOrder($otherBuyer);
+
+        $this->actingAs($buyer)->postJson('/api/payments/initiate', [
+            'order_id' => $order->id,
+            'gateway'  => 'xendit',
+        ])->assertStatus(422);
+    }
+
+    public function test_initiate_requires_auth(): void
+    {
+        $this->postJson('/api/payments/initiate', [
+            'order_id' => 1,
+            'gateway'  => 'xendit',
+        ])->assertStatus(401);
+    }
+
+    // ── switch ────────────────────────────────────────────────────────────────
+
+    public function test_buyer_can_switch_payment_gateway(): void
+    {
+        Event::fake();
+        $this->mockGateway();
+        $buyer   = $this->buyer();
+        $order   = $this->pendingOrder($buyer);
+        $payment = Payment::factory()->create([
+            'order_id' => $order->id,
+            'status'   => PaymentStatus::Pending,
+            'method'   => 'invoice',
+            'gateway'  => 'xendit',
+        ]);
+
+        $response = $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/switch", [
+            'gateway' => 'midtrans',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => PaymentStatus::Expired->value]);
+        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'method' => 'snap']);
+    }
+
+    public function test_switch_requires_auth(): void
+    {
+        $payment = Payment::factory()->create();
+
+        $this->postJson("/api/payments/{$payment->id}/switch", [
+            'gateway' => 'midtrans',
+        ])->assertStatus(401);
+    }
+
+    public function test_switch_fails_if_payment_not_pending(): void
+    {
+        $this->mockGateway();
+        $buyer   = $this->buyer();
+        $order   = $this->pendingOrder($buyer);
+        $payment = Payment::factory()->paid()->create(['order_id' => $order->id, 'gateway' => 'xendit']);
+
+        $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/switch", [
+            'gateway' => 'midtrans',
+        ])->assertStatus(422);
+    }
+
+    public function test_switch_returns_404_for_other_users_payment(): void
+    {
+        $buyer      = $this->buyer();
+        $otherBuyer = $this->buyer();
+        $order      = $this->pendingOrder($otherBuyer);
+        $payment    = Payment::factory()->create(['order_id' => $order->id, 'status' => PaymentStatus::Pending]);
+
+        $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/switch", [
+            'gateway' => 'midtrans',
+        ])->assertStatus(404);
+    }
+
+    // ── status ────────────────────────────────────────────────────────────────
+
+    public function test_buyer_can_get_payment_status(): void
+    {
+        $buyer   = $this->buyer();
+        $order   = $this->pendingOrder($buyer);
+        $payment = Payment::factory()->create(['order_id' => $order->id]);
+
+        $this->actingAs($buyer)->getJson("/api/payments/{$payment->id}/status")
+            ->assertStatus(200)->assertJsonStructure([
+                'success', 'data' => ['id', 'status', 'amount_cents'],
+            ]);
+    }
+
+    public function test_status_requires_auth(): void
+    {
+        $payment = Payment::factory()->create();
+
+        $this->getJson("/api/payments/{$payment->id}/status")->assertStatus(401);
+    }
+
+    public function test_status_returns_404_for_other_users_payment(): void
+    {
+        $buyer      = $this->buyer();
+        $otherBuyer = $this->buyer();
+        $order      = $this->pendingOrder($otherBuyer);
+        $payment    = Payment::factory()->create(['order_id' => $order->id]);
+
+        $this->actingAs($buyer)->getJson("/api/payments/{$payment->id}/status")
+            ->assertStatus(404);
+    }
+
+    // ── refund ────────────────────────────────────────────────────────────────
+
+    public function test_buyer_can_refund_paid_payment(): void
+    {
+        Event::fake();
+        $this->mockGateway();
+        $buyer   = $this->buyer();
+        $order   = $this->pendingOrder($buyer);
+        $payment = Payment::factory()->paid()->create(['order_id' => $order->id, 'amount' => 10000000]);
+
+        $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/refund", [
+            'reason' => 'Item not received',
+        ])->assertStatus(200)->assertJsonStructure(['data' => ['id', 'status', 'amount_cents']]);
+
+        $this->assertDatabaseHas('refunds', ['payment_id' => $payment->id]);
+    }
+
+    public function test_buyer_cannot_refund_other_users_payment(): void
+    {
+        $buyer      = $this->buyer();
+        $otherBuyer = $this->buyer();
+        $order      = $this->pendingOrder($otherBuyer);
+        $payment    = Payment::factory()->paid()->create(['order_id' => $order->id]);
+
+        $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/refund", [
+            'reason' => 'Test',
+        ])->assertStatus(404);
+    }
+}

@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers\Api\Payment;
 
+use App\DTOs\Payment\InitiatePaymentDTO;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Payment\StorePaymentRequest;
-use App\Http\Resources\Payment\TransactionResource;
+use App\Http\Requests\Payment\InitiatePaymentRequest;
+use App\Http\Requests\Payment\RefundPaymentRequest;
+use App\Http\Requests\Payment\SwitchPaymentRequest;
+use App\Http\Resources\Payment\PaymentResource;
+use App\Http\Resources\Payment\RefundResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\Payment;
 use App\Services\Payment\PaymentService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PaymentController extends Controller
 {
@@ -15,14 +21,48 @@ class PaymentController extends Controller
         private readonly PaymentService $paymentService,
     ) {}
 
-    public function store(StorePaymentRequest $request): JsonResponse
+    public function initiate(InitiatePaymentRequest $request): JsonResponse
     {
-        try {
-            $transaction = $this->paymentService->createInvoice($request->validated());
+        $payment = $this->paymentService->initiatePayment(
+            InitiatePaymentDTO::fromRequest($request)
+        );
 
-            return ApiResponse::success('Invoice created successfully.', new TransactionResource($transaction), 201);
-        } catch (\Exception $e) {
-            return ApiResponse::error('Failed to create payment invoice.', 500);
-        }
+        return ApiResponse::success('Payment initiated successfully.', new PaymentResource($payment), 201);
+    }
+
+    public function status(Request $request, int $id): JsonResponse
+    {
+        $payment = Payment::where('id', $id)
+            ->whereHas('order', fn ($q) => $q->where('user_id', $request->user()->id))
+            ->firstOrFail();
+
+        $payment = $this->paymentService->getStatus($payment);
+
+        return ApiResponse::success('Payment status retrieved.', new PaymentResource($payment));
+    }
+
+    public function switch(SwitchPaymentRequest $request, int $id): JsonResponse
+    {
+        $payment = Payment::where('id', $id)
+            ->whereHas('order', fn ($q) => $q->where('user_id', $request->user()->id))
+            ->firstOrFail();
+
+        $newPayment = $this->paymentService->switchPayment(
+            $payment,
+            InitiatePaymentDTO::fromSwitchRequest($request, $payment->order_id)
+        );
+
+        return ApiResponse::success('Payment method switched.', new PaymentResource($newPayment), 201);
+    }
+
+    public function refund(RefundPaymentRequest $request, int $id): JsonResponse
+    {
+        $payment = Payment::where('id', $id)
+            ->whereHas('order', fn ($q) => $q->where('user_id', $request->user()->id))
+            ->firstOrFail();
+
+        $refund = $this->paymentService->requestRefund($payment, $request->input('reason', ''));
+
+        return ApiResponse::success('Refund processed successfully.', new RefundResource($refund));
     }
 }

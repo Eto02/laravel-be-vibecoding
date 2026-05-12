@@ -16,6 +16,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\User;
+use App\Models\WalletBalance;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -238,9 +239,10 @@ class DevSeeder extends Seeder
             $order->statusLogs()->create(['from_status' => 'processing','to_status' => 'shipped',   'note' => 'AWB: JNE20260501001',    'changed_by' => $merchant->id]);
         }
 
-        if ($variantXz) {
-            $subtotal = $variantXz->price * 2;
-            $fee      = 2000000;
+        $variantKaos = ProductVariant::where('sku', 'SKU-KPP-M-PTH')->first();
+        if ($variantKaos) {
+            $subtotal = $variantKaos->price * 2; // 2× Rp 89.000 = Rp 178.000 — well within QRIS/VA limits
+            $fee      = 1500000;                 // Rp 15.000 shipping
             $order2   = Order::create([
                 'order_number'     => null,
                 'user_id'          => $buyer->id,
@@ -259,13 +261,32 @@ class DevSeeder extends Seeder
             ]);
             $order2->update(['order_number' => 'INV/' . now()->format('Y/m') . '/' . str_pad($order2->id, 6, '0', STR_PAD_LEFT)]);
             $order2->items()->create([
-                'product_variant_id' => $variantXz->id,
-                'product_snapshot'   => ['product_name' => 'Smartphone XZ Pro', 'variant_sku' => 'SKU-XZ-128-BLK', 'attributes' => ['storage' => '128GB', 'warna' => 'Hitam']],
+                'product_variant_id' => $variantKaos->id,
+                'product_snapshot'   => ['product_name' => 'Kaos Polos Premium', 'variant_sku' => 'SKU-KPP-M-PTH', 'attributes' => ['ukuran' => 'M', 'warna' => 'Putih']],
                 'quantity'           => 2,
-                'unit_price'         => $variantXz->price,
+                'unit_price'         => $variantKaos->price,
                 'subtotal'           => $subtotal,
             ]);
             $order2->statusLogs()->create(['from_status' => null, 'to_status' => 'pending', 'note' => 'Order placed.', 'changed_by' => $buyer->id]);
+        }
+
+        // ── Wallet balances ───────────────────────────────────────────────────
+        // Buyer wallet — simulates topped-up state
+        WalletBalance::firstOrCreate(['user_id' => $buyer->id], [
+            'balance'  => 50000000, // Rp 500.000
+            'on_hold'  => 0,
+        ]);
+
+        // Merchant wallet — simulates earnings with a pending withdrawal
+        $merchantWallet = WalletBalance::firstOrCreate(['user_id' => $merchant->id], [
+            'balance'  => 150000000, // Rp 1.500.000
+            'on_hold'  => 20000000,  // Rp 200.000 pending withdrawal
+        ]);
+        if ($merchantWallet->wasRecentlyCreated) {
+            $merchantWallet->transactions()->createMany([
+                ['type' => 'credit', 'amount' => 170000000, 'description' => 'Order completed — INV/2026/05/000001'],
+                ['type' => 'debit',  'amount' => 20000000,  'description' => 'Withdrawal initiated — on_hold'],
+            ]);
         }
 
         $this->command->info('DevSeeder selesai:');
@@ -280,6 +301,8 @@ class DevSeeder extends Seeder
         );
         $this->command->info('Cart test@example.com: 3 items dari 2 toko (multi-store)');
         $this->command->info('Orders test@example.com: 1 shipped (JNE), 1 pending');
+        $this->command->info('Wallet test@example.com: Rp 500.000 balance');
+        $this->command->info('Wallet merchant@marketplace.dev: Rp 1.500.000 balance, Rp 200.000 on_hold');
     }
 
     private function category(string $name, string $slug, int $sort, ?int $parentId = null): Category

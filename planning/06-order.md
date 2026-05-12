@@ -109,15 +109,21 @@ PUT  /api/merchant/orders/{id}/ship            [auth:sanctum, merchant]  ← pro
             "shipping_courier": "jne",
             "shipping_service": "REG",
             "shipping_fee": 15000,
-            "notes": "Tolong bubble wrap"
+            "notes": "Tolong bubble wrap",
+            "item_ids": [42, 43]
         }
     ],
     "voucher_code": null
 }
 ```
 
-> **Catatan:** `items` adalah per-toko (sudah di-group dari cart). Client mengirim `shipping_fee` hasil kalkulasi di frontend. Sprint 6: fee diterima as-is tanpa re-validasi backend (ShippingService belum ada). Sprint 8: tambahkan re-kalkulasi backend + toleransi ±Rp500.
-> **Voucher:** `voucher_code` opsional. Sprint 6: field diterima tapi diabaikan (VoucherService belum ada). Sprint 11: aktifkan validasi voucher.
+> **`item_ids` (optional):** Array ID `cart_items.id` spesifik yang ingin di-checkout dari toko ini.
+> - Jika **tidak disertakan / null** → semua item dari toko tersebut di-checkout (behavior lama, backward-compatible).
+> - Jika **disertakan** → hanya item tersebut yang di-checkout. Item lain di cart **tetap tersisa** (tidak dihapus).
+> - Jika `item_ids` diisi tapi tidak ada yang cocok dengan `store_id` → 422 DomainException.
+>
+> **Catatan:** `items` adalah per-toko (sudah di-group dari cart di sisi frontend). Client mengirim `shipping_fee` hasil kalkulasi. Sprint 8: tambahkan re-kalkulasi backend + toleransi ±Rp500.
+> **Voucher:** `voucher_code` opsional. Sprint 6: field diterima tapi diabaikan. Sprint 11: aktifkan validasi voucher.
 
 ---
 
@@ -133,6 +139,7 @@ readonly class CheckoutItemDTO {
         public string  $shippingService,
         public int     $shippingFee,
         public ?string $notes,
+        public ?array  $itemIds = null, // null = all items from store; array = partial checkout
     ) {}
 }
 
@@ -319,6 +326,8 @@ $order->update([
 - `test_checkout_fails_if_cart_empty`
 - `test_checkout_requires_idempotency_key`
 - `test_duplicate_checkout_with_same_key_returns_cached_result`
+- `test_partial_checkout_only_checks_out_selected_items`
+- `test_partial_checkout_fails_with_invalid_item_ids`
 - `test_user_can_view_own_orders`
 - `test_user_cannot_view_other_users_order`
 - `test_buyer_can_cancel_pending_order`

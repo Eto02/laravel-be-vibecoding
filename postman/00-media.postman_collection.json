@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Marketplace API — Media (File Upload)",
-    "_postman_id": "marketplace-api-v2-02-media",
+    "_postman_id": "marketplace-api-v2-00-media",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -93,7 +93,7 @@
   ],
   "item": [
     {
-      "name": "02. Media (File Upload)",
+      "name": "00. Media (File Upload)",
       "description": "Upload file ke Cloudflare R2 via Presigned URL (client-side direct upload)\n\n**Flow:**\n1. `POST /api/media/presigned-url` → dapat `upload_url` + `key`\n2. `PUT {upload_url}` dari client langsung ke R2 (tidak melalui server)\n3. `POST /api/media/confirm` dengan `key` → konfirmasi upload",
       "item": [
         {

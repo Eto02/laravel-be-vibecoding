@@ -273,6 +273,106 @@ class OrderTest extends TestCase
         $this->assertEquals(1, Order::where('user_id', $buyer->id)->count());
     }
 
+    public function test_checkout_with_multiple_items_from_same_store(): void
+    {
+        Queue::fake([CancelExpiredOrderJob::class]);
+        $this->passthroughIdempotency();
+
+        $buyer    = $this->buyer();
+        [, $store] = $this->merchantWithStore();
+        $address  = $this->addressFor($buyer);
+
+        $variantA = $this->activeVariant($store, 5);
+        $variantB = $this->activeVariant($store, 3);
+
+        $this->addToCart($buyer, $variantA, 2); // buy 2 of A
+        $this->addToCart($buyer, $variantB, 1); // buy 1 of B
+
+        $response = $this->actingAs($buyer)
+            ->withHeaders(['X-Idempotency-Key' => 'multi-item-001'])
+            ->postJson('/api/orders/checkout', $this->checkoutPayload($store->id, $address->id))
+            ->assertStatus(201);
+
+        $order = Order::where('user_id', $buyer->id)->first();
+
+        // Both items in a single order
+        $this->assertCount(2, $order->items);
+
+        // Subtotal = price*qty for each item
+        $expectedSubtotal = ($variantA->price * 2) + ($variantB->price * 1);
+        $this->assertEquals($expectedSubtotal, $order->subtotal);
+
+        // Cart fully cleared
+        $cart = Cart::where('user_id', $buyer->id)->first();
+        $this->assertEquals(0, $cart->items()->count());
+
+        // Stock decremented per quantity
+        $this->assertEquals(3, $variantA->fresh()->stock); // 5 - 2
+        $this->assertEquals(2, $variantB->fresh()->stock); // 3 - 1
+    }
+
+    public function test_partial_checkout_only_checks_out_selected_items(): void
+    {
+        Queue::fake([CancelExpiredOrderJob::class]);
+        $this->passthroughIdempotency();
+
+        $buyer   = $this->buyer();
+        [, $store] = $this->merchantWithStore();
+        $address = $this->addressFor($buyer);
+
+        $variantA = $this->activeVariant($store, 5);
+        $variantB = $this->activeVariant($store, 5);
+        $variantC = $this->activeVariant($store, 5);
+
+        $itemA = $this->addToCart($buyer, $variantA, 1);
+        $itemB = $this->addToCart($buyer, $variantB, 1);
+        $itemC = $this->addToCart($buyer, $variantC, 1);
+
+        // Checkout only item C
+        $payload = $this->checkoutPayload($store->id, $address->id);
+        $payload['items'][0]['item_ids'] = [$itemC->id];
+
+        $this->actingAs($buyer)
+            ->withHeaders(['X-Idempotency-Key' => 'partial-key-001'])
+            ->postJson('/api/orders/checkout', $payload)
+            ->assertStatus(201);
+
+        // Order has only item C
+        $order = Order::where('user_id', $buyer->id)->first();
+        $this->assertCount(1, $order->items);
+
+        // Cart still has items A and B
+        $cart = Cart::where('user_id', $buyer->id)->first();
+        $remaining = $cart->items()->pluck('id')->toArray();
+        $this->assertContains($itemA->id, $remaining);
+        $this->assertContains($itemB->id, $remaining);
+        $this->assertNotContains($itemC->id, $remaining);
+    }
+
+    public function test_partial_checkout_fails_with_invalid_item_ids(): void
+    {
+        $this->passthroughIdempotency();
+
+        $buyer   = $this->buyer();
+        [, $store]      = $this->merchantWithStore();
+        [, $otherStore] = $this->merchantWithStore();
+        $address = $this->addressFor($buyer);
+
+        $variantA    = $this->activeVariant($store, 5);
+        $variantOther = $this->activeVariant($otherStore, 5);
+        $this->addToCart($buyer, $variantA, 1);
+        $itemOther = $this->addToCart($buyer, $variantOther, 1);
+
+        // Try to checkout item from otherStore under store's store_id
+        $payload = $this->checkoutPayload($store->id, $address->id);
+        $payload['items'][0]['item_ids'] = [$itemOther->id];
+
+        $this->actingAs($buyer)
+            ->withHeaders(['X-Idempotency-Key' => 'partial-key-002'])
+            ->postJson('/api/orders/checkout', $payload)
+            ->assertStatus(422);
+    }
+
     // ── Buyer: list & show ────────────────────────────────────────────────────
 
     public function test_user_can_view_own_orders(): void

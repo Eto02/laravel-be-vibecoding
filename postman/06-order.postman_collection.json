@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Marketplace API — Order",
-    "_postman_id": "marketplace-api-v2-07-order",
+    "_postman_id": "marketplace-api-v2-06-order",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -58,7 +58,7 @@
   ],
   "item": [
     {
-      "name": "07. Order",
+      "name": "06. Order",
       "item": [
         {
           "name": "Buyer",
@@ -102,10 +102,10 @@
                     "checkout"
                   ]
                 },
-                "description": "Checkout cart. Requires X-Idempotency-Key header (min 8 chars, e.g. UUID). Creates one Order per store in cart. Decrements stock atomically inside DB transaction.",
+                "description": "Buat order dari cart items. Satu entri `items[]` = satu toko = satu Order.\n\n**`item_ids` (optional):** Array ID cart_item spesifik yang ingin di-checkout dari toko ini. Jika tidak disertakan / null → semua item dari toko tersebut di-checkout sekaligus.\n\n**Contoh partial checkout** (3 item di toko, hanya checkout item ke-3):\n```json\n{ \"store_id\": 1, \"item_ids\": [42] }\n```\n\nItem yang tidak di-checkout **tetap di cart** (tidak dihapus).\n\n**Selalu sertakan `X-Idempotency-Key`** header (UUID) untuk mencegah double order.\n\n`shipping_fee` diterima as-is (Sprint 8 akan tambah re-validasi backend via ShippingService).",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"items\": [\n    {\n      \"store_id\": \"{{store_id}}\",\n      \"address_id\": \"{{address_id}}\",\n      \"shipping_courier\": \"jne\",\n      \"shipping_service\": \"REG\",\n      \"shipping_fee\": 1500000,\n      \"notes\": \"Tolong bubble wrap\"\n    }\n  ],\n  \"voucher_code\": null\n}",
+                  "raw": "{\n  \"items\": [\n    {\n      \"store_id\": \"{{store_id}}\",\n      \"address_id\": \"{{address_id}}\",\n      \"shipping_courier\": \"jne\",\n      \"shipping_service\": \"REG\",\n      \"shipping_fee\": 1500000,\n      \"notes\": \"Tolong bubble wrap\",\n      \"item_ids\": null  // optional: specific cart_item IDs — omit to checkout ALL items from store\n    }\n  ],\n  \"voucher_code\": null\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -115,28 +115,28 @@
               },
               "response": [
                 {
-                  "name": "201 — Checkout Successful",
-                  "originalRequest": {},
+                  "name": "201 Created — Full checkout",
                   "status": "Created",
                   "code": 201,
-                  "_postman_previewlanguage": "json",
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Checkout successful.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"order_number\": \"INV/2026/05/000001\",\n      \"status\": \"pending\",\n      \"status_label\": \"Menunggu Pembayaran\",\n      \"store\": {\n        \"id\": 1,\n        \"name\": \"Toko Demo\",\n        \"slug\": \"toko-demo\"\n      },\n      \"subtotal_cents\": 39000000,\n      \"subtotal\": \"Rp 390.000\",\n      \"shipping_fee_cents\": 1500000,\n      \"shipping_fee\": \"Rp 15.000\",\n      \"discount_cents\": 0,\n      \"discount\": \"Rp 0\",\n      \"total_cents\": 40500000,\n      \"total\": \"Rp 405.000\",\n      \"payment_due_at\": \"2026-05-12T00:00:00Z\",\n      \"items\": [\n        {\n          \"id\": 1,\n          \"product_name\": \"Sepatu Lari Pro\",\n          \"variant_sku\": \"SKU-SLP-40\",\n          \"quantity\": 1,\n          \"unit_price_cents\": 39000000,\n          \"subtotal_cents\": 39000000\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"timestamp\": \"2026-05-11T10:00:00Z\"\n  }\n}"
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Checkout successful.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"order_number\": \"INV/2026/05/000001\",\n      \"status\": \"pending\",\n      \"total_cents\": 39000000,\n      \"total\": \"Rp 390.000\",\n      \"items\": [\n        {\n          \"product_name\": \"Sepatu Lari\",\n          \"quantity\": 1,\n          \"unit_price_cents\": 39000000\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"timestamp\": \"2026-05-12T10:00:00.000000Z\"\n  }\n}"
                 },
                 {
-                  "name": "422 — Insufficient Stock",
-                  "originalRequest": {},
-                  "status": "Unprocessable Entity",
-                  "code": 422,
-                  "_postman_previewlanguage": "json",
-                  "body": "{\n  \"success\": false,\n  \"message\": \"Insufficient stock for Sepatu Lari Pro. Please update your cart.\",\n  \"meta\": {\n    \"timestamp\": \"2026-05-11T10:00:00Z\"\n  }\n}"
-                },
-                {
-                  "name": "422 — Missing Idempotency Key",
-                  "originalRequest": {},
-                  "status": "Unprocessable Entity",
-                  "code": 422,
-                  "_postman_previewlanguage": "json",
-                  "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": {\n    \"_idempotency_key\": [\n      \"The X-Idempotency-Key header is required.\"\n    ]\n  },\n  \"meta\": {\n    \"timestamp\": \"2026-05-11T10:00:00Z\"\n  }\n}"
+                  "name": "201 Created — Partial checkout (item_ids)",
+                  "status": "Created",
+                  "code": 201,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Checkout successful.\",\n  \"data\": [\n    {\n      \"id\": 2,\n      \"order_number\": \"INV/2026/05/000002\",\n      \"status\": \"pending\",\n      \"total_cents\": 15000000,\n      \"total\": \"Rp 150.000\",\n      \"items\": [\n        {\n          \"product_name\": \"Kaos Polos Hitam\",\n          \"quantity\": 1,\n          \"unit_price_cents\": 15000000\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"timestamp\": \"2026-05-12T10:01:00.000000Z\"\n  }\n}"
                 }
               ],
               "event": [

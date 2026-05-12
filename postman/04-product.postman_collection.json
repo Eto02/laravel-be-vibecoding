@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Marketplace API — Product",
-    "_postman_id": "marketplace-api-v2-05-product",
+    "_postman_id": "marketplace-api-v2-04-product",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -58,7 +58,7 @@
   ],
   "item": [
     {
-      "name": "05. Product",
+      "name": "04. Product",
       "description": "Product Catalog — Categories, Products (CRUD), Variants, dan Media (Presigned Upload).\n\n**Flow Media Upload:**\n1. `POST /api/merchant/products/{product}/media` → dapat `upload_url` + `key` (tersimpan ke `media_upload_url` dan `media_key`)\n2. `PUT {{media_upload_url}}` (folder Media > Upload File ke R2) — kirim langsung ke R2\n3. `POST /api/merchant/products/{product}/media/confirm` dengan `key: {{media_key}}` — simpan ke DB",
       "item": [
         {

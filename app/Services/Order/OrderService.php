@@ -4,10 +4,12 @@ namespace App\Services\Order;
 
 use App\Contracts\Shared\CacheServiceInterface;
 use App\Contracts\Shared\IdempotencyServiceInterface;
+use App\Services\Payment\PaymentService;
 use App\DTOs\Order\CheckoutDTO;
 use App\Enums\DisputeStatus;
 use App\Enums\OrderStatus;
 use App\Events\Order\OrderCancelled;
+use App\Events\Order\OrderCompleted;
 use App\Events\Order\OrderDelivered;
 use App\Events\Order\OrderPlaced;
 use App\Events\Order\OrderShipped;
@@ -23,8 +25,9 @@ use Illuminate\Support\Facades\DB;
 class OrderService
 {
     public function __construct(
-        private readonly CacheServiceInterface      $cache,
+        private readonly CacheServiceInterface       $cache,
         private readonly IdempotencyServiceInterface $idempotency,
+        private readonly PaymentService              $paymentService,
     ) {}
 
     /** @return Order[] */
@@ -70,6 +73,9 @@ class OrderService
             throw new \DomainException('Only pending orders can be cancelled.');
         }
 
+        // Cancel any active gateway charge so the VA/QR is deactivated immediately
+        $this->paymentService->cancelPendingPaymentsForOrder($order);
+
         return $this->cancel($order, $user->id, 'Cancelled by buyer.');
     }
 
@@ -88,6 +94,23 @@ class OrderService
         OrderDelivered::dispatch($delivered);
 
         return $delivered;
+    }
+
+    public function completeOrder(User $user, Order $order): Order
+    {
+        if (! $order->isOwnedByUser($user->id)) {
+            throw new \DomainException('Order does not belong to this user.');
+        }
+
+        if ($order->status !== OrderStatus::Delivered) {
+            throw new \DomainException('Only delivered orders can be marked as completed.');
+        }
+
+        $completed = $this->transition($order, OrderStatus::Completed, $user->id, 'Order completed by buyer.');
+
+        OrderCompleted::dispatch($completed);
+
+        return $completed;
     }
 
     public function getOrdersForMerchant(Store $store, ?string $status = null): LengthAwarePaginator
@@ -185,9 +208,10 @@ class OrderService
             throw new \DomainException('Cart is empty.');
         }
 
-        $orderIds = [];
+        $orderIds           = [];
+        $checkedOutItemIds  = [];
 
-        DB::transaction(function () use ($user, $data, &$orderIds) {
+        DB::transaction(function () use ($user, $data, &$orderIds, &$checkedOutItemIds) {
             // Reload cart with lock inside transaction to prevent race conditions
             $cart = \App\Models\Cart::where('user_id', $user->id)
                 ->lockForUpdate()
@@ -209,6 +233,14 @@ class OrderService
 
                 if (! $storeItems || $storeItems->isEmpty()) {
                     throw new \DomainException("No cart items found for store ID {$checkoutItem->storeId}.");
+                }
+
+                // Partial checkout: filter to specific items if item_ids provided
+                if ($checkoutItem->itemIds !== null) {
+                    $storeItems = $storeItems->whereIn('id', $checkoutItem->itemIds);
+                    if ($storeItems->isEmpty()) {
+                        throw new \DomainException("None of the specified item IDs belong to store {$checkoutItem->storeId}.");
+                    }
                 }
 
                 $address = Address::where('id', $checkoutItem->addressId)
@@ -255,6 +287,8 @@ class OrderService
                         throw new \DomainException("Insufficient stock for {$productName}. Please update your cart.");
                     }
 
+                    $checkedOutItemIds[] = $cartItem->id;
+
                     $order->items()->create([
                         'product_variant_id' => $variant->id,
                         'product_snapshot'   => [
@@ -279,8 +313,8 @@ class OrderService
             }
         });
 
-        // Clear cart after successful transaction
-        \App\Models\CartItem::whereHas('cart', fn ($q) => $q->where('user_id', $user->id))->delete();
+        // Remove only the checked-out cart items (partial checkout leaves remaining items intact)
+        \App\Models\CartItem::whereIn('id', $checkedOutItemIds)->delete();
         $this->cache->forget("cart:user:{$user->id}");
 
         // Dispatch events outside the DB transaction

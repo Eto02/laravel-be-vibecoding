@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Marketplace API — Merchant",
-    "_postman_id": "marketplace-api-v2-04-merchant",
+    "_postman_id": "marketplace-api-v2-03-merchant",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -68,7 +68,7 @@
   ],
   "item": [
     {
-      "name": "04. Merchant",
+      "name": "03. Merchant",
       "description": "Merchant & Store module — Store registration, profile management, KYC upload, followers, and public store views.",
       "item": [
         {

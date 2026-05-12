@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Marketplace API — User",
-    "_postman_id": "marketplace-api-v2-03-user",
+    "_postman_id": "marketplace-api-v2-02-user",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -38,7 +38,7 @@
   ],
   "item": [
     {
-      "name": "03. User Profile",
+      "name": "02. User Profile",
       "description": "User profile management — GET/PUT profile, avatar upload, address book CRUD, phone verification via OTP.\n\nSemua endpoint membutuhkan Bearer token 🔒\n\n**Avatar upload flow:**\n1. `POST /users/me/avatar` → dapat `avatar_upload_url` + `avatar_key`\n2. `PUT {{avatar_upload_url}}` langsung ke R2 (tidak melalui server)\n3. `POST /users/me/avatar/confirm` → simpan key ke DB\n\n**Phone verification flow:**\n1. `POST /users/phone/send-otp` → OTP dikirim via WA/SMS\n2. `POST /users/phone/verify` → verifikasi OTP → phone tersimpan",
       "item": [
         {

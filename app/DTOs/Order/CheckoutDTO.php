@@ -22,6 +22,7 @@ readonly class CheckoutDTO
                 shippingService: $item['shipping_service'],
                 shippingFee:     (int) $item['shipping_fee'],
                 notes:           $item['notes'] ?? null,
+                itemIds:         isset($item['item_ids']) ? array_map('intval', $item['item_ids']) : null,
             ),
             $request->input('items', [])
         );

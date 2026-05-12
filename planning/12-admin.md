@@ -10,8 +10,10 @@
 - ⬜ Review moderation (approve/reject review yang dilaporkan)
 - ⬜ Dispute resolution (handle komplain buyer vs seller)
 - ⬜ Platform revenue dashboard (komisi per transaksi, total GMV)
-- ⬜ Platform settings (komisi %, auto-approve merchant, batas produk per toko)
+- ⬜ Platform settings (komisi %, active payment gateway, auto-approve merchant, batas produk per toko)
 - ⬜ Voucher & Flash Sale management (platform-wide)
+- ⬜ **`GatewayResolver`** — dynamic gateway switch via `platform_settings` + Redis cache (Tier 2)
+- ⬜ **`CircuitBreakerGatewayResolver`** — auto-failover ke fallback gateway jika primary gagal N kali (Tier 3)
 
 ---
 
@@ -85,11 +87,15 @@ app/Http/Resources/Admin/AdminMerchantResource.php
 app/Services/Admin/AdminUserService.php
 app/Services/Admin/AdminMerchantService.php
 app/Services/Admin/AdminDashboardService.php
+app/Services/Payment/GatewayResolver.php                    (new — Tier 2)
+app/Services/Payment/CircuitBreakerGatewayResolver.php      (new — Tier 3)
 app/Models/PlatformSetting.php
 database/migrations/xxxx_create_platform_settings_table.php
 database/seeders/AdminUserSeeder.php
 routes/api/admin.php
 tests/Feature/Api/Admin/AdminTest.php
+tests/Unit/Services/Payment/GatewayResolverTest.php         (new)
+tests/Unit/Services/Payment/CircuitBreakerTest.php          (new)
 ```
 
 ---
@@ -105,12 +111,62 @@ tests/Feature/Api/Admin/AdminTest.php
 ---
 
 ## Business Logic Notes
+
+### General
 - Admin role di-assign via `UserRole` enum: `$user->update(['role' => UserRole::Admin->value])`
 - Platform settings disimpan di DB tabel `platform_settings` (key-value), di-cache di Redis
-- Revenue dashboard: aggregate dari `transactions` yang berstatus `paid`
+- Revenue dashboard: aggregate dari `payments` yang berstatus `paid`
 - GMV (Gross Merchandise Value): total nilai transaksi sebelum potongan komisi platform
 - Dispute: admin bertindak sebagai mediator — bisa refund ke buyer atau release ke merchant
 - KYC approval: ubah `store.status` dari `pending` ke `active` + set `store.kyc_status = 'approved'` + dispatch `Merchant\MerchantApproved` event (Listener kirim email)
-- **Admin product ban:** `AdminProductController::ban()` memanggil `ProductService::adminSetStatus($product, ProductStatus::Banned)` — bypass validasi merchant. `UpdateProductStatusRequest` hanya berlaku untuk merchant endpoint; admin endpoint punya FormRequest sendiri atau bypass validation layer.
-- **Admin users table:** `users.role` kolom sudah ada (Sprint 4, migration `add_role_to_users_table`). Untuk ban user: set `email_verified_at = null` (blokir login) atau tambahkan `banned_at` kolom terpisah di Sprint 12.
+- **Admin product ban:** `AdminProductController::ban()` memanggil `ProductService::adminSetStatus($product, ProductStatus::Banned)` — bypass validasi merchant.
+- **Admin users table:** untuk ban user: set `email_verified_at = null` (blokir login) atau tambahkan `banned_at` kolom terpisah di Sprint 12.
+
+### GatewayResolver (Tier 2 — dynamic switch)
+
+```php
+// app/Services/Payment/GatewayResolver.php
+class GatewayResolver {
+    public function resolve(): PaymentGatewayInterface {
+        $gateway = Cache::remember('payment:active_gateway', 60, fn() =>
+            PlatformSetting::getValue('payment_gateway', config('payment.default_gateway', 'xendit'))
+        );
+        return app("payment.{$gateway}");
+    }
+
+    public function switch(string $gateway): void {
+        PlatformSetting::setValue('payment_gateway', $gateway);
+        Cache::forget('payment:active_gateway');
+    }
+}
+```
+
+- Admin switch gateway via `PUT /api/admin/settings` dengan body `{ "payment_gateway": "midtrans" }`
+- Efektif dalam 60 detik (Redis TTL cache)
+- `AppServiceProvider` binding diupdate: `PaymentGatewayInterface` → resolve via `GatewayResolver`
+
+### CircuitBreakerGatewayResolver (Tier 3 — auto-failover)
+
+```php
+// app/Services/Payment/CircuitBreakerGatewayResolver.php
+// Wraps GatewayResolver, tambah Redis-backed failure tracking
+```
+
+| Parameter | Default | Keterangan |
+|---|---|---|
+| `THRESHOLD` | 5 | Jumlah failure sebelum circuit "open" |
+| `WINDOW` | 60s | Window waktu penghitungan failure |
+| `RECOVERY` | 30s | Jeda sebelum coba primary lagi ("half-open") |
+
+- `PaymentService` panggil `resolver->recordSuccess($gateway)` / `recordFailure($gateway)` setelah setiap gateway call
+- Jika circuit "open" → auto-route ke fallback tanpa intervensi manual
+- Setelah `RECOVERY` seconds → coba primary lagi ("half-open"); jika sukses → close circuit
+
+### Migration dari Sprint 7 ke Sprint 12
+
+Hanya 2 perubahan saat Sprint 12 aktif:
+1. `AppServiceProvider::bind(PaymentGatewayInterface::class)` → delegate ke `CircuitBreakerGatewayResolver`
+2. `WalletService::creditMerchant()` → ganti `config('platform.fee_percent')` ke `PlatformSetting::getValue('fee_percent')`
+
+`PaymentService`, `XenditPaymentService`, `MidtransPaymentService` **tidak perlu diubah sama sekali**.
 - **Files to Create** perlu ditambahkan: `app/Http/Requests/Admin/AdminUpdateProductStatusRequest.php` (izinkan `banned`)

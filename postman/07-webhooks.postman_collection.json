@@ -1,86 +1,295 @@
 {
   "info": {
     "name": "Marketplace API — Payment Webhooks",
-    "_postman_id": "marketplace-api-v2-08-webhooks",
+    "_postman_id": "marketplace-api-v2-07-webhooks",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{access_token}}",
-        "type": "string"
-      }
-    ]
+    "type": "noauth"
   },
   "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:8000",
-      "type": "string"
-    },
-    {
-      "key": "access_token",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "refresh_token",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "transaction_id",
-      "value": "",
-      "type": "string"
-    }
+    { "key": "base_url",             "value": "http://localhost:8000", "type": "string" },
+    { "key": "XENDIT_WEBHOOK_TOKEN", "value": "",                      "type": "string", "description": "Isi dari .env XENDIT_WEBHOOK_TOKEN" },
+    { "key": "midtrans_server_key",  "value": "",                      "type": "string", "description": "Isi dari .env MIDTRANS_SERVER_KEY" },
+    { "key": "midtrans_signature",   "value": "",                      "type": "string", "description": "Auto-computed by pre-request script" }
   ],
   "item": [
     {
-      "name": "Webhooks",
-      "description": "Webhook endpoints — tidak membutuhkan auth, verifikasi via signature",
+      "name": "07. Webhooks",
+      "description": "Module 7 — Webhook endpoints: PUBLIC, no Bearer auth.\n\n**Xendit:** verifikasi via `x-callback-token` header (dibandingkan `XENDIT_WEBHOOK_TOKEN` di .env)\n**Midtrans:** verifikasi via SHA-512 signature di body payload\n\nSemua webhook idempotent — jika payment sudah `paid`/`refunded`, event diabaikan.",
       "item": [
         {
-          "name": "Xendit Webhook",
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "x-callback-token",
-                "value": "YOUR_XENDIT_CALLBACK_TOKEN",
-                "description": "Xendit webhook verification token dari .env XENDIT_WEBHOOK_TOKEN"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"id\": \"invoice_xxx\",\n  \"external_id\": \"INV-order_123\",\n  \"status\": \"PAID\",\n  \"amount\": 150000,\n  \"paid_amount\": 150000,\n  \"paid_at\": \"2026-05-04T12:00:00.000Z\",\n  \"payer_email\": \"buyer@example.com\",\n  \"payment_method\": \"BANK_TRANSFER\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+          "name": "— Xendit —",
+          "item": [
+            {
+              "name": "Xendit — Invoice Paid",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Webhook returns 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
                 }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/api/webhooks/xendit",
-              "host": [
-                "{{base_url}}"
               ],
-              "path": [
-                "api",
-                "webhooks",
-                "xendit"
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept",          "value": "application/json" },
+                  { "key": "Content-Type",    "value": "application/json" },
+                  { "key": "x-callback-token","value": "{{XENDIT_WEBHOOK_TOKEN}}", "description": "Dari .env XENDIT_WEBHOOK_TOKEN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"623fca3f9fea3b00d1c4a7b2\",\n  \"external_id\": \"PAY-ABCDEFGHIJ-5\",\n  \"user_id\": \"your-xendit-user-id\",\n  \"status\": \"PAID\",\n  \"merchant_name\": \"Marketplace Dev\",\n  \"amount\": 390000,\n  \"paid_amount\": 390000,\n  \"paid_at\": \"2026-05-12T10:05:00.000Z\",\n  \"payer_email\": \"buyer@example.com\",\n  \"description\": \"Payment for order ORD-XXXXX\",\n  \"currency\": \"IDR\",\n  \"payment_method\": \"BANK_TRANSFER\",\n  \"bank_code\": \"BCA\",\n  \"payment_channel\": \"BCA\",\n  \"payment_destination\": \"8808123456789\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/webhooks/xendit",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "webhooks", "xendit"]
+                },
+                "description": "Xendit Invoice payment berhasil.\n\nDikirim Xendit ke Laravel saat buyer selesai bayar di halaman invoice (metode apapun — VA, QRIS, e-wallet, kartu kredit).\n\n**Field penting:**\n- `external_id` → harus match `payments.gateway_ref` atau `transactions.external_id`\n- `status: PAID` → Laravel set payment → `paid`, dispatch `PaymentCaptured`\n- `paid_amount` → amount aktual yang dibayar (dalam IDR, bukan cents)\n\n**Cara pakai:**\n1. Ganti `external_id` dengan nilai dari `payment_details.external_id` hasil Initiate Payment\n2. Isi `XENDIT_WEBHOOK_TOKEN` di collection variables\n3. Send → cek DB: `payments.status` harus jadi `paid`"
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{ \"message\": \"Webhook processed.\" }"
+                },
+                {
+                  "name": "403 Forbidden — Invalid Signature",
+                  "status": "Forbidden",
+                  "code": 403,
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Invalid webhook signature.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                }
               ]
             },
-            "description": "Webhook callback dari Xendit ketika pembayaran berhasil.\n\n⚠️ Endpoint ini PUBLIC — tidak butuh Bearer token.\n⚠️ Verifikasi dilakukan via `x-callback-token` header.\n\n**status** values: `PAID`, `EXPIRED`, `SETTLEMENT`"
-          }
+            {
+              "name": "Xendit — Invoice Expired",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Webhook returns 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept",          "value": "application/json" },
+                  { "key": "Content-Type",    "value": "application/json" },
+                  { "key": "x-callback-token","value": "{{XENDIT_WEBHOOK_TOKEN}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"623fca3f9fea3b00d1c4a7b2\",\n  \"external_id\": \"PAY-ABCDEFGHIJ-5\",\n  \"status\": \"EXPIRED\",\n  \"amount\": 390000,\n  \"currency\": \"IDR\",\n  \"description\": \"Payment for order ORD-XXXXX\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/webhooks/xendit",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "webhooks", "xendit"]
+                },
+                "description": "Xendit Invoice expired — buyer tidak bayar sampai batas waktu (default 24 jam).\n\n**Flow yang terjadi di Laravel:**\n1. `parseWebhookPayload()` mapping `EXPIRED` → status `expired`\n2. `PaymentService::markExpired()` dipanggil\n3. `payments.status` → `expired`\n4. `transactions.status` → `expired`\n5. Event `PaymentFailed` di-dispatch → listener `NotifyPaymentFailed` kirim notifikasi ke buyer\n\n**Note:** Order tetap `pending` — buyer bisa inisiasi payment baru. Order akan otomatis `cancelled` jika `payment_due_at` terlewat (handled oleh `ExpireUnpaidPayments` job).\n\n**Cara pakai:**\n1. Ganti `external_id` dengan nilai dari `payment_details.external_id`\n2. Send → cek DB: `payments.status` harus jadi `expired`"
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{ \"message\": \"Webhook processed.\" }"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "— Midtrans —",
+          "item": [
+            {
+              "name": "Midtrans — Snap Paid (Settlement)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "// Auto-compute Midtrans webhook signature",
+                      "// Signature = SHA-512(order_id + status_code + gross_amount + server_key)",
+                      "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
+                      "if (!serverKey) {",
+                      "  console.warn('midtrans_server_key not set — signature will be invalid');",
+                      "  return;",
+                      "}",
+                      "try {",
+                      "  const body = JSON.parse(pm.request.body.raw);",
+                      "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
+                      "  const sig = CryptoJS.SHA512(input).toString();",
+                      "  pm.collectionVariables.set('midtrans_signature', sig);",
+                      "} catch(e) {",
+                      "  console.error('Failed to compute signature:', e);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Midtrans webhook returns 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept",       "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"settlement\",\n  \"transaction_id\": \"txn-abc123\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"PAY-ABCDEFGHIJ-8\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/webhooks/midtrans",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "webhooks", "midtrans"]
+                },
+                "description": "Midtrans Snap payment notification — pembayaran berhasil (settlement).\n\n**Signature auto-computed** oleh pre-request script:\n`SHA-512(order_id + status_code + gross_amount + server_key)`\n\n**Pre-condition:**\n1. Isi `midtrans_server_key` di collection variables (dari .env `MIDTRANS_SERVER_KEY`)\n2. Ganti `order_id` dengan `external_id` dari Initiate Payment\n3. Sesuaikan `gross_amount` (format: `\"390000.00\"` — IDR tanpa cents)\n\n**transaction_status mappings di Laravel:**\n- `settlement` → `paid`\n- `capture` + `fraud_status: accept` → `paid`\n- `deny` → `failed`\n- `cancel` / `expire` → `expired`\n- `pending` → no-op (hanya informational)\n\n`order_id` di Midtrans = `external_id` di tabel `transactions`."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{ \"message\": \"Webhook processed.\" }"
+                },
+                {
+                  "name": "403 Forbidden — Invalid Signature",
+                  "status": "Forbidden",
+                  "code": 403,
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Invalid webhook signature.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Midtrans — Snap Expired",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "// Auto-compute Midtrans webhook signature",
+                      "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
+                      "if (!serverKey) { return; }",
+                      "try {",
+                      "  const body = JSON.parse(pm.request.body.raw);",
+                      "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
+                      "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
+                      "} catch(e) { console.error(e); }"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Midtrans expire webhook returns 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept",       "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"expire\",\n  \"transaction_id\": \"txn-abc123\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"407\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"PAY-ABCDEFGHIJ-8\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"currency\": \"IDR\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/webhooks/midtrans",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "webhooks", "midtrans"]
+                },
+                "description": "Midtrans Snap expired — buyer tidak bayar sampai batas waktu (default 24 jam di Snap).\n\n**Status code untuk expire: `407`** (berbeda dengan settlement `200`)\n\n**Flow yang terjadi di Laravel:**\n1. `parseWebhookPayload()` → `transaction_status: expire` → mapped ke status `expired`\n2. `PaymentService::markExpired()` dipanggil\n3. `payments.status` → `expired`, `transactions.status` → `expired`\n4. Event `PaymentFailed` di-dispatch\n\n**Pre-condition:**\n1. Isi `midtrans_server_key` di collection variables\n2. Ganti `order_id` dan `gross_amount` sesuai transaksi\n3. Pre-request script akan auto-compute signature\n\n**Note:** Signature SHA-512 input: `order_id + \"407\" + gross_amount + serverKey`"
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{ \"message\": \"Webhook processed.\" }"
+                }
+              ]
+            },
+            {
+              "name": "Midtrans — Card Capture + Fraud Accept",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
+                      "if (!serverKey) { return; }",
+                      "try {",
+                      "  const body = JSON.parse(pm.request.body.raw);",
+                      "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
+                      "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
+                      "} catch(e) { console.error(e); }"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept",       "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"capture\",\n  \"transaction_id\": \"txn-abc124\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"credit_card\",\n  \"order_id\": \"PAY-ABCDEFGHIJ-9\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\",\n  \"masked_card\": \"481111-1114\",\n  \"bank\": \"bca\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/webhooks/midtrans",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "webhooks", "midtrans"]
+                },
+                "description": "Midtrans credit card capture — `transaction_status: capture` + `fraud_status: accept` → Laravel maps ke `paid`.\n\nIni format untuk kartu kredit. Debit/VA/GoPay umumnya langsung `settlement` bukan `capture`."
+              },
+              "response": []
+            }
+          ]
         }
       ]
     }

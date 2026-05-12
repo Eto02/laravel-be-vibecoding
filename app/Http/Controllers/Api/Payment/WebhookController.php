@@ -15,19 +15,19 @@ class WebhookController extends Controller
         private readonly PaymentService $paymentService,
     ) {}
 
-    public function xendit(Request $request): JsonResponse
+    public function handle(Request $request, string $provider): JsonResponse
     {
         try {
-            $this->paymentService->handleWebhook($request);
+            $this->paymentService->handleWebhook($request, $provider);
 
             return ApiResponse::success('Webhook processed successfully.');
-        } catch (\RuntimeException $e) {
+        } catch (\DomainException $e) {
             $status = $e->getCode() === 403 ? 403 : 400;
-            Log::warning('Webhook runtime error: ' . $e->getMessage());
+            Log::warning("Webhook {$provider} domain error: " . $e->getMessage());
 
             return ApiResponse::error($e->getMessage(), $status);
         } catch (\Exception $e) {
-            Log::error('Webhook critical error: ' . $e->getMessage(), ['exception' => $e]);
+            Log::error("Webhook {$provider} critical error: " . $e->getMessage(), ['exception' => $e]);
 
             return ApiResponse::error('Failed to process webhook.', 500);
         }
