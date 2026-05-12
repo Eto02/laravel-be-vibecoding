@@ -201,6 +201,11 @@ class MerchantService
         StoreUnfollowed::dispatch($store);
     }
 
+    public function getStoreForUser(User $user): Store
+    {
+        return $user->store()->firstOrFail();
+    }
+
     public function getPublicProfile(string $slug): Store
     {
         return $this->cache->remember(
