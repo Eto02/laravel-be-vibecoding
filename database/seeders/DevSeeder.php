@@ -16,6 +16,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\User;
+use App\Models\WalletBalance;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -268,6 +269,25 @@ class DevSeeder extends Seeder
             $order2->statusLogs()->create(['from_status' => null, 'to_status' => 'pending', 'note' => 'Order placed.', 'changed_by' => $buyer->id]);
         }
 
+        // ── Wallet balances ───────────────────────────────────────────────────
+        // Buyer wallet — simulates topped-up state
+        WalletBalance::firstOrCreate(['user_id' => $buyer->id], [
+            'balance'  => 50000000, // Rp 500.000
+            'on_hold'  => 0,
+        ]);
+
+        // Merchant wallet — simulates earnings with a pending withdrawal
+        $merchantWallet = WalletBalance::firstOrCreate(['user_id' => $merchant->id], [
+            'balance'  => 150000000, // Rp 1.500.000
+            'on_hold'  => 20000000,  // Rp 200.000 pending withdrawal
+        ]);
+        if ($merchantWallet->wasRecentlyCreated) {
+            $merchantWallet->transactions()->createMany([
+                ['type' => 'credit', 'amount' => 170000000, 'description' => 'Order completed — INV/2026/05/000001'],
+                ['type' => 'debit',  'amount' => 20000000,  'description' => 'Withdrawal initiated — on_hold'],
+            ]);
+        }
+
         $this->command->info('DevSeeder selesai:');
         $this->command->table(
             ['Role', 'Email', 'Password'],
@@ -280,6 +300,8 @@ class DevSeeder extends Seeder
         );
         $this->command->info('Cart test@example.com: 3 items dari 2 toko (multi-store)');
         $this->command->info('Orders test@example.com: 1 shipped (JNE), 1 pending');
+        $this->command->info('Wallet test@example.com: Rp 500.000 balance');
+        $this->command->info('Wallet merchant@marketplace.dev: Rp 1.500.000 balance, Rp 200.000 on_hold');
     }
 
     private function category(string $name, string $slug, int $sort, ?int $parentId = null): Category
