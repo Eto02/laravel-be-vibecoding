@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Events\Payment\PaymentCaptured;
 use App\Events\Payment\PaymentFailed;
+use App\Mail\Payment\PaymentExpiredMail;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Transaction;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Services\Payment\PaymentGatewayInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class WebhookTest extends TestCase
@@ -109,6 +111,55 @@ class WebhookTest extends TestCase
 
         // Event should NOT be dispatched again
         Event::assertNotDispatched(PaymentCaptured::class);
+    }
+
+    public function test_xendit_expired_webhook_queues_notification_email(): void
+    {
+        Mail::fake();
+        $this->mockGateway('expired', 'PAY-EXPIRE');
+        ['payment' => $payment] = $this->paymentWithOrder('PAY-EXPIRE');
+
+        $this->postJson('/api/webhooks/xendit', ['external_id' => 'PAY-EXPIRE', 'status' => 'EXPIRED'])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => PaymentStatus::Expired->value]);
+        Mail::assertQueued(PaymentExpiredMail::class, fn ($mail) => $mail->payment->id === $payment->id);
+    }
+
+    public function test_midtrans_expired_webhook_queues_notification_email(): void
+    {
+        Mail::fake();
+        $this->mockGateway('expired', 'PAY-MIDTRANS-EXPIRE');
+        ['payment' => $payment] = $this->paymentWithOrder('PAY-MIDTRANS-EXPIRE');
+
+        $this->postJson('/api/webhooks/midtrans', [
+            'order_id'           => 'PAY-MIDTRANS-EXPIRE',
+            'transaction_status' => 'expire',
+            'status_code'        => '407',
+            'gross_amount'       => '100000.00',
+            'signature_key'      => 'mock_verified',
+        ])->assertStatus(200);
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => PaymentStatus::Expired->value]);
+        Mail::assertQueued(PaymentExpiredMail::class, fn ($mail) => $mail->payment->id === $payment->id);
+    }
+
+    public function test_midtrans_cancelled_webhook_queues_notification_email(): void
+    {
+        Mail::fake();
+        $this->mockGateway('expired', 'PAY-MIDTRANS-CANCEL');
+        ['payment' => $payment] = $this->paymentWithOrder('PAY-MIDTRANS-CANCEL');
+
+        $this->postJson('/api/webhooks/midtrans', [
+            'order_id'           => 'PAY-MIDTRANS-CANCEL',
+            'transaction_status' => 'cancel',
+            'status_code'        => '407',
+            'gross_amount'       => '100000.00',
+            'signature_key'      => 'mock_verified',
+        ])->assertStatus(200);
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => PaymentStatus::Expired->value]);
+        Mail::assertQueued(PaymentExpiredMail::class, fn ($mail) => $mail->payment->id === $payment->id);
     }
 
     // ── Midtrans webhook ──────────────────────────────────────────────────────
