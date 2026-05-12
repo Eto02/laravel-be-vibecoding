@@ -49,6 +49,12 @@
       "key": "xendit_secret_key",
       "value": "xnd_development_YOUR_KEY_HERE",
       "type": "string"
+    },
+    {
+      "key": "snap_redirect_url",
+      "value": "",
+      "type": "string",
+      "description": "Auto-saved from Initiate Payment (midtrans) response"
     }
   ],
   "item": [
@@ -70,8 +76,14 @@
                       "if (pm.response.code === 201) {",
                       "  const body = pm.response.json();",
                       "  pm.collectionVariables.set('payment_id', String(body.data.id || ''));",
+                      "  // Xendit invoice",
                       "  const invoiceId = body.data.payment_details?.invoice_id || '';",
                       "  pm.collectionVariables.set('invoice_id', invoiceId);",
+                      "  // Midtrans snap",
+                      "  const snapUrl = body.data.redirect_url || '';",
+                      "  if (body.data.gateway === 'midtrans') {",
+                      "    pm.collectionVariables.set('snap_redirect_url', snapUrl);",
+                      "  }",
                       "  pm.test('Initiate payment returns 201', () => pm.response.to.have.status(201));",
                       "  pm.test('Response has payment data', () => {",
                       "    pm.expect(body.data).to.have.property('id');",
@@ -653,10 +665,10 @@
         },
         {
           "name": "Sandbox Simulator",
-          "description": "⚠️ Xendit SANDBOX only — simulate invoice payment to trigger webhook callbacks.\n\nPre-condition: run 'Initiate Payment' first — it auto-saves `invoice_id` and `payment_id` variables.\n\nThese requests hit Xendit API directly (not your Laravel app), using Basic auth with `xendit_secret_key`.",
+          "description": "⚠️ SANDBOX only — simulasi pembayaran untuk memicu webhook ke Laravel.\n\n**Xendit:** API langsung → auto-trigger webhook\n**Midtrans:** Buka `snap_redirect_url` di browser → pilih metode → bayar dengan test credentials\n\nPre-condition: jalankan 'Initiate Payment' dulu — `invoice_id` dan `snap_redirect_url` tersimpan otomatis.",
           "item": [
             {
-              "name": "Simulate Invoice Payment (Xendit Sandbox)",
+              "name": "Xendit — Simulate Invoice Paid ⚡",
               "event": [
                 {
                   "listen": "test",
@@ -664,7 +676,9 @@
                     "exec": [
                       "pm.test('Simulate returns 200', () => pm.response.to.have.status(200));",
                       "pm.test('Simulation triggered', () => {",
-                      "  pm.expect(pm.response.json()).to.have.property('status');",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body).to.have.property('status');",
+                      "  pm.test('Invoice status is PAID', () => pm.expect(body.status).to.equal('PAID'));",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -675,63 +689,115 @@
                 "auth": {
                   "type": "basic",
                   "basic": [
-                    {
-                      "key": "username",
-                      "value": "{{xendit_secret_key}}",
-                      "type": "string"
-                    },
-                    {
-                      "key": "password",
-                      "value": "",
-                      "type": "string"
-                    }
+                    { "key": "username", "value": "{{xendit_secret_key}}", "type": "string" },
+                    { "key": "password", "value": "",                      "type": "string" }
                   ]
                 },
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
                   "raw": "{}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+                  "options": { "raw": { "language": "json" } }
                 },
                 "url": {
                   "raw": "https://api.xendit.co/v2/invoices/{{invoice_id}}/simulate_payment",
                   "protocol": "https",
-                  "host": [
-                    "api",
-                    "xendit",
-                    "co"
-                  ],
-                  "path": [
-                    "v2",
-                    "invoices",
-                    "{{invoice_id}}",
-                    "simulate_payment"
-                  ]
+                  "host": ["api", "xendit", "co"],
+                  "path": ["v2", "invoices", "{{invoice_id}}", "simulate_payment"]
                 },
-                "description": "Simulate invoice payment berhasil di Xendit Sandbox.\n\n**Xendit akan otomatis kirim webhook** ke callback URL yang terdaftar di dashboard → Laravel app memproses → payment menjadi `paid`.\n\n**Pre-condition:**\n1. Jalankan 'Initiate Payment' dulu → `invoice_id` tersimpan otomatis\n2. Pastikan `xendit_secret_key` diisi di collection variables\n3. Webhook URL sudah di-set di Xendit dashboard (Settings → Webhooks → Invoice) → `https://your-ngrok.io/api/webhooks/xendit`\n\n**Setelah ini:** panggil `GET /api/payments/{id}/status` → status harus `paid`\n\n⚠️ **Sandbox only** — tidak ada endpoint ini di production."
+                "description": "Simulate Xendit Invoice berhasil dibayar di sandbox — **satu klik, tanpa buka browser**.\n\nXendit akan kirim webhook `status: PAID` ke callback URL → Laravel set payment `paid`.\n\n**Setup (sekali saja):**\n1. Isi `xendit_secret_key` di collection variables\n2. Set Webhook URL di [Xendit Dashboard](https://dashboard.xendit.co) → Settings → Webhooks → Invoice paid → `https://your-ngrok.io/api/webhooks/xendit`\n3. Aktifkan Xendit → Settings → Webhooks → toggle Invoice paid ✅\n\n**Flow per test:**\n1. `POST /api/payments/initiate` dengan `gateway: xendit` → `invoice_id` tersimpan otomatis\n2. Send request ini → Xendit trigger webhook\n3. `GET /api/payments/{{payment_id}}/status` → status harus `paid`\n\n⚠️ **Sandbox only**"
               },
               "response": [
                 {
                   "name": "200 OK — Simulation triggered",
                   "status": "OK",
                   "code": 200,
-                  "header": [
-                    {
-                      "key": "Content-Type",
-                      "value": "application/json"
-                    }
-                  ],
-                  "body": "{\"id\": \"623fca...\", \"external_id\": \"PAY-ABCDEFGHIJ-5\", \"status\": \"PAID\", \"amount\": 390000, \"paid_amount\": 390000, \"currency\": \"IDR\"}"
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{\n  \"id\": \"623fca3f9fea3b00d1c4a7b2\",\n  \"external_id\": \"PAY-ABCDEFGHIJ-5\",\n  \"status\": \"PAID\",\n  \"amount\": 390000,\n  \"paid_amount\": 390000,\n  \"currency\": \"IDR\",\n  \"payment_method\": \"BCA\"\n}"
+                }
+              ]
+            },
+            {
+              "name": "Midtrans — Open Snap Checkout (Browser) 🌐",
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{snap_redirect_url}}",
+                  "host": ["{{snap_redirect_url}}"]
+                },
+                "description": "**Buka URL ini di browser** untuk masuk ke halaman Snap Midtrans.\n\n`snap_redirect_url` tersimpan otomatis saat kamu jalankan 'Initiate Payment' dengan `gateway: midtrans`.\n\n---\n\n## Test Credentials Midtrans Sandbox\n\n### Kartu Kredit\n| Card Number | Type | 3DS |\n|---|---|---|\n| `4811 1111 1111 1114` | Visa (success) | OTP: `112233` |\n| `4911 1111 1111 1113` | Visa (success, no 3DS) | — |\n| `4911 1111 1111 1129` | Visa (challenge/fraud) | — |\n| `5210 0000 0000 0002` | Mastercard | OTP: `112233` |\n\nCVV: `123` | Exp: `01/25` (masa depan)\n\n### Bank Transfer (VA)\nSemua VA di sandbox akan **auto-settle dalam beberapa detik** — tidak perlu aksi manual.\n\n### GoPay\n1. Pilih GoPay di Snap\n2. Scan QR atau klik deeplink\n3. Di sandbox, gunakan test number `+628123456789` dan PIN `123456`\n\n### ShopeePay\nRedirect ke halaman ShopeePay sandbox → approve dengan akun sandbox\n\n### QRIS\nScan QR dengan app sandbox QRIS atau konfirmasi manual di dashboard Midtrans\n\n---\n\n## Setelah Bayar\n\nMidtrans akan kirim webhook ke `POST /api/webhooks/midtrans`.\n\n**Setup webhook (sekali saja):**\n[Midtrans Dashboard](https://dashboard.sandbox.midtrans.com) → Settings → Configuration\n→ **Payment Notification URL:** `https://your-ngrok.io/api/webhooks/midtrans`\n\nAlternatif tanpa browser: gunakan request **'Midtrans — Snap Paid (Settlement)'** di collection `07-webhooks` untuk trigger webhook secara manual."
+              },
+              "response": []
+            },
+            {
+              "name": "Midtrans — Trigger Webhook Manual (no browser) 🔧",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "// Compute Midtrans signature: SHA-512(order_id + status_code + gross_amount + server_key)",
+                      "// Ganti 'midtrans_server_key' di collection variables dengan MIDTRANS_SERVER_KEY dari .env",
+                      "const serverKey = pm.collectionVariables.get('midtrans_server_key') || '';",
+                      "if (!serverKey) {",
+                      "  console.warn('⚠️ Set midtrans_server_key in collection variables!');",
+                      "  return;",
+                      "}",
+                      "try {",
+                      "  const body = JSON.parse(pm.request.body.raw);",
+                      "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
+                      "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
+                      "} catch(e) { console.error('Signature error:', e); }"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Manual webhook returns 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept",       "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"transaction_status\": \"settlement\",\n  \"transaction_id\": \"txn-sandbox-001\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"gopay\",\n  \"order_id\": \"GANTI-DENGAN-EXTERNAL-ID-DARI-INITIATE\",\n  \"gross_amount\": \"GANTI-DENGAN-JUMLAH-IDR.00\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\",\n  \"transaction_time\": \"2026-05-12 10:00:00\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/webhooks/midtrans",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "webhooks", "midtrans"]
+                },
+                "description": "Trigger webhook Midtrans secara manual ke Laravel — **tanpa buka browser, tanpa Midtrans dashboard**.\n\nCocok untuk development lokal dimana Midtrans tidak bisa reach server kamu.\n\n**Setup:**\n1. Isi `midtrans_server_key` di collection variables (dari `.env MIDTRANS_SERVER_KEY`)\n2. Ganti `order_id` dengan `external_id` dari hasil Initiate Payment (format: `PAY-XXXXX-5`)\n3. Ganti `gross_amount` dengan jumlah dalam IDR format string, contoh: `\"390000.00\"`\n4. Pre-request script akan auto-compute `signature_key` → webhook akan lolos verifikasi\n\n**Cara dapat `order_id`:**\nDari response Initiate Payment → `data.payment_details.external_id`\n\n**Cara dapat `gross_amount`:**\nDari `data.amount_cents` dibagi 100, format: `\"390000.00\"`\n\n**Setelah Send:** `GET /api/payments/{{payment_id}}/status` → status harus `paid`"
+              },
+              "response": [
+                {
+                  "name": "200 OK — Webhook processed",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{ \"message\": \"Webhook processed.\" }"
+                },
+                {
+                  "name": "403 Forbidden — Wrong Server Key",
+                  "status": "Forbidden",
+                  "code": 403,
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Invalid webhook signature.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 }
               ]
             }
