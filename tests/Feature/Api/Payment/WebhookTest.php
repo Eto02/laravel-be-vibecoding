@@ -191,6 +191,54 @@ class WebhookTest extends TestCase
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => OrderStatus::Paid->value]);
     }
 
+    // ── Recovery: paid webhook on locally-expired payment ────────────────────
+
+    public function test_paid_webhook_recovers_locally_expired_payment_when_order_is_pending(): void
+    {
+        Event::fake();
+        $this->mockGateway('paid', 'PAY-RECOVER');
+        $user    = User::factory()->create(['email_verified_at' => now()]);
+        $order   = Order::factory()->create(['user_id' => $user->id, 'status' => OrderStatus::Pending, 'total' => 10000000]);
+        // Simulate scheduler having expired the payment locally (soft-terminal)
+        $payment = Payment::factory()->create([
+            'order_id'    => $order->id,
+            'gateway_ref' => 'PAY-RECOVER',
+            'status'      => PaymentStatus::Expired,
+            'amount'      => 10000000,
+        ]);
+
+        $this->postJson('/api/webhooks/xendit', ['external_id' => 'PAY-RECOVER', 'status' => 'PAID'])
+            ->assertStatus(200);
+
+        // Payment must be recovered to Paid
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => PaymentStatus::Paid->value]);
+        // Order must be fulfilled
+        Event::assertDispatched(PaymentCaptured::class);
+    }
+
+    public function test_paid_webhook_on_expired_payment_does_not_recover_already_paid_order(): void
+    {
+        Event::fake();
+        $this->mockGateway('paid', 'PAY-DOUBLEP');
+        $user    = User::factory()->create(['email_verified_at' => now()]);
+        $order   = Order::factory()->create(['user_id' => $user->id, 'status' => OrderStatus::Paid, 'total' => 10000000]);
+        // Old expired payment for an already-paid order (true double-charge scenario)
+        Payment::factory()->create([
+            'order_id'    => $order->id,
+            'gateway_ref' => 'PAY-DOUBLEP',
+            'status'      => PaymentStatus::Expired,
+            'amount'      => 10000000,
+        ]);
+
+        $this->postJson('/api/webhooks/xendit', ['external_id' => 'PAY-DOUBLEP', 'status' => 'PAID'])
+            ->assertStatus(200);
+
+        // No PaymentCaptured — order was already paid, this is a double-charge
+        Event::assertNotDispatched(PaymentCaptured::class);
+        // Order stays Paid
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => OrderStatus::Paid->value]);
+    }
+
     // ── Midtrans webhook ──────────────────────────────────────────────────────
 
     public function test_midtrans_webhook_marks_payment_paid(): void

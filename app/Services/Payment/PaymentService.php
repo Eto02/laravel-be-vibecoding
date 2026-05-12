@@ -125,21 +125,39 @@ class PaymentService
             return; // Unknown payment — skip silently
         }
 
-        // Skip if already in a terminal state
-        $terminalStatuses = [
-            PaymentStatus::Paid,
-            PaymentStatus::Expired,
-            PaymentStatus::Failed,
-            PaymentStatus::Refunded,
-        ];
+        // Hard-terminal: Paid and Refunded are truly final — no recovery possible
+        if (in_array($payment->status, [PaymentStatus::Paid, PaymentStatus::Refunded])) {
+            return;
+        }
 
-        if (in_array($payment->status, $terminalStatuses)) {
-            if ($status === 'paid' && in_array($payment->status, [PaymentStatus::Expired, PaymentStatus::Failed])) {
-                Log::critical('Received paid webhook for expired/failed payment — possible double charge', [
+        // Soft-terminal: Expired or Failed — a paid webhook means money reached the gateway.
+        // This happens when: (a) scheduler expired locally before gateway did, or
+        // (b) a switched-away invoice's cancelCharge failed and the user paid on the old one.
+        // If the order is still unfulfilled we can recover; otherwise it's a true double-charge.
+        if (in_array($payment->status, [PaymentStatus::Expired, PaymentStatus::Failed])) {
+            if ($status === 'paid') {
+                $order = $payment->order;
+
+                if ($order && $order->status === OrderStatus::Pending) {
+                    Log::warning('Paid webhook for locally-expired payment — order still pending, recovering', [
+                        'payment_id'   => $payment->id,
+                        'order_id'     => $order->id,
+                        'gateway_ref'  => $externalId,
+                        'gateway'      => $payment->gateway,
+                        'local_status' => $payment->status->value,
+                    ]);
+                    // Expire any other pending payments for this order (e.g. Payment B from switch)
+                    $this->cancelPendingPaymentsForOrder($order);
+                    $this->markPaid($payment, $normalized['amount']);
+                    return;
+                }
+
+                Log::critical('Paid webhook for expired/failed payment — order already processed, possible double charge', [
                     'payment_id'   => $payment->id,
+                    'order_id'     => $payment->order_id,
+                    'order_status' => $order?->status->value,
                     'gateway_ref'  => $externalId,
                     'gateway'      => $payment->gateway,
-                    'local_status' => $payment->status->value,
                 ]);
             }
             return;
