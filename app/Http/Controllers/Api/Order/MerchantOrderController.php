@@ -7,6 +7,7 @@ use App\Http\Requests\Order\ShipOrderRequest;
 use App\Http\Resources\Order\OrderListResource;
 use App\Http\Resources\Order\OrderResource;
 use App\Http\Responses\ApiResponse;
+use App\Services\Merchant\MerchantService;
 use App\Services\Order\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,11 +16,12 @@ class MerchantOrderController extends Controller
 {
     public function __construct(
         private readonly OrderService $orderService,
+        private readonly MerchantService $merchant,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
-        $store  = $request->user()->store;
+        $store  = $this->merchant->getStoreForUser($request->user());
         $orders = $this->orderService->getOrdersForMerchant(
             $store,
             $request->query('status'),
@@ -35,7 +37,7 @@ class MerchantOrderController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $store = $request->user()->store;
+        $store = $this->merchant->getStoreForUser($request->user());
         $order = $this->orderService->findForMerchant($store, $id);
 
         return ApiResponse::success('Order retrieved.', new OrderResource($order));
@@ -43,7 +45,7 @@ class MerchantOrderController extends Controller
 
     public function confirm(Request $request, int $id): JsonResponse
     {
-        $store = $request->user()->store;
+        $store = $this->merchant->getStoreForUser($request->user());
         $order = $this->orderService->findForMerchant($store, $id);
         $order = $this->orderService->confirmByMerchant($store, $order);
 
@@ -52,7 +54,7 @@ class MerchantOrderController extends Controller
 
     public function ship(ShipOrderRequest $request, int $id): JsonResponse
     {
-        $store = $request->user()->store;
+        $store = $this->merchant->getStoreForUser($request->user());
         $order = $this->orderService->findForMerchant($store, $id);
         $order = $this->orderService->shipByMerchant($store, $order, $request->input('tracking_number'));
 

@@ -17,6 +17,7 @@ use App\Models\Store;
 use App\Models\StoreDocument;
 use App\Models\StoreFollower;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
 class MerchantService
@@ -200,6 +201,11 @@ class MerchantService
         StoreUnfollowed::dispatch($store);
     }
 
+    public function getStoreForUser(User $user): Store
+    {
+        return $user->store()->firstOrFail();
+    }
+
     public function getPublicProfile(string $slug): Store
     {
         return $this->cache->remember(
@@ -207,6 +213,11 @@ class MerchantService
             600,
             fn () => Store::where('slug', $slug)->firstOrFail(),
         );
+    }
+
+    public function getFollowers(Store $store): LengthAwarePaginator
+    {
+        return $store->followers()->with('user:id,name,avatar')->paginate(20);
     }
 
     public function getDashboard(Store $store): array

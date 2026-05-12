@@ -93,7 +93,7 @@ app/
 │   │   ├── LogApiRequests.php         # Global — audit + Grafana logging
 │   │   └── EnsureMerchantOwnership.php
 │   └── Responses/
-│       └── ApiResponse.php            # MANDATORY — all responses go through this
+│       └── ApiResponse.php            # MANDATORY class — all responses go through this
 │
 ├── Models/                            # All models in root — domain grouped by naming
 │   ├── User.php                       # [Auth/User]
@@ -186,7 +186,7 @@ app/
 │       └── CreateProductDTO.php
 │
 ├── Responses/                         # Standardized API response wrappers
-│   └── ApiResponse.php                # MANDATORY Trait for Controllers
+│   └── ApiResponse.php                # MANDATORY class — use ApiResponse::success() / error() / validationError()
 │
 ├── Listeners/
 │   ├── Auth/
@@ -263,7 +263,7 @@ tests/
 
 ## API Response Standard
 
-Semua Controller WAJIB menggunakan `ApiResponse` trait. Format JSON harus konsisten:
+Semua Controller WAJIB menggunakan `ApiResponse` class (static methods). Format JSON harus konsisten:
 
 ### Success Response (200/201)
 ```json
@@ -315,6 +315,7 @@ public function process(CheckoutDTO $data): Order { ... }
 ## Architecture Rules — STRICT
 
 1. **Controllers are thin.** A controller method does exactly three things: validate input (via injected `FormRequest`), call a Service method, return a response via `ApiResponse`. No Eloquent queries. No business logic. No `Validator::make()`.
+   - **Exception — Policy delegation:** `$this->authorize('action', $model)` is acceptable in controllers. It delegates to a Laravel Policy class; it is not business logic. Do NOT inline ownership checks — those belong in the Service.
 
 2. **Services own all business logic.** All DB queries, cache reads/writes, event dispatches, and complex logic live in Service classes. Services can call other Services. Never call `response()->json()` from a Service.
 
@@ -330,7 +331,9 @@ public function process(CheckoutDTO $data): Order { ... }
 
 5. **Shared/cross-cutting services live in `app/Services/Shared/`.** If a service is used by more than one domain (e.g., Email, SMS, OTP, File Upload, Push Notification), it MUST go in `Shared/`. Domain services inject Shared services via constructor.
 
-6. **FormRequests for all mutating endpoints.** Every `POST`, `PUT`, `PATCH` endpoint must use a dedicated `FormRequest` subclass.
+6. **FormRequests for all mutating endpoints with input.** Every `POST`, `PUT`, `PATCH` endpoint that accepts a request body MUST use a dedicated `FormRequest` subclass — no inline `$request->validate()`, no `Validator::make()`.
+   - **Bodyless action routes** (e.g., `POST /orders/{id}/cancel`, `DELETE /sessions/{id}`) that carry no input body may use plain `Illuminate\Http\Request`. Authorization for these routes belongs in the Service layer.
+   - `FormRequest::authorize()` is the preferred place for Policy checks when a FormRequest already exists; do not add a FormRequest solely to hold an `authorize()` call.
 
 7. **API Resources wrap all model output.** Never return an Eloquent model or collection directly. Always use a Resource with an explicit `toArray()` whitelist.
 
@@ -427,7 +430,7 @@ Status transitions harus mengikuti alur yang valid. Dilarang melompat status tan
 
 ## Standard Response Envelope
 
-ALL API responses MUST use `App\Http\Responses\ApiResponse`. No exceptions.
+ALL API responses MUST use `App\Http\Responses\ApiResponse` (static class methods). No exceptions.
 
 ```json
 // Success
@@ -519,16 +522,19 @@ PUT  /api/auth/change-password [auth:sanctum]
 
 ## Payment Gateway
 
-Interface pattern in `app/Services/Payment/`:
+Interface pattern in `app/Services/Payment/PaymentGatewayInterface.php`:
 ```php
 interface PaymentGatewayInterface {
-    public function createInvoice(array $data): array;
-    public function capturePayment(string $paymentId): array;
-    public function refundPayment(string $paymentId, int $amount): array;
+    public function createCharge(array $data): array;       // returns: gateway_ref, redirect_url, payment_details, expires_at
+    public function cancelCharge(string $ref, string $method): void;
+    public function getPaymentStatus(string $ref): array;
+    public function refundPayment(string $ref, int $amount): array;
     public function verifyWebhook(Request $request): bool;
+    public function parseWebhookPayload(Request $request): array; // returns: event, external_id, status, amount
 }
 ```
-Bound in `AppServiceProvider` based on `env('PAYMENT_GATEWAY', 'xendit')`.
+Named gateway bindings registered in `AppServiceProvider`: `payment.xendit`, `payment.midtrans`.
+Expiry: configured via `PAYMENT_EXPIRY_MINUTES` (default 15), capped by `order.payment_due_at`.
 Webhook routes are NOT under `auth:sanctum` — use `verifyWebhook()` signature verification.
 
 ---

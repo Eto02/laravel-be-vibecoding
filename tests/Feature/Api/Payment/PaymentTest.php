@@ -238,7 +238,7 @@ class PaymentTest extends TestCase
 
         $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/refund", [
             'reason' => 'Item not received',
-        ])->assertStatus(200)->assertJsonStructure(['data' => ['id', 'status', 'amount_cents']]);
+        ])->assertStatus(201)->assertJsonStructure(['data' => ['id', 'status', 'amount_cents']]);
 
         $this->assertDatabaseHas('refunds', ['payment_id' => $payment->id]);
     }

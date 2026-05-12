@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Api\Store;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Merchant\StoreSummaryResource;
+use App\Http\Resources\Merchant\StoreFollowerResource;
 use App\Http\Responses\ApiResponse;
-use App\Models\Store;
 use App\Services\Merchant\MerchantService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,10 +17,10 @@ class StoreFollowerController extends Controller
 
     public function followers(string $slug): JsonResponse
     {
-        $store     = Store::where('slug', $slug)->firstOrFail();
-        $followers = $store->followers()->with('user:id,name,avatar')->paginate(20);
+        $store     = $this->merchant->getPublicProfile($slug);
+        $followers = $this->merchant->getFollowers($store);
 
-        return ApiResponse::success('Followers retrieved.', $followers->items(), paginationMeta: [
+        return ApiResponse::success('Followers retrieved.', StoreFollowerResource::collection($followers->items()), paginationMeta: [
             'current_page' => $followers->currentPage(),
             'last_page'    => $followers->lastPage(),
             'per_page'     => $followers->perPage(),
@@ -31,17 +30,17 @@ class StoreFollowerController extends Controller
 
     public function follow(Request $request, string $slug): JsonResponse
     {
-        $store = Store::where('slug', $slug)->firstOrFail();
+        $store = $this->merchant->getPublicProfile($slug);
         $this->merchant->follow($request->user(), $store);
 
-        return ApiResponse::success('Store followed successfully.');
+        return ApiResponse::success('Store followed successfully.', null, 201);
     }
 
-    public function unfollow(Request $request, string $slug): JsonResponse
+    public function unfollow(Request $request, string $slug): \Illuminate\Http\Response
     {
-        $store = Store::where('slug', $slug)->firstOrFail();
+        $store = $this->merchant->getPublicProfile($slug);
         $this->merchant->unfollow($request->user(), $store);
 
-        return ApiResponse::success('Store unfollowed successfully.');
+        return response()->noContent();
     }
 }

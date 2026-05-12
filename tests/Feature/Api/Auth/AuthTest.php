@@ -404,7 +404,7 @@ class AuthTest extends TestCase
 
         $response = $this->actingAs($user)->deleteJson("/api/auth/sessions/{$token->id}");
 
-        $response->assertStatus(200)->assertJson(['success' => true]);
+        $response->assertStatus(204);
         $this->assertNotNull($token->fresh()->revoked_at);
     }
 

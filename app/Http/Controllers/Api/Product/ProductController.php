@@ -13,6 +13,7 @@ use App\Http\Resources\Product\ProductListResource;
 use App\Http\Resources\Product\ProductResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Product;
+use App\Services\Merchant\MerchantService;
 use App\Services\Product\ProductService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ class ProductController extends Controller
 {
     public function __construct(
         private readonly ProductService $products,
+        private readonly MerchantService $merchant,
     ) {}
 
     // ── Public ────────────────────────────────────────────────────────────────
@@ -57,7 +59,7 @@ class ProductController extends Controller
 
     public function merchantIndex(Request $request): JsonResponse
     {
-        $storeId = $request->user()->store->id;
+        $storeId = $this->merchant->getStoreForUser($request->user())->id;
         $paginator = $this->products->getMerchantProducts($storeId);
 
         return ApiResponse::success('Products retrieved.', ProductListResource::collection($paginator), paginationMeta: [
@@ -70,7 +72,7 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $store = $request->user()->store;
+        $store = $this->merchant->getStoreForUser($request->user());
         $product = $this->products->create(CreateProductDTO::fromRequest($request, $store->id));
 
         return ApiResponse::success('Product created.', new ProductResource($product), 201);

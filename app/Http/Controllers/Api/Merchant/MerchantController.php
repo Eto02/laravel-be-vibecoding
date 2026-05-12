@@ -32,14 +32,14 @@ class MerchantController extends Controller
 
     public function show(Request $request): JsonResponse
     {
-        $store = $request->user()->store;
+        $store = $this->merchant->getStoreForUser($request->user());
 
         return ApiResponse::success('Store retrieved.', new StoreResource($store));
     }
 
     public function dashboard(Request $request): JsonResponse
     {
-        $store = $request->user()->store;
+        $store = $this->merchant->getStoreForUser($request->user());
         $data  = $this->merchant->getDashboard($store);
 
         return ApiResponse::success('Dashboard retrieved.', [
@@ -52,7 +52,7 @@ class MerchantController extends Controller
 
     public function uploadKyc(UploadKycRequest $request): JsonResponse
     {
-        $store  = $request->user()->store;
+        $store  = $this->merchant->getStoreForUser($request->user());
         $result = $this->merchant->generateKycPresignedUrl(
             $store,
             $request->input('type'),
@@ -65,7 +65,7 @@ class MerchantController extends Controller
 
     public function confirmKyc(ConfirmKycRequest $request): JsonResponse
     {
-        $store    = $request->user()->store;
+        $store    = $this->merchant->getStoreForUser($request->user());
         $document = $this->merchant->confirmKycUpload(
             $store,
             $request->input('type'),
@@ -77,7 +77,7 @@ class MerchantController extends Controller
 
     public function reuploadKyc(UploadKycRequest $request): JsonResponse
     {
-        $store  = $request->user()->store;
+        $store  = $this->merchant->getStoreForUser($request->user());
         $result = $this->merchant->generateKycReuploadUrl(
             $store,
             $request->input('type'),
@@ -90,7 +90,7 @@ class MerchantController extends Controller
 
     public function confirmKycReupload(ConfirmKycRequest $request): JsonResponse
     {
-        $store    = $request->user()->store;
+        $store    = $this->merchant->getStoreForUser($request->user());
         $document = $this->merchant->confirmKycUpload(
             $store,
             $request->input('type'),
