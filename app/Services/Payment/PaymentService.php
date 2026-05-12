@@ -45,6 +45,18 @@ class PaymentService
             ->where('status', OrderStatus::Pending)
             ->firstOrFail();
 
+        // Guard: one active payment per order at a time
+        $active = Payment::where('order_id', $order->id)
+            ->whereIn('status', [PaymentStatus::Pending, PaymentStatus::Paid])
+            ->first();
+
+        if ($active) {
+            if ($active->status === PaymentStatus::Paid) {
+                throw new \DomainException('This order has already been paid.');
+            }
+            return $active; // Return existing pending payment — no new gateway charge
+        }
+
         $externalId = 'PAY-' . strtoupper(Str::random(10)) . '-' . $order->id;
 
         $chargeData = [

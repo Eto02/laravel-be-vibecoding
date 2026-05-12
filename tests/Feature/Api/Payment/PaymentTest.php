@@ -95,6 +95,29 @@ class PaymentTest extends TestCase
         $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'method' => 'virtual_account']);
     }
 
+    public function test_initiate_returns_existing_payment_when_pending_exists(): void
+    {
+        Event::fake();
+        $this->mockGateway();
+        $buyer   = $this->buyer();
+        $order   = $this->pendingOrder($buyer);
+        $existing = Payment::factory()->create([
+            'order_id' => $order->id,
+            'status'   => PaymentStatus::Pending,
+        ]);
+
+        $response = $this->actingAs($buyer)->postJson('/api/payments/initiate', [
+            'order_id'  => $order->id,
+            'gateway'   => 'xendit',
+            'method'    => 'virtual_account',
+            'bank_code' => 'BCA',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertSame($existing->id, $response->json('data.id'));
+        $this->assertDatabaseCount('payments', 1); // no new payment created
+    }
+
     public function test_initiate_returns_422_for_wrong_order(): void
     {
         $buyer       = $this->buyer();

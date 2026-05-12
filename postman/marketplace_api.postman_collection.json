@@ -150,6 +150,16 @@
       "key": "payment_id",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "payment_external_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "xendit_secret_key",
+      "value": "xnd_development_YOUR_KEY_HERE",
+      "type": "string"
     }
   ],
   "item": [
@@ -4909,11 +4919,16 @@
                       "if (pm.response.code === 201) {",
                       "  const body = pm.response.json();",
                       "  pm.collectionVariables.set('payment_id', String(body.data.id || ''));",
+                      "  const extId = body.data.payment_details?.external_id || '';",
+                      "  pm.collectionVariables.set('payment_external_id', extId);",
                       "  pm.test('Initiate payment returns 201', () => pm.response.to.have.status(201));",
                       "  pm.test('Response has payment data', () => {",
                       "    pm.expect(body.data).to.have.property('id');",
                       "    pm.expect(body.data).to.have.property('status');",
                       "    pm.expect(body.data).to.have.property('amount_cents');",
+                      "  });",
+                      "  pm.test('payment_details has external_id for simulation', () => {",
+                      "    pm.expect(body.data.payment_details).to.have.property('external_id');",
                       "  });",
                       "}"
                     ],
@@ -5405,6 +5420,157 @@
                   "body": "{\n  \"success\": false,\n  \"message\": \"This action is unauthorized.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "name": "Sandbox Simulator",
+          "description": "⚠️ Xendit SANDBOX only — simulate payments to trigger webhook callbacks.\n\nPre-condition: run 'Initiate Payment' first — it auto-saves `payment_external_id` and `payment_id` variables.\n\nThese requests hit Xendit API directly (not your Laravel app), using Basic auth with `xendit_secret_key`.",
+          "item": [
+            {
+              "name": "Simulate VA Payment (Xendit Sandbox)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Simulate returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Simulation triggered', () => {",
+                      "  pm.expect(pm.response.json()).to.have.property('status');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{xendit_secret_key}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 39000000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://api.xendit.co/callback_virtual_accounts/external_id/{{payment_external_id}}/simulate_payment",
+                  "protocol": "https",
+                  "host": [
+                    "api",
+                    "xendit",
+                    "co"
+                  ],
+                  "path": [
+                    "callback_virtual_accounts",
+                    "external_id",
+                    "{{payment_external_id}}",
+                    "simulate_payment"
+                  ]
+                },
+                "description": "Simulate VA payment berhasil di Xendit Sandbox.\n\n**Xendit akan otomatis kirim webhook** ke callback URL yang terdaftar di dashboard → Laravel app memproses → payment menjadi `paid`.\n\n**Pre-condition:**\n1. Jalankan 'Initiate Payment' dulu → `payment_external_id` tersimpan otomatis\n2. Pastikan `xendit_secret_key` diisi di collection variables\n3. Webhook URL sudah di-set di Xendit dashboard (Settings → Webhooks) → `https://your-ngrok.io/api/webhooks/xendit`\n\n**Setelah ini:** panggil `GET /api/payments/{id}/status` → status harus `paid`\n\n⚠️ **Sandbox only** — tidak ada endpoint ini di production."
+              },
+              "response": [
+                {
+                  "name": "200 OK — Simulation triggered",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\"id\": \"62efe2def7d34a54e6a51c81\", \"external_id\": \"PAY-ABCDEFGHIJ-5\", \"account_number\": \"8808123456789\", \"bank_code\": \"BCA\", \"amount\": 39000000, \"status\": \"COMPLETED\"}"
+                }
+              ]
+            },
+            {
+              "name": "Simulate GoPay Payment (Xendit Sandbox)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('GoPay simulate returns 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{xendit_secret_key}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 50000000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://api.xendit.co/ewallets/charges/{{payment_external_id}}/payments/simulate",
+                  "protocol": "https",
+                  "host": [
+                    "api",
+                    "xendit",
+                    "co"
+                  ],
+                  "path": [
+                    "ewallets",
+                    "charges",
+                    "{{payment_external_id}}",
+                    "payments",
+                    "simulate"
+                  ]
+                },
+                "description": "Simulate e-wallet payment (GoPay/DANA/ShopeePay) di Xendit Sandbox.\n\nUntuk e-wallet, gunakan `payment_details.charge_id` (bukan `external_id`) — set manual ke `payment_external_id` variable jika berbeda.\n\n**Xendit akan kirim webhook** `ewallet.payment` ke callback URL.\n\n⚠️ **Sandbox only**."
+              },
+              "response": []
             }
           ]
         }
