@@ -8,6 +8,7 @@ use App\DTOs\Order\CheckoutDTO;
 use App\Enums\DisputeStatus;
 use App\Enums\OrderStatus;
 use App\Events\Order\OrderCancelled;
+use App\Events\Order\OrderCompleted;
 use App\Events\Order\OrderDelivered;
 use App\Events\Order\OrderPlaced;
 use App\Events\Order\OrderShipped;
@@ -88,6 +89,23 @@ class OrderService
         OrderDelivered::dispatch($delivered);
 
         return $delivered;
+    }
+
+    public function completeOrder(User $user, Order $order): Order
+    {
+        if (! $order->isOwnedByUser($user->id)) {
+            throw new \DomainException('Order does not belong to this user.');
+        }
+
+        if ($order->status !== OrderStatus::Delivered) {
+            throw new \DomainException('Only delivered orders can be marked as completed.');
+        }
+
+        $completed = $this->transition($order, OrderStatus::Completed, $user->id, 'Order completed by buyer.');
+
+        OrderCompleted::dispatch($completed);
+
+        return $completed;
     }
 
     public function getOrdersForMerchant(Store $store, ?string $status = null): LengthAwarePaginator
