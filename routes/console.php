@@ -11,3 +11,4 @@ Artisan::command('inspire', function () {
 Schedule::command('media:cleanup-orphans')->everyFifteenMinutes();
 Schedule::command('orders:cancel-expired')->everyFifteenMinutes();
 Schedule::job(new \App\Jobs\ExpireUnpaidPayments)->everyFiveMinutes();
+Schedule::job(new \App\Jobs\Payment\ReconcilePayments)->everyFiveMinutes();

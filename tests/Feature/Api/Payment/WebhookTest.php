@@ -31,6 +31,9 @@ class WebhookTest extends TestCase
             'status'      => $status,
             'amount'      => 10000000,
         ]);
+        // Dual verification: getPaymentStatus() returns raw API payload; parseStatusResponse() normalizes it
+        $mock->method('getPaymentStatus')->willReturn(['status' => $status, 'amount' => 10000000]);
+        $mock->method('parseStatusResponse')->willReturn(['status' => $status, 'amount' => 10000000]);
 
         $this->app->instance(PaymentGatewayInterface::class, $mock);
         $this->app->instance('payment.xendit', $mock);

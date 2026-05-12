@@ -4,32 +4,24 @@ namespace App\Http\Controllers\Api\Payment;
 
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
-use App\Services\Payment\PaymentService;
+use App\Jobs\Payment\ProcessWebhookJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
 {
-    public function __construct(
-        private readonly PaymentService $paymentService,
-    ) {}
-
     public function handle(Request $request, string $provider): JsonResponse
     {
-        try {
-            $this->paymentService->handleWebhook($request, $provider);
+        // Signature verification is synchronous — reject invalid webhooks before queuing
+        $gateway = app("payment.{$provider}");
 
-            return ApiResponse::success('Webhook processed successfully.');
-        } catch (\DomainException $e) {
-            $status = $e->getCode() === 403 ? 403 : 400;
-            Log::warning("Webhook {$provider} domain error: " . $e->getMessage());
-
-            return ApiResponse::error($e->getMessage(), $status);
-        } catch (\Exception $e) {
-            Log::error("Webhook {$provider} critical error: " . $e->getMessage(), ['exception' => $e]);
-
-            return ApiResponse::error('Failed to process webhook.', 500);
+        if (! $gateway->verifyWebhook($request)) {
+            return ApiResponse::error('Invalid webhook signature.', 403);
         }
+
+        // Dispatch for async processing: dual verification + state update happen in the job
+        ProcessWebhookJob::dispatch($provider, $request->all());
+
+        return ApiResponse::success('Webhook received.');
     }
 }
