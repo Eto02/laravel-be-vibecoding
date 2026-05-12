@@ -18,7 +18,7 @@ class MidtransPaymentService implements PaymentGatewayInterface
 
     public function createCharge(array $data): array
     {
-        $grossAmount = (int) $data['amount'];
+        $grossAmount = (int) round($data['amount'] / 100);
 
         $response = Http::withBasicAuth($this->serverKey, '')
             ->post($this->snapUrl, [
@@ -96,7 +96,7 @@ class MidtransPaymentService implements PaymentGatewayInterface
 
         $response = Http::withBasicAuth($this->serverKey, '')
             ->post("{$baseUrl}/v2/{$chargeRef}/refund", [
-                'amount' => $amount,
+                'amount' => (int) round($amount / 100),
                 'reason' => 'Customer refund request',
             ]);
 

@@ -28,12 +28,17 @@ class XenditPaymentService implements PaymentGatewayInterface
         };
     }
 
+    private function toIDR(int $cents): int
+    {
+        return (int) round($cents / 100);
+    }
+
     private function createInvoice(array $data): array
     {
         $response = Http::withBasicAuth($this->secretKey, '')
             ->post("{$this->baseUrl}/v2/invoices", [
                 'external_id'      => $data['external_id'],
-                'amount'           => $data['amount'],
+                'amount'           => $this->toIDR($data['amount']),
                 'description'      => $data['description'] ?? 'Payment',
                 'invoice_duration' => 86400,
                 'currency'         => 'IDR',
@@ -57,7 +62,7 @@ class XenditPaymentService implements PaymentGatewayInterface
                 'external_id'       => $data['external_id'],
                 'bank_code'         => strtoupper($data['bank_code'] ?? 'BCA'),
                 'name'              => $data['customer_name'] ?? 'Customer',
-                'expected_amount'   => $data['amount'],
+                'expected_amount'   => $this->toIDR($data['amount']),
                 'is_closed'         => true,
                 'is_single_use'     => true,
                 'expiration_date'   => $data['expires_at'] ?? now()->addHours(24)->toISOString(),
@@ -86,7 +91,7 @@ class XenditPaymentService implements PaymentGatewayInterface
                 'external_id'     => $data['external_id'],
                 'type'            => 'DYNAMIC',
                 'currency'        => 'IDR',
-                'amount'          => $data['amount'],
+                'amount'          => $this->toIDR($data['amount']),
                 'expires_at'      => now()->addSeconds($data['qris_ttl_seconds'] ?? 300)->toISOString(),
                 'callback_url'    => $data['callback_url'] ?? config('xendit.webhook_url'),
             ]);
@@ -113,7 +118,7 @@ class XenditPaymentService implements PaymentGatewayInterface
         $payload = [
             'reference_id'        => $data['external_id'],
             'currency'            => 'IDR',
-            'amount'              => $data['amount'],
+            'amount'              => $this->toIDR($data['amount']),
             'checkout_method'     => 'ONE_TIME_PAYMENT',
             'channel_code'        => $ewalletType,
             'channel_properties'  => $this->buildEWalletChannelProperties($ewalletType, $data),
@@ -218,7 +223,7 @@ class XenditPaymentService implements PaymentGatewayInterface
         $response = Http::withBasicAuth($this->secretKey, '')
             ->post("{$this->baseUrl}/refunds", [
                 'payment_request_id' => $chargeRef,
-                'amount'             => $amount,
+                'amount'             => $this->toIDR($amount),
                 'reason'             => 'OTHERS',
             ]);
 
