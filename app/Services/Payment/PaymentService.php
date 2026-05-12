@@ -17,6 +17,7 @@ use App\Models\Transaction;
 use App\Contracts\Shared\IdempotencyServiceInterface;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PaymentService
@@ -52,7 +53,14 @@ class PaymentService
         try {
             $oldGateway = app("payment.{$currentPayment->gateway}");
             $oldGateway->cancelCharge($currentPayment->gateway_ref, $currentPayment->method);
-        } catch (\Throwable) {}
+        } catch (\Throwable $e) {
+            Log::warning('Failed to cancel old gateway charge on payment switch', [
+                'payment_id'  => $currentPayment->id,
+                'gateway_ref' => $currentPayment->gateway_ref,
+                'gateway'     => $currentPayment->gateway,
+                'error'       => $e->getMessage(),
+            ]);
+        }
 
         $currentPayment->update(['status' => PaymentStatus::Expired]);
         $currentPayment->transaction?->update(['status' => TransactionStatus::Expired]);
@@ -118,7 +126,22 @@ class PaymentService
         }
 
         // Skip if already in a terminal state
-        if (in_array($payment->status, [PaymentStatus::Paid, PaymentStatus::Refunded])) {
+        $terminalStatuses = [
+            PaymentStatus::Paid,
+            PaymentStatus::Expired,
+            PaymentStatus::Failed,
+            PaymentStatus::Refunded,
+        ];
+
+        if (in_array($payment->status, $terminalStatuses)) {
+            if ($status === 'paid' && in_array($payment->status, [PaymentStatus::Expired, PaymentStatus::Failed])) {
+                Log::critical('Received paid webhook for expired/failed payment — possible double charge', [
+                    'payment_id'   => $payment->id,
+                    'gateway_ref'  => $externalId,
+                    'gateway'      => $payment->gateway,
+                    'local_status' => $payment->status->value,
+                ]);
+            }
             return;
         }
 
