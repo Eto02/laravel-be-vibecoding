@@ -86,10 +86,8 @@ class XenditPaymentService implements PaymentGatewayInterface
 
     private function createQrisCharge(array $data): array
     {
-        $response = Http::withHeaders([
-                'Authorization' => $this->secretKey,
-                'api-version'   => '2022-07-31',
-            ])
+        $response = Http::withBasicAuth($this->secretKey, '')
+            ->withHeaders(['api-version' => '2022-07-31'])
             ->post("{$this->baseUrl}/qr_codes", [
                 'reference_id' => $data['external_id'],
                 'type'         => 'DYNAMIC',
