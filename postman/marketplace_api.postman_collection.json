@@ -187,7 +187,7 @@
       ]
     },
     {
-      "name": "02. Media (File Upload)",
+      "name": "00. Media (File Upload)",
       "description": "Upload file ke Cloudflare R2 via Presigned URL (client-side direct upload)\n\n**Flow:**\n1. `POST /api/media/presigned-url` → dapat `upload_url` + `key`\n2. `PUT {upload_url}` dari client langsung ke R2 (tidak melalui server)\n3. `POST /api/media/confirm` dengan `key` → konfirmasi upload",
       "item": [
         {
@@ -1400,7 +1400,7 @@
       ]
     },
     {
-      "name": "03. User Profile",
+      "name": "02. User Profile",
       "description": "User profile management — GET/PUT profile, avatar upload, address book CRUD, phone verification via OTP.\n\nSemua endpoint membutuhkan Bearer token 🔒\n\n**Avatar upload flow:**\n1. `POST /users/me/avatar` → dapat `avatar_upload_url` + `avatar_key`\n2. `PUT {{avatar_upload_url}}` langsung ke R2 (tidak melalui server)\n3. `POST /users/me/avatar/confirm` → simpan key ke DB\n\n**Phone verification flow:**\n1. `POST /users/phone/send-otp` → OTP dikirim via WA/SMS\n2. `POST /users/phone/verify` → verifikasi OTP → phone tersimpan",
       "item": [
         {
@@ -2158,7 +2158,7 @@
       ]
     },
     {
-      "name": "04. Merchant",
+      "name": "03. Merchant",
       "description": "Merchant & Store module — Store registration, profile management, KYC upload, followers, and public store views.",
       "item": [
         {
@@ -2681,7 +2681,7 @@
       ]
     },
     {
-      "name": "05. Product",
+      "name": "04. Product",
       "description": "Product Catalog — Categories, Products (CRUD), Variants, dan Media (Presigned Upload).\n\n**Flow Media Upload:**\n1. `POST /api/merchant/products/{product}/media` → dapat `upload_url` + `key` (tersimpan ke `media_upload_url` dan `media_key`)\n2. `PUT {{media_upload_url}}` (folder Media > Upload File ke R2) — kirim langsung ke R2\n3. `POST /api/merchant/products/{product}/media/confirm` dengan `key: {{media_key}}` — simpan ke DB",
       "item": [
         {
@@ -3718,7 +3718,7 @@
       ]
     },
     {
-      "name": "06. Cart",
+      "name": "05. Cart",
       "item": [
         {
           "name": "Cart",
@@ -4233,7 +4233,7 @@
       ]
     },
     {
-      "name": "07. Order",
+      "name": "06. Order",
       "item": [
         {
           "name": "Buyer",

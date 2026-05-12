@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Marketplace API — Cart & Wishlist",
-    "_postman_id": "marketplace-api-v2-06-cart",
+    "_postman_id": "marketplace-api-v2-05-cart",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -53,7 +53,7 @@
   ],
   "item": [
     {
-      "name": "06. Cart",
+      "name": "05. Cart",
       "item": [
         {
           "name": "Cart",

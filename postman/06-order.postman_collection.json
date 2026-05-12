@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Marketplace API — Order",
-    "_postman_id": "marketplace-api-v2-07-order",
+    "_postman_id": "marketplace-api-v2-06-order",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -58,7 +58,7 @@
   ],
   "item": [
     {
-      "name": "07. Order",
+      "name": "06. Order",
       "item": [
         {
           "name": "Buyer",
