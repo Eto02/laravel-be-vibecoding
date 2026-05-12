@@ -24,8 +24,12 @@
   "item": [
     {
       "name": "07. Payment",
-      "description": "Initiate & manage payments via Xendit / Midtrans gateway",
+      "description": "Module 7 — Payment: gateway charges, wallet, and refunds",
       "item": [
+        {
+          "name": "Payment",
+          "description": "Initiate & manage payments via Xendit / Midtrans gateway",
+          "item": [
         {
           "name": "Initiate Payment 🔒",
           "event": [
@@ -188,12 +192,12 @@
             }
           ]
         }
-      ]
-    },
-    {
-      "name": "07. Wallet",
-      "description": "Wallet balance, transactions, top-up and merchant withdrawal",
-      "item": [
+          ]
+        },
+        {
+          "name": "Wallet",
+          "description": "Wallet balance, transactions, top-up and merchant withdrawal",
+          "item": [
         {
           "name": "Get Wallet Balance 🔒",
           "event": [
@@ -358,6 +362,8 @@
               "header": [{ "key": "Content-Type", "value": "application/json" }],
               "body": "{\n  \"success\": false,\n  \"message\": \"This action is unauthorized.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
             }
+          ]
+        }
           ]
         }
       ]

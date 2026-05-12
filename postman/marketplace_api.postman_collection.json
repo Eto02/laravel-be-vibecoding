@@ -4892,10 +4892,11 @@
       ]
     },
     {
-      "name": "Payment",
+      "name": "07. Payment",
+      "description": "Module 7 — Payment: gateway charges, wallet, and refunds",
       "item": [
         {
-          "name": "07. Payment",
+          "name": "Payment",
           "description": "Initiate & manage payments via Xendit / Midtrans gateway",
           "item": [
             {
@@ -5147,7 +5148,7 @@
           ]
         },
         {
-          "name": "07. Wallet",
+          "name": "Wallet",
           "description": "Wallet balance, transactions, top-up and merchant withdrawal",
           "item": [
             {
@@ -5410,8 +5411,8 @@
       ]
     },
     {
-      "name": "Webhooks",
-      "description": "Webhook endpoints — public, no Bearer auth. Verified via gateway signature.",
+      "name": "07. Webhooks",
+      "description": "Module 7 — Webhook endpoints: public, no Bearer auth. Verified via gateway signature.",
       "item": [
         {
           "name": "Xendit — VA Paid",

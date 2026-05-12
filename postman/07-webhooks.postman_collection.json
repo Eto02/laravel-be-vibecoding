@@ -14,8 +14,8 @@
   ],
   "item": [
     {
-      "name": "Webhooks",
-      "description": "Webhook endpoints — public, no Bearer auth. Verified via gateway signature.",
+      "name": "07. Webhooks",
+      "description": "Module 7 — Webhook endpoints: public, no Bearer auth. Verified via gateway signature.",
       "item": [
         {
           "name": "Xendit — VA Paid",
