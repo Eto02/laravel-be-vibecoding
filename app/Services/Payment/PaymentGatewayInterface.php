@@ -31,4 +31,11 @@ interface PaymentGatewayInterface
      * Returns: ['event' => string, 'external_id' => string, 'status' => 'paid'|'failed'|'expired'|'pending', 'amount' => int]
      */
     public function parseWebhookPayload(Request $request): array;
+
+    /**
+     * Normalize a raw gateway API response (from getPaymentStatus()) into
+     * the same internal format as parseWebhookPayload().
+     * Returns: ['status' => 'paid'|'expired'|'failed'|'pending', 'amount' => int]
+     */
+    public function parseStatusResponse(array $apiResponse): array;
 }

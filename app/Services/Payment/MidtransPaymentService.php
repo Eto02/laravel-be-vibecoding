@@ -82,12 +82,13 @@ class MidtransPaymentService implements PaymentGatewayInterface
 
     public function getPaymentStatus(string $externalId): array
     {
-        $apiUrl = str_replace('/snap/v1/transactions', '', $this->snapUrl);
-        $baseUrl = config('midtrans.is_production', false)
+        $baseUrl  = config('midtrans.is_production', false)
             ? 'https://api.midtrans.com'
             : 'https://api.sandbox.midtrans.com';
 
-        $response = Http::withBasicAuth($this->serverKey, '')
+        $timeout  = config('payment.dual_verification_timeout_seconds', 5);
+        $response = Http::timeout($timeout)
+            ->withBasicAuth($this->serverKey, '')
             ->get("{$baseUrl}/v2/{$externalId}/status");
 
         if (! $response->successful()) {
@@ -95,6 +96,28 @@ class MidtransPaymentService implements PaymentGatewayInterface
         }
 
         return $response->json();
+    }
+
+    public function parseStatusResponse(array $apiResponse): array
+    {
+        $transactionStatus = $apiResponse['transaction_status'] ?? '';
+        $fraudStatus       = $apiResponse['fraud_status'] ?? '';
+
+        $isPaid = ($transactionStatus === 'capture' && $fraudStatus === 'accept')
+            || $transactionStatus === 'settlement';
+
+        $status = match (true) {
+            $isPaid                                                    => 'paid',
+            in_array($transactionStatus, ['cancel', 'expire', 'deny']) => 'expired',
+            $transactionStatus === 'failure'                           => 'failed',
+            $transactionStatus === 'pending'                           => 'pending',
+            default                                                    => 'failed',
+        };
+
+        return [
+            'status' => $status,
+            'amount' => (int) round((float) ($apiResponse['gross_amount'] ?? 0) * 100),
+        ];
     }
 
     public function refundPayment(string $chargeRef, int $amount): array

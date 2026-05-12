@@ -81,12 +81,31 @@ class XenditPaymentService implements PaymentGatewayInterface
 
     public function getPaymentStatus(string $externalId): array
     {
-        $response = Http::withBasicAuth($this->secretKey, '')
+        $timeout  = config('payment.dual_verification_timeout_seconds', 5);
+        $response = Http::timeout($timeout)
+            ->withBasicAuth($this->secretKey, '')
             ->get("{$this->baseUrl}/v2/invoices/{$externalId}");
 
         $this->assertSuccess($response, 'Failed to fetch Xendit payment status');
 
         return $response->json();
+    }
+
+    public function parseStatusResponse(array $apiResponse): array
+    {
+        $raw = strtoupper($apiResponse['status'] ?? '');
+
+        $status = match ($raw) {
+            'PAID', 'SETTLED' => 'paid',
+            'EXPIRED'         => 'expired',
+            'PENDING'         => 'pending',
+            default           => 'failed',
+        };
+
+        return [
+            'status' => $status,
+            'amount' => (int) round((float) ($apiResponse['paid_amount'] ?? $apiResponse['amount'] ?? 0) * 100),
+        ];
     }
 
     public function refundPayment(string $chargeRef, int $amount): array
