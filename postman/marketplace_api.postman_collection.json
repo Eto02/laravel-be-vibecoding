@@ -147,17 +147,7 @@
       "type": "string"
     },
     {
-      "key": "session_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "transaction_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "invoice_url",
+      "key": "payment_id",
       "value": "",
       "type": "string"
     }
@@ -4902,76 +4892,518 @@
       ]
     },
     {
-      "name": "07. Payment",
-      "description": "Pembayaran via Xendit gateway",
+      "name": "Payment",
       "item": [
         {
-          "name": "Create Payment 🔒",
-          "event": [
+          "name": "07. Payment",
+          "description": "Initiate & manage payments via Xendit / Midtrans gateway",
+          "item": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  const body = pm.response.json();",
-                  "  if (body.data) {",
-                  "    pm.collectionVariables.set('transaction_id', String(body.data.id || ''));",
-                  "    pm.collectionVariables.set('invoice_url', body.data.invoice_url || '');",
-                  "  }",
-                  "  pm.test('Create payment returns 201', () => pm.response.to.have.status(201));",
-                  "  pm.test('Response has invoice_url', () => pm.expect(body.data).to.have.property('invoice_url'));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Idempotency-Key",
-                "value": "{{$guid}}",
-                "description": "Unique key per request — mencegah double payment"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 150000,\n  \"description\": \"Payment for Order #123\",\n  \"currency\": \"IDR\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "name": "Initiate Payment 🔒",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  const body = pm.response.json();",
+                      "  pm.collectionVariables.set('payment_id', String(body.data.id || ''));",
+                      "  pm.test('Initiate payment returns 201', () => pm.response.to.have.status(201));",
+                      "  pm.test('Response has payment data', () => {",
+                      "    pm.expect(body.data).to.have.property('id');",
+                      "    pm.expect(body.data).to.have.property('status');",
+                      "    pm.expect(body.data).to.have.property('amount_cents');",
+                      "  });",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
                 }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/api/payments",
-              "host": [
-                "{{base_url}}"
               ],
-              "path": [
-                "api",
-                "payments"
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Unique key per request — prevents double payment"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"order_id\": {{order_id}},\n  \"gateway\": \"xendit\",\n  \"method\": \"virtual_account\",\n  \"bank_code\": \"BCA\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/payments/initiate",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "payments",
+                    "initiate"
+                  ]
+                },
+                "description": "Buat gateway charge dan Payment record.\n\n**Selalu sertakan `X-Idempotency-Key`** (UUID) untuk mencegah double charge.\n\n**method** options:\n- `virtual_account` → `bank_code` required (BCA/BNI/BRI/MANDIRI)\n- `qris` → universal QRIS, no extra params\n- `ewallet` → `ewallet_type` required (OVO/DANA/GOPAY/SHOPEEPAY/LINKAJA); OVO also needs `phone`\n- `invoice` → Xendit hosted checkout (legacy)\n- `snap` → Midtrans Snap hosted checkout (use `gateway: midtrans`)\n\n`amount` stored as integer cents."
+              },
+              "response": [
+                {
+                  "name": "201 Created — Virtual Account",
+                  "status": "Created",
+                  "code": 201,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment initiated successfully.\",\n  \"data\": {\n    \"id\": 1,\n    \"order_id\": 5,\n    \"gateway\": \"xendit\",\n    \"method\": \"virtual_account\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"pending\",\n    \"payment_details\": {\n      \"bank_code\": \"BCA\",\n      \"account_number\": \"8808123456789\",\n      \"virtual_account_id\": \"va-xxx\"\n    },\n    \"redirect_url\": null,\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                },
+                {
+                  "name": "201 Created — QRIS",
+                  "status": "Created",
+                  "code": 201,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment initiated successfully.\",\n  \"data\": {\n    \"id\": 2,\n    \"order_id\": 6,\n    \"gateway\": \"xendit\",\n    \"method\": \"qris\",\n    \"amount_cents\": 50000000,\n    \"amount\": \"Rp 500.000\",\n    \"status\": \"pending\",\n    \"payment_details\": {\n      \"qr_id\": \"qr-xxx\",\n      \"qr_string\": \"00020101021226...\"\n    },\n    \"redirect_url\": null,\n    \"expires_at\": \"2026-05-12T10:05:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                },
+                {
+                  "name": "201 Created — GoPay E-wallet",
+                  "status": "Created",
+                  "code": 201,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment initiated successfully.\",\n  \"data\": {\n    \"id\": 3,\n    \"order_id\": 7,\n    \"gateway\": \"xendit\",\n    \"method\": \"ewallet\",\n    \"amount_cents\": 100000000,\n    \"amount\": \"Rp 1.000.000\",\n    \"status\": \"pending\",\n    \"payment_details\": {\n      \"ewallet_type\": \"GOPAY\",\n      \"charge_id\": \"ewc-xxx\",\n      \"checkout_url\": \"https://wallet.google.com/gopay/...\"\n    },\n    \"redirect_url\": \"https://wallet.google.com/gopay/...\",\n    \"expires_at\": \"2026-05-12T10:05:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                },
+                {
+                  "name": "422 Unprocessable — Missing ewallet_type",
+                  "status": "Unprocessable Entity",
+                  "code": 422,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": {\n    \"ewallet_type\": [\"The ewallet type field is required when method is ewallet.\"]\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                }
               ]
             },
-            "description": "Buat invoice pembayaran via Xendit.\n\n⚠️ Selalu sertakan header `X-Idempotency-Key` (UUID) untuk mencegah double charge.\n\n`amount` dalam **satuan Rupiah** (min: Rp 10.000 = `10000`)."
-          },
-          "response": [
             {
-              "name": "201 Created",
-              "status": "Created",
-              "code": 201,
-              "header": [
+              "name": "Get Payment Status 🔒",
+              "event": [
                 {
-                  "key": "Content-Type",
-                  "value": "application/json"
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Get status returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Response has status field', () => {",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body.data).to.have.property('status');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Invoice created successfully.\",\n  \"data\": {\n    \"id\": 1,\n    \"external_id\": \"INV-xxx\",\n    \"invoice_url\": \"https://checkout.xendit.co/web/...\",\n    \"amount\": 150000,\n    \"status\": \"pending\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-04T00:00:00.000000Z\" }\n}"
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/payments/{{payment_id}}/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "payments",
+                    "{{payment_id}}",
+                    "status"
+                  ]
+                },
+                "description": "Poll status pembayaran. Frontend menggunakan ini untuk mendeteksi saat pembayaran VA/QRIS selesai.\n\nReturns Payment dengan relasi order dan transaction."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment status retrieved.\",\n  \"data\": {\n    \"id\": 1,\n    \"order_id\": 5,\n    \"gateway\": \"xendit\",\n    \"method\": \"virtual_account\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"paid\",\n    \"payment_details\": { \"bank_code\": \"BCA\", \"account_number\": \"8808123456789\" },\n    \"redirect_url\": null,\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Request Refund 🔒",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Refund returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Refund has id', () => {",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body.data).to.have.property('id');",
+                      "  pm.expect(body.data.status).to.equal('processed');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Item not received\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/payments/{{payment_id}}/refund",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "payments",
+                    "{{payment_id}}",
+                    "refund"
+                  ]
+                },
+                "description": "Request refund untuk payment milik user yang terautentikasi.\n\n- **Paid**: gateway refundPayment() + create Refund record + Payment status → refunded\n- **Pending/Expired**: cancel only — no gateway call, Payment status → failed\n\nHanya buyer pemilik order yang dapat request refund."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Refund processed successfully.\",\n  \"data\": {\n    \"id\": 1,\n    \"payment_id\": 1,\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"reason\": \"Item not received\",\n    \"status\": \"processed\",\n    \"refunded_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                },
+                {
+                  "name": "404 Not Found — Wrong User",
+                  "status": "Not Found",
+                  "code": 404,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"No query results for model [App\\\\Models\\\\Payment].\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "07. Wallet",
+          "description": "Wallet balance, transactions, top-up and merchant withdrawal",
+          "item": [
+            {
+              "name": "Get Wallet Balance 🔒",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Balance returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Response has balance fields', () => {",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body.data).to.have.property('balance_cents');",
+                      "  pm.expect(body.data).to.have.property('available_cents');",
+                      "  pm.expect(body.data).to.have.property('on_hold_cents');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/balance",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "balance"
+                  ]
+                },
+                "description": "Ambil saldo wallet user yang terautentikasi.\n\nWallet dibuat otomatis (`firstOrCreate`) saat pertama kali diakses — tidak perlu inisialisasi manual.\n\n`available_cents = balance_cents - on_hold_cents`"
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Wallet balance retrieved.\",\n  \"data\": {\n    \"balance_cents\": 50000000,\n    \"balance\": \"Rp 500.000\",\n    \"on_hold_cents\": 10000000,\n    \"on_hold\": \"Rp 100.000\",\n    \"available_cents\": 40000000,\n    \"available\": \"Rp 400.000\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                }
+              ]
+            },
+            {
+              "name": "List Wallet Transactions 🔒",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Transactions returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Response has pagination', () => {",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body.meta).to.have.property('pagination');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/transactions?page=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "transactions"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "description": "Riwayat transaksi wallet user (paginated, 20 per page, latest first).\n\n`type`: `credit` (masuk) atau `debit` (keluar)"
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Wallet transactions retrieved.\",\n  \"data\": [\n    {\n      \"id\": 2,\n      \"type\": \"credit\",\n      \"amount_cents\": 50000000,\n      \"amount\": \"Rp 500.000\",\n      \"description\": \"Top-up via BCA VA\",\n      \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n    },\n    {\n      \"id\": 1,\n      \"type\": \"debit\",\n      \"amount_cents\": 10000000,\n      \"amount\": \"Rp 100.000\",\n      \"description\": \"Withdrawal — on_hold\",\n      \"created_at\": \"2026-05-12T09:00:00.000000Z\"\n    }\n  ],\n  \"meta\": {\n    \"timestamp\": \"2026-05-12T10:00:00.000000Z\",\n    \"pagination\": { \"current_page\": 1, \"last_page\": 1, \"per_page\": 20, \"total\": 2 }\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Topup Wallet 🔒",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 50000000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/topup",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "topup"
+                  ]
+                },
+                "description": "Initiate wallet top-up via payment gateway.\n\nAlur: POST ini mengembalikan instruksi untuk melanjutkan ke `POST /api/payments/initiate` dengan jumlah yang sama. Kredit wallet terjadi otomatis via `PaymentCaptured` → `CreditUserWallet` listener setelah pembayaran berhasil.\n\n`amount` dalam integer cents. Min: Rp 10.000 (1000000 cents)."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Top-up payment initiated. Complete payment to credit wallet.\",\n  \"data\": {\n    \"message\": \"Redirect user to initiate a payment via POST /api/payments/initiate with the wallet top-up amount.\",\n    \"amount\": 50000000\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Withdraw (Merchant Only) 🔒",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Withdraw returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('on_hold increased', () => {",
+                      "  const body = pm.response.json();",
+                      "  pm.expect(body.data.on_hold_cents).to.be.greaterThan(0);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 10000000,\n  \"bank_code\": \"BCA\",\n  \"account_number\": \"1234567890\",\n  \"account_name\": \"Merchant Demo\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/wallet/withdraw",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallet",
+                    "withdraw"
+                  ]
+                },
+                "description": "Merchant meminta pencairan saldo wallet ke rekening bank.\n\n**Hanya untuk akun Merchant (role=merchant)**. Buyer mendapat 403.\n\nAlur `on_hold`:\n1. Withdraw request → `balance -= amount`, `on_hold += amount`\n2. Disbursement webhook SUCCESS → `on_hold -= amount` (permanently deducted)\n3. Disbursement webhook FAILED → `on_hold -= amount`, `balance += amount` (rollback)\n\n`amount` dalam integer cents. Tidak boleh melebihi `available_cents`."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Withdrawal initiated. Funds will be transferred within 1-3 business days.\",\n  \"data\": {\n    \"balance_cents\": 40000000,\n    \"balance\": \"Rp 400.000\",\n    \"on_hold_cents\": 10000000,\n    \"on_hold\": \"Rp 100.000\",\n    \"available_cents\": 30000000,\n    \"available\": \"Rp 300.000\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                },
+                {
+                  "name": "422 Unprocessable — Insufficient Balance",
+                  "status": "Unprocessable Entity",
+                  "code": 422,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Insufficient balance.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                },
+                {
+                  "name": "403 Forbidden — Not Merchant",
+                  "status": "Forbidden",
+                  "code": 403,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"This action is unauthorized.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                }
+              ]
             }
           ]
         }
@@ -4979,10 +5411,21 @@
     },
     {
       "name": "Webhooks",
-      "description": "Webhook endpoints — tidak membutuhkan auth, verifikasi via signature",
+      "description": "Webhook endpoints — public, no Bearer auth. Verified via gateway signature.",
       "item": [
         {
-          "name": "Xendit Webhook",
+          "name": "Xendit — VA Paid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Webhook returns 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "noauth"
@@ -4994,14 +5437,18 @@
                 "value": "application/json"
               },
               {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
                 "key": "x-callback-token",
-                "value": "YOUR_XENDIT_CALLBACK_TOKEN",
-                "description": "Xendit webhook verification token dari .env XENDIT_WEBHOOK_TOKEN"
+                "value": "{{XENDIT_WEBHOOK_TOKEN}}",
+                "description": "From .env XENDIT_WEBHOOK_TOKEN"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"id\": \"invoice_xxx\",\n  \"external_id\": \"INV-order_123\",\n  \"status\": \"PAID\",\n  \"amount\": 150000,\n  \"paid_amount\": 150000,\n  \"paid_at\": \"2026-05-04T12:00:00.000Z\",\n  \"payer_email\": \"buyer@example.com\",\n  \"payment_method\": \"BANK_TRANSFER\"\n}",
+              "raw": "{\n  \"id\": \"62efe2def7d34a54e6a51c81\",\n  \"event\": \"virtual_account.payment.created\",\n  \"payment_id\": \"pay-xxx\",\n  \"external_id\": \"PAY-ABCDEFGHIJ-5\",\n  \"account_number\": \"8808123456789\",\n  \"bank_code\": \"BCA\",\n  \"amount\": 39000000,\n  \"currency\": \"IDR\",\n  \"payment_detail\": { \"source\": \"VA\" }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5019,8 +5466,187 @@
                 "xendit"
               ]
             },
-            "description": "Webhook callback dari Xendit ketika pembayaran berhasil.\n\n⚠️ Endpoint ini PUBLIC — tidak butuh Bearer token.\n⚠️ Verifikasi dilakukan via `x-callback-token` header.\n\n**status** values: `PAID`, `EXPIRED`, `SETTLEMENT`"
+            "description": "Xendit Virtual Account payment webhook.\n\n⚠️ Endpoint ini PUBLIC — tidak butuh Bearer token.\n⚠️ Verifikasi via `x-callback-token` header (compare to env `XENDIT_WEBHOOK_TOKEN`).\n\n`external_id` harus match dengan `payments.gateway_ref` atau `transactions.external_id`.\n\nWebhook idempotent — jika payment sudah `paid` atau `refunded`, event diabaikan."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{ \"message\": \"Webhook processed.\" }"
+            },
+            {
+              "name": "403 Forbidden — Invalid Signature",
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid webhook signature.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Xendit — QRIS Paid",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-callback-token",
+                "value": "{{XENDIT_WEBHOOK_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"qr-xxx\",\n  \"event\": \"qr_code.payment.succeeded\",\n  \"reference_id\": \"PAY-ABCDEFGHIJ-6\",\n  \"amount\": 50000000,\n  \"currency\": \"IDR\",\n  \"charge_status\": \"SUCCEEDED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/xendit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "webhooks",
+                "xendit"
+              ]
+            },
+            "description": "Xendit QRIS payment webhook.\n\n`reference_id` maps to `external_id` in payment/transaction records."
           }
+        },
+        {
+          "name": "Xendit — E-wallet Paid",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-callback-token",
+                "value": "{{XENDIT_WEBHOOK_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"ewallet.payment\",\n  \"business_id\": \"xxx\",\n  \"created\": \"2026-05-12T10:00:00.000Z\",\n  \"data\": {\n    \"id\": \"ewc-xxx\",\n    \"reference_id\": \"PAY-ABCDEFGHIJ-7\",\n    \"status\": \"SUCCEEDED\",\n    \"currency\": \"IDR\",\n    \"charge_amount\": 100000000,\n    \"capture_amount\": 100000000,\n    \"checkout_method\": \"ONE_TIME_PAYMENT\",\n    \"channel_code\": \"GOPAY\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/xendit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "webhooks",
+                "xendit"
+              ]
+            },
+            "description": "Xendit e-wallet payment webhook (GoPay/DANA/ShopeePay/OVO/LinkAja)."
+          }
+        },
+        {
+          "name": "Midtrans — Settlement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Midtrans webhook returns 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"settlement\",\n  \"transaction_id\": \"xxx\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"compute_sha512_of(order_id + status_code + gross_amount + server_key)\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"PAY-ABCDEFGHIJ-8\",\n  \"merchant_id\": \"xxx\",\n  \"gross_amount\": \"100000.00\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/midtrans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "webhooks",
+                "midtrans"
+              ]
+            },
+            "description": "Midtrans payment notification webhook (Snap).\n\n⚠️ Endpoint ini PUBLIC — tidak butuh Bearer token.\n⚠️ Signature verification: `SHA-512(order_id + status_code + gross_amount + serverKey)` dibandingkan dengan `signature_key` di payload.\n\n**transaction_status mappings:**\n- `settlement` → `paid`\n- `capture` + `fraud_status: accept` → `paid`\n- `deny` → `failed`\n- `cancel` / `expire` → `expired`\n\n`order_id` dalam payload Midtrans = `external_id` dalam transactions table."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{ \"message\": \"Webhook processed.\" }"
+            }
+          ]
         }
       ]
     }
