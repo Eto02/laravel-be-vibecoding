@@ -31,6 +31,23 @@ services:
             - redis
             - app
 
+    scheduler:
+        build:
+            context: .
+            dockerfile: docker/php/Dockerfile
+            target: development
+        container_name: laravel-scheduler
+        restart: unless-stopped
+        command: php artisan schedule:work
+        volumes:
+            - .:/var/www/html
+        networks:
+            - laravel
+        depends_on:
+            - mysql
+            - redis
+            - app
+
     nginx:
         image: nginx:alpine
         container_name: laravel-nginx
