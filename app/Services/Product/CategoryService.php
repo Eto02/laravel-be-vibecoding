@@ -37,6 +37,14 @@ class CategoryService
 
     public function create(array $data): Category
     {
+        if (isset($data['parent_id'])) {
+            $parent = Category::find($data['parent_id']);
+            $data['level'] = ($parent?->level ?? 0) + 1;
+        } else {
+            $data['level'] = 1;
+        }
+        $data['sort_order'] = $data['sort_order'] ?? 0;
+
         $category = Category::create($data);
         $this->cache->forget('category:tree');
         return $category;
@@ -44,6 +52,11 @@ class CategoryService
 
     public function update(Category $category, array $data): Category
     {
+        if (isset($data['parent_id'])) {
+            $parent = Category::find($data['parent_id']);
+            $data['level'] = ($parent?->level ?? 0) + 1;
+        }
+
         $oldSlug = $category->slug;
         $category->update($data);
         $this->cache->forget('category:tree');
