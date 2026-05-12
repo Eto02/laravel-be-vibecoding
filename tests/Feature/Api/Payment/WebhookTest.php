@@ -162,6 +162,35 @@ class WebhookTest extends TestCase
         Mail::assertQueued(PaymentExpiredMail::class, fn ($mail) => $mail->payment->id === $payment->id);
     }
 
+    public function test_expire_webhook_cancels_pending_order(): void
+    {
+        $this->mockGateway('expired', 'PAY-CANCEL-TEST');
+        ['order' => $order] = $this->paymentWithOrder('PAY-CANCEL-TEST');
+
+        $this->postJson('/api/webhooks/xendit', ['external_id' => 'PAY-CANCEL-TEST', 'status' => 'EXPIRED'])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('orders', [
+            'id'     => $order->id,
+            'status' => OrderStatus::Cancelled->value,
+        ]);
+    }
+
+    public function test_expire_webhook_does_not_cancel_non_pending_order(): void
+    {
+        $this->mockGateway('expired', 'PAY-PAID-CANCEL');
+        $user    = User::factory()->create(['email_verified_at' => now()]);
+        $order   = Order::factory()->create(['user_id' => $user->id, 'status' => OrderStatus::Paid, 'total' => 10000000]);
+        $payment = Payment::factory()->paid()->create(['order_id' => $order->id, 'gateway_ref' => 'PAY-PAID-CANCEL']);
+
+        // Paid order — PaymentFailed won't be dispatched (terminal state guard)
+        $this->postJson('/api/webhooks/xendit', ['external_id' => 'PAY-PAID-CANCEL', 'status' => 'EXPIRED'])
+            ->assertStatus(200);
+
+        // Order must stay Paid
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => OrderStatus::Paid->value]);
+    }
+
     // ── Midtrans webhook ──────────────────────────────────────────────────────
 
     public function test_midtrans_webhook_marks_payment_paid(): void
