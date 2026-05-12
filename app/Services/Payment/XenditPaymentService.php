@@ -88,7 +88,7 @@ class XenditPaymentService implements PaymentGatewayInterface
                 'currency'        => 'IDR',
                 'amount'          => $data['amount'],
                 'expires_at'      => now()->addSeconds($data['qris_ttl_seconds'] ?? 300)->toISOString(),
-                'callback_url'    => $data['callback_url'] ?? null,
+                'callback_url'    => $data['callback_url'] ?? config('xendit.webhook_url'),
             ]);
 
         $this->assertSuccess($response, 'Failed to create Xendit QRIS charge');
