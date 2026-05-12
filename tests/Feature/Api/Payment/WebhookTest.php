@@ -216,14 +216,13 @@ class WebhookTest extends TestCase
         Event::assertDispatched(PaymentCaptured::class);
     }
 
-    public function test_paid_webhook_on_expired_payment_does_not_recover_already_paid_order(): void
+    public function test_double_charge_webhook_auto_credits_user_wallet(): void
     {
         Event::fake();
         $this->mockGateway('paid', 'PAY-DOUBLEP');
         $user    = User::factory()->create(['email_verified_at' => now()]);
         $order   = Order::factory()->create(['user_id' => $user->id, 'status' => OrderStatus::Paid, 'total' => 10000000]);
-        // Old expired payment for an already-paid order (true double-charge scenario)
-        Payment::factory()->create([
+        $payment = Payment::factory()->create([
             'order_id'    => $order->id,
             'gateway_ref' => 'PAY-DOUBLEP',
             'status'      => PaymentStatus::Expired,
@@ -233,10 +232,18 @@ class WebhookTest extends TestCase
         $this->postJson('/api/webhooks/xendit', ['external_id' => 'PAY-DOUBLEP', 'status' => 'PAID'])
             ->assertStatus(200);
 
-        // No PaymentCaptured — order was already paid, this is a double-charge
+        // No PaymentCaptured — order already paid
         Event::assertNotDispatched(PaymentCaptured::class);
         // Order stays Paid
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => OrderStatus::Paid->value]);
+        // Refund record created for audit
+        $this->assertDatabaseHas('refunds', ['payment_id' => $payment->id]);
+        // User wallet credited with duplicate amount
+        $this->assertDatabaseHas('wallet_transactions', [
+            'type'         => 'credit',
+            'amount'       => 10000000,
+            'reference_id' => $payment->id,
+        ]);
     }
 
     // ── Midtrans webhook ──────────────────────────────────────────────────────

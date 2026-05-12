@@ -2,6 +2,7 @@
 
 namespace App\Services\Payment;
 
+use App\Contracts\Shared\IdempotencyServiceInterface;
 use App\DTOs\Payment\InitiatePaymentDTO;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
@@ -14,7 +15,6 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\Transaction;
-use App\Contracts\Shared\IdempotencyServiceInterface;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -25,6 +25,7 @@ class PaymentService
     public function __construct(
         private readonly PaymentGatewayInterface $gateway,
         private readonly IdempotencyServiceInterface $idempotency,
+        private readonly WalletService $wallet,
     ) {}
 
     public function initiatePayment(InitiatePaymentDTO $data): Payment
@@ -152,13 +153,9 @@ class PaymentService
                     return;
                 }
 
-                Log::critical('Paid webhook for expired/failed payment — order already processed, possible double charge', [
-                    'payment_id'   => $payment->id,
-                    'order_id'     => $payment->order_id,
-                    'order_status' => $order?->status->value,
-                    'gateway_ref'  => $externalId,
-                    'gateway'      => $payment->gateway,
-                ]);
+                // Order already fulfilled — this is a duplicate payment.
+                // Auto-credit the user's wallet so the money is not lost.
+                $this->refundDoubleChargeToWallet($payment, $normalized['amount'], $externalId);
             }
             return;
         }
@@ -307,6 +304,46 @@ class PaymentService
             'status'          => PaymentStatus::Pending,
             'payment_details' => $result['payment_details'],
             'expires_at'      => $result['expires_at'] ? now()->parse($result['expires_at']) : $paymentExpiresAt,
+        ]);
+    }
+
+    private function refundDoubleChargeToWallet(Payment $payment, int $amount, string $gatewayRef): void
+    {
+        $user = $payment->order?->user;
+
+        if (! $user) {
+            Log::critical('Double payment detected but could not resolve user — manual refund required', [
+                'payment_id'  => $payment->id,
+                'gateway_ref' => $gatewayRef,
+                'gateway'     => $payment->gateway,
+                'amount'      => $amount,
+            ]);
+            return;
+        }
+
+        Refund::create([
+            'payment_id'  => $payment->id,
+            'amount'      => $amount,
+            'reason'      => "Duplicate payment auto-refunded to wallet (gateway ref: {$gatewayRef})",
+            'status'      => RefundStatus::Processed,
+            'refunded_at' => now(),
+        ]);
+
+        $this->wallet->creditUser(
+            $user,
+            $amount,
+            "Duplicate payment refunded to wallet (ref: {$gatewayRef})",
+            Payment::class,
+            $payment->id,
+        );
+
+        Log::critical('Double payment detected — auto-credited user wallet', [
+            'payment_id'  => $payment->id,
+            'order_id'    => $payment->order_id,
+            'user_id'     => $user->id,
+            'gateway_ref' => $gatewayRef,
+            'gateway'     => $payment->gateway,
+            'amount'      => $amount,
         ]);
     }
 
