@@ -17,6 +17,7 @@ use App\Models\Refund;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -103,69 +104,36 @@ class PaymentService
     {
         $gateway = app("payment.{$provider}");
 
-        if (! $gateway->verifyWebhook($request)) {
-            throw new \DomainException('Invalid webhook signature.', 403);
-        }
+        // Signature verification is done in WebhookController before dispatching the job
+        $normalized = $gateway->parseWebhookPayload($request);
+        $externalId = $normalized['external_id'];
 
-        $normalized  = $gateway->parseWebhookPayload($request);
-        $externalId  = $normalized['external_id'];
-        $status      = $normalized['status'];
-
-        $payment = Payment::where('gateway_ref', $externalId)
-            ->orWhereHas('transaction', fn ($q) => $q->where('external_id', $externalId))
-            ->first();
-
+        $payment = $this->findPaymentByExternalId($externalId);
         if (! $payment) {
-            $transaction = Transaction::where('external_id', $externalId)->first();
-            if ($transaction) {
-                $payment = Payment::where('transaction_id', $transaction->id)->first();
-            }
-        }
-
-        if (! $payment) {
-            return; // Unknown payment — skip silently
-        }
-
-        // Hard-terminal: Paid and Refunded are truly final — no recovery possible
-        if (in_array($payment->status, [PaymentStatus::Paid, PaymentStatus::Refunded])) {
             return;
         }
 
-        // Soft-terminal: Expired or Failed — a paid webhook means money reached the gateway.
-        // This happens when: (a) scheduler expired locally before gateway did, or
-        // (b) a switched-away invoice's cancelCharge failed and the user paid on the old one.
-        // If the order is still unfulfilled we can recover; otherwise it's a true double-charge.
-        if (in_array($payment->status, [PaymentStatus::Expired, PaymentStatus::Failed])) {
-            if ($status === 'paid') {
-                $order = $payment->order;
+        // Dual verification: webhook payload is a signal, not the truth.
+        // Call the gateway API to get the authoritative status before changing any DB state.
+        $apiResponse = $gateway->getPaymentStatus($externalId);
+        $verified    = $gateway->parseStatusResponse($apiResponse);
 
-                if ($order && $order->status === OrderStatus::Pending) {
-                    Log::warning('Paid webhook for locally-expired payment — order still pending, recovering', [
-                        'payment_id'   => $payment->id,
-                        'order_id'     => $order->id,
-                        'gateway_ref'  => $externalId,
-                        'gateway'      => $payment->gateway,
-                        'local_status' => $payment->status->value,
-                    ]);
-                    // Expire any other pending payments for this order (e.g. Payment B from switch)
-                    $this->cancelPendingPaymentsForOrder($order);
-                    $this->markPaid($payment, $normalized['amount']);
-                    return;
-                }
+        $this->applyStatusTransition($payment, $verified['status'], $verified['amount']);
+    }
 
-                // Order already fulfilled — this is a duplicate payment.
-                // Auto-credit the user's wallet so the money is not lost.
-                $this->refundDoubleChargeToWallet($payment, $normalized['amount'], $externalId);
-            }
+    public function handleApiStatusUpdate(Payment $payment): void
+    {
+        $gateway    = app("payment.{$payment->gateway}");
+        $externalId = $payment->gateway_ref ?? $payment->transaction?->external_id;
+
+        if (! $externalId) {
             return;
         }
 
-        match ($status) {
-            'paid'    => $this->markPaid($payment, $normalized['amount']),
-            'expired' => $this->markExpired($payment),
-            'pending' => null, // informational callback — no state change
-            default   => $this->markFailed($payment),
-        };
+        $apiResponse = $gateway->getPaymentStatus($externalId);
+        $verified    = $gateway->parseStatusResponse($apiResponse);
+
+        $this->applyStatusTransition($payment, $verified['status'], $verified['amount']);
     }
 
     public function requestRefund(Payment $payment, string $reason): Refund
@@ -241,6 +209,66 @@ class PaymentService
         }
 
         return $expired->count();
+    }
+
+    private function applyStatusTransition(Payment $payment, string $status, int $amount): void
+    {
+        DB::transaction(function () use ($payment, $status, $amount) {
+            $locked = Payment::where('id', $payment->id)->lockForUpdate()->first();
+            if (! $locked) {
+                return;
+            }
+
+            // Hard-terminal: Paid and Refunded are truly final — no state change ever
+            if (in_array($locked->status, [PaymentStatus::Paid, PaymentStatus::Refunded])) {
+                return;
+            }
+
+            // Soft-terminal recovery: locally expired/failed but gateway says paid
+            // Happens when scheduler fires before gateway session ends, or cancelCharge failed on switch
+            if (in_array($locked->status, [PaymentStatus::Expired, PaymentStatus::Failed]) && $status === 'paid') {
+                $order = $locked->order;
+
+                if ($order && $order->status === OrderStatus::Pending) {
+                    Log::warning('Paid signal for locally-expired payment — order still pending, recovering', [
+                        'payment_id'   => $locked->id,
+                        'order_id'     => $order->id,
+                        'gateway'      => $locked->gateway,
+                        'local_status' => $locked->status->value,
+                    ]);
+                    $this->cancelPendingPaymentsForOrder($order);
+                    $this->markPaid($locked, $amount);
+                    return;
+                }
+
+                // Order already fulfilled — auto-credit wallet, money must not be lost
+                $this->refundDoubleChargeToWallet($locked, $amount, $locked->gateway_ref ?? '');
+                return;
+            }
+
+            match ($status) {
+                'paid'    => $this->markPaid($locked, $amount),
+                'expired' => $this->markExpired($locked),
+                'pending' => null,
+                default   => $this->markFailed($locked),
+            };
+        });
+    }
+
+    private function findPaymentByExternalId(string $externalId): ?Payment
+    {
+        $payment = Payment::where('gateway_ref', $externalId)
+            ->orWhereHas('transaction', fn ($q) => $q->where('external_id', $externalId))
+            ->first();
+
+        if (! $payment) {
+            $transaction = Transaction::where('external_id', $externalId)->first();
+            if ($transaction) {
+                $payment = Payment::where('transaction_id', $transaction->id)->first();
+            }
+        }
+
+        return $payment;
     }
 
     private function createPayment(InitiatePaymentDTO $data): Payment
