@@ -18,7 +18,7 @@ class PaymentResource extends JsonResource
             'amount'          => 'Rp ' . number_format($this->amount / 100, 0, ',', '.'),
             'status'          => $this->status->value,
             'payment_details' => $this->payment_details,
-            'redirect_url'    => $this->payment_details['redirect_url'] ?? $this->payment_details['checkout_url'] ?? null,
+            'redirect_url'    => $this->payment_details['redirect_url'] ?? $this->payment_details['invoice_url'] ?? $this->payment_details['checkout_url'] ?? null,
             'expires_at'      => $this->expires_at?->toISOString(),
             'created_at'      => $this->created_at?->toISOString(),
         ];

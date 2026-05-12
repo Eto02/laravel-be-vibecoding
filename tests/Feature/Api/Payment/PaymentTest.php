@@ -92,6 +92,7 @@ class PaymentTest extends TestCase
         $response->assertStatus(201)->assertJsonStructure([
             'success', 'message', 'data' => ['id', 'order_id', 'gateway', 'method', 'amount_cents', 'amount', 'status', 'redirect_url', 'payment_details'],
         ]);
+        $this->assertNotNull($response->json('data.redirect_url'), 'redirect_url must not be null for Xendit invoice');
         $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'method' => 'invoice']);
     }
 
