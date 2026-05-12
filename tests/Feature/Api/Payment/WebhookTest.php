@@ -111,6 +111,54 @@ class WebhookTest extends TestCase
         Event::assertNotDispatched(PaymentCaptured::class);
     }
 
+    // ── Xendit QRIS webhook ───────────────────────────────────────────────────
+
+    public function test_xendit_qris_webhook_marks_payment_paid(): void
+    {
+        Event::fake();
+
+        // QRIS uses real parseWebhookPayload — no mock needed for parsing
+        $mock = $this->createMock(PaymentGatewayInterface::class);
+        $mock->method('verifyWebhook')->willReturn(true);
+
+        // Use the real XenditPaymentService parseWebhookPayload
+        $xendit = new \App\Services\Payment\XenditPaymentService();
+        $mock->method('parseWebhookPayload')->willReturnCallback(
+            fn ($req) => $xendit->parseWebhookPayload($req)
+        );
+
+        $this->app->instance(PaymentGatewayInterface::class, $mock);
+        $this->app->instance('payment.xendit', $mock);
+
+        $user    = User::factory()->create(['email_verified_at' => now()]);
+        $order   = Order::factory()->create(['user_id' => $user->id, 'status' => OrderStatus::Pending]);
+        $payment = Payment::factory()->create([
+            'order_id'    => $order->id,
+            'gateway_ref' => 'qr_9bd909fd-422a-4a43-bd49-958edf383f6d',
+            'status'      => PaymentStatus::Pending,
+            'method'      => 'qris',
+        ]);
+        Transaction::factory()->create([
+            'external_id' => 'PAY-QRIS-TEST-1',
+            'status'      => \App\Enums\TransactionStatus::Pending,
+        ]);
+        $payment->update(['transaction_id' => \App\Models\Transaction::where('external_id', 'PAY-QRIS-TEST-1')->first()->id]);
+
+        $this->postJson('/api/webhooks/xendit', [
+            'id'           => 'qrpy_f83566a0-81e6-4e4a-8677-44320f9fa7d3',
+            'qr_id'        => 'qr_9bd909fd-422a-4a43-bd49-958edf383f6d',
+            'reference_id' => 'PAY-QRIS-TEST-1',
+            'status'       => 'SUCCEEDED',
+            'amount'       => 1930,
+            'currency'     => 'IDR',
+            'type'         => 'DYNAMIC',
+            'channel_code' => 'ID_LINKAJA',
+        ])->assertStatus(200);
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => PaymentStatus::Paid->value]);
+        Event::assertDispatched(PaymentCaptured::class);
+    }
+
     // ── Midtrans webhook ──────────────────────────────────────────────────────
 
     public function test_midtrans_webhook_marks_payment_paid(): void

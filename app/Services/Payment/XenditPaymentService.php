@@ -280,14 +280,21 @@ class XenditPaymentService implements PaymentGatewayInterface
             ];
         }
 
-        // QRIS payment — api-version 2022-07-31 nests data under 'data' key
-        if (str_contains($event, 'qr_code') || str_contains($event, 'qr.payment')) {
-            $qrisData = $payload['data'] ?? $payload;
+        // QRIS payment — identified by qr_id field (no 'event' key in payload)
+        // Payload: { qr_id, reference_id, status: "SUCCEEDED"|"EXPIRED", amount (IDR) }
+        if (isset($payload['qr_id'])) {
+            $qrisStatus = strtoupper($payload['status'] ?? '');
+            $status     = match ($qrisStatus) {
+                'SUCCEEDED' => 'paid',
+                'EXPIRED'   => 'expired',
+                default     => 'failed',
+            };
+
             return [
-                'event'       => 'payment.succeeded',
-                'external_id' => $qrisData['reference_id'] ?? $qrisData['external_id'] ?? '',
-                'status'      => 'paid',
-                'amount'      => (int) ($qrisData['amount'] ?? 0),
+                'event'       => $status === 'paid' ? 'payment.succeeded' : 'payment.' . $status,
+                'external_id' => $payload['reference_id'] ?? '',
+                'status'      => $status,
+                'amount'      => (int) ($payload['amount'] ?? 0) * 100, // IDR → cents
             ];
         }
 
