@@ -13,7 +13,7 @@
 
 ## Yang Perlu Dibangun ✅
 - ✅ Expand `PaymentGatewayInterface` → unified `createCharge()` + `parseWebhookPayload()`
-- ✅ `XenditPaymentService`: VA (Closed), QRIS (Dynamic), E-wallet (OVO/GoPay/Dana/ShopeePay/LinkAja)
+- ✅ `XenditPaymentService`: Invoice only (Xendit hosted checkout — VA/QRIS/e-wallet handled by Xendit UI)
 - ✅ `MidtransPaymentService`: Snap API (hosted checkout, semua method via satu endpoint)
 - ✅ `PaymentService`: method routing, expiry check, refund logic
 - ✅ `WalletService`: top-up, credit, debit, withdraw (merchant payout)
@@ -107,13 +107,11 @@ POST /api/wallet/withdraw                      [auth:merchant]
 ```json
 {
   "order_id": 1,
-  "gateway": "xendit",
-  "method": "virtual_account",
-  "bank_code": "BCA",
-  "ewallet_type": "GOPAY",
-  "phone": "08123456789"
+  "gateway": "xendit"
 }
 ```
+
+Method diassign otomatis: `xendit` → `invoice`, `midtrans` → `snap`.
 
 ---
 
@@ -154,44 +152,17 @@ interface PaymentGatewayInterface {
 
 ## Xendit Payment Methods — Implementation Detail
 
-### Virtual Account (Closed VA)
-- **API:** `POST /callback_virtual_accounts` dengan `is_closed: true`
-- **Banks:** BCA, BNI, BRI, MANDIRI, PERMATA, BSI, SAHABAT_SAMPOERNA
-- **Expiry:** ikut `payment_due_at` dari Order (maks 72h untuk VA)
-- **Webhook event:** `virtual_account.paid`, header `X-CALLBACK-TOKEN`
-- **`payment_details` JSON:** `{ "bank_code": "BCA", "account_number": "8808xxx", "virtual_account_id": "xxx" }`
-- **Biaya:** VA berbeda per bank — tampilkan `bank_code` ke frontend agar user tahu
+### Invoice (Hosted Checkout) ✅ — Implemented
+- **API:** `POST /v2/invoices`
+- **Method assigned:** `invoice` (auto, no request param needed)
+- **User flow:** user diarahkan ke `redirect_url` (Xendit hosted page) → pilih metode pembayaran (VA, QRIS, e-wallet, kartu kredit, dll) → Xendit callback webhook ke Laravel
+- **Webhook event:** `status: PAID | EXPIRED`, header `X-CALLBACK-TOKEN`
+- **`payment_details` JSON:** `{ "external_id": "PAY-xxx", "invoice_id": "xxx", "invoice_url": "https://checkout.xendit.co/..." }`
+- **Keuntungan:** satu integrasi mendukung semua metode — tidak perlu per-method implementation
 
-### QRIS (Dynamic QR)
-- **API:** `POST /qr_codes` dengan `type: DYNAMIC`
-- **TTL:** 300s untuk online checkout (update `expires_at` di `payments`)
-- **Webhook event:** `qr_code.payment.succeeded`
-- **`payment_details` JSON:** `{ "qr_id": "xxx", "qr_string": "00020101..." }`
-- **Note:** QRIS diterima semua e-wallet + mobile banking yang support QRIS (GoPay, OVO, Dana, ShopeePay, dll)
-
-### E-wallet
-- **API:** `POST /ewallets/charges`
-- **Flow per type:**
-
-| Type | Flow | `checkout_url` | Kebutuhan Extra |
-|---|---|---|---|
-| `OVO` | Push notif ke OVO app | ❌ | `phone` wajib |
-| `DANA` | Redirect ke Dana checkout | ✅ | — |
-| `GOPAY` | Deeplink / web redirect | ✅ | — |
-| `SHOPEEPAY` | Redirect ke ShopeePay | ✅ | — |
-| `LINKAJA` | Redirect | ✅ | — |
-
-- **Webhook event:** `ewallet.payment`, cek `charge_status: SUCCEEDED`
-- **`payment_details` JSON:** `{ "ewallet_type": "GOPAY", "charge_id": "xxx", "checkout_url": "https://..." }`
-- **Note:** OVO push tidak punya `checkout_url` — response ke client berisi `null` untuk `redirect_url`
-
-### `createCharge()` internal routing (XenditPaymentService)
-```
-method = virtual_account → POST /callback_virtual_accounts (is_closed: true)
-method = qris           → POST /qr_codes (type: DYNAMIC)
-method = ewallet        → POST /ewallets/charges
-method = invoice        → POST /v2/invoices (hosted, backward-compatible)
-```
+### Sandbox Simulation
+- `POST https://api.xendit.co/v2/invoices/{invoice_id}/simulate_payment` — trigger paid webhook
+- Gunakan `invoice_id` dari `payment_details.invoice_id`
 
 ---
 
@@ -410,7 +381,7 @@ Named binding `payment.xendit` / `payment.midtrans` sengaja diekspos agar Sprint
 - [x] Models + factories
 - [x] Enums
 - [x] PaymentGatewayInterface updated
-- [x] XenditPaymentService: VA + QRIS + e-wallet + parseWebhookPayload
+- [x] XenditPaymentService: Invoice-only + parseWebhookPayload (simplified from VA/QRIS/e-wallet)
 - [x] MidtransPaymentService: Snap API + webhook verification
 - [x] PaymentService: routing + expiry + refund
 - [x] WalletService
@@ -438,3 +409,17 @@ Named binding `payment.xendit` / `payment.midtrans` sengaja diekspos agar Sprint
 - [x] Midtrans `pending` status webhook → no-op (sebelumnya: mapped ke failed)
 - [x] Midtrans `payment_details` ditambah `external_id`
 - [x] 5 test baru: switch (4) + status ownership (1)
+
+## Post-Sprint Fixes (Session 3) — Invoice-Only Simplification
+
+- [x] `XenditPaymentService` disederhanakan ke invoice-only (`createCharge` → `createInvoice` only)
+- [x] Removed VA, QRIS, e-wallet specific charge methods from Xendit service
+- [x] `InitiatePaymentRequest` simplified: hanya `order_id` + `gateway` (tidak ada `method`, `bank_code`, `ewallet_type`, `phone`)
+- [x] `SwitchPaymentRequest` simplified: hanya `gateway` (tidak ada `method`)
+- [x] `InitiatePaymentDTO` simplified: hapus `method`, `bankCode`, `ewalletType`, `phone`, `successRedirectUrl`
+- [x] `PaymentService::createPayment()` auto-assign method: `xendit` → `invoice`, `midtrans` → `snap`
+- [x] `PaymentTest` rewritten: invoice-focused, remove VA/QRIS/ewallet tests
+- [x] `WebhookTest` remove `test_xendit_qris_webhook_marks_payment_paid` (QRIS removed)
+- [x] Postman `07-payment.postman_collection.json` updated: invoice-only examples, sandbox simulator uses invoice simulation endpoint
+- [x] DevSeeder pending order changed to cheaper product (Rp 178.000) untuk testing invoice
+- [x] All 259 tests pass

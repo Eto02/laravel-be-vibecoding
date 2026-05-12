@@ -199,17 +199,18 @@ class PaymentService
 
         $externalId = 'PAY-' . strtoupper(Str::random(10)) . '-' . $order->id;
 
+        $method = match ($data->gateway) {
+            'midtrans' => 'snap',
+            default    => 'invoice',
+        };
+
         $chargeData = [
-            'external_id'          => $externalId,
-            'amount'               => $order->total,
-            'method'               => $data->method,
-            'bank_code'            => $data->bankCode,
-            'ewallet_type'         => $data->ewalletType,
-            'phone'                => $data->phone,
-            'success_redirect_url' => $data->successRedirectUrl,
-            'expires_at'           => $order->payment_due_at?->toISOString(),
-            'customer_name'        => $order->user->name,
-            'customer_email'       => $order->user->email,
+            'external_id'    => $externalId,
+            'amount'         => $order->total,
+            'expires_at'     => $order->payment_due_at?->toISOString(),
+            'customer_name'  => $order->user->name,
+            'customer_email' => $order->user->email,
+            'description'    => "Payment for order {$order->order_number}",
         ];
 
         $gateway = app("payment.{$data->gateway}");
@@ -226,7 +227,7 @@ class PaymentService
             'order_id'        => $order->id,
             'transaction_id'  => $transaction->id,
             'gateway'         => $data->gateway,
-            'method'          => $data->method,
+            'method'          => $method,
             'gateway_ref'     => $result['gateway_ref'],
             'amount'          => $order->total,
             'status'          => PaymentStatus::Pending,

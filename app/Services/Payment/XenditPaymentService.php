@@ -20,17 +20,7 @@ class XenditPaymentService implements PaymentGatewayInterface
 
     public function createCharge(array $data): array
     {
-        return match ($data['method'] ?? 'invoice') {
-            'virtual_account' => $this->createVirtualAccount($data),
-            'qris'            => $this->createQrisCharge($data),
-            'ewallet'         => $this->createEWalletCharge($data),
-            default           => $this->createInvoice($data),
-        };
-    }
-
-    private function toIDR(int $cents): int
-    {
-        return (int) round($cents / 100);
+        return $this->createInvoice($data);
     }
 
     private function createInvoice(array $data): array
@@ -42,6 +32,10 @@ class XenditPaymentService implements PaymentGatewayInterface
                 'description'      => $data['description'] ?? 'Payment',
                 'invoice_duration' => 86400,
                 'currency'         => 'IDR',
+                'customer'         => [
+                    'given_names' => $data['customer_name'] ?? 'Customer',
+                    'email'       => $data['customer_email'] ?? null,
+                ],
             ]);
 
         $this->assertSuccess($response, 'Failed to create Xendit invoice');
@@ -50,165 +44,22 @@ class XenditPaymentService implements PaymentGatewayInterface
         return [
             'gateway_ref'     => $body['id'],
             'redirect_url'    => $body['invoice_url'],
-            'payment_details' => ['invoice_id' => $body['id'], 'invoice_url' => $body['invoice_url']],
-            'expires_at'      => $body['expiry_date'] ?? null,
-        ];
-    }
-
-    private function createVirtualAccount(array $data): array
-    {
-        $response = Http::withBasicAuth($this->secretKey, '')
-            ->post("{$this->baseUrl}/callback_virtual_accounts", [
-                'external_id'       => $data['external_id'],
-                'bank_code'         => strtoupper($data['bank_code'] ?? 'BCA'),
-                'name'              => $data['customer_name'] ?? 'Customer',
-                'expected_amount'   => $this->toIDR($data['amount']),
-                'is_closed'         => true,
-                'is_single_use'     => true,
-                'expiration_date'   => $data['expires_at'] ?? now()->addHours(24)->toISOString(),
-            ]);
-
-        $this->assertSuccess($response, 'Failed to create Xendit virtual account');
-        $body = $response->json();
-
-        return [
-            'gateway_ref'     => $body['id'],
-            'redirect_url'    => null,
             'payment_details' => [
-                'external_id'        => $data['external_id'], // needed for sandbox simulate API
-                'bank_code'          => $body['bank_code'],
-                'account_number'     => $body['account_number'],
-                'virtual_account_id' => $body['id'],
+                'external_id' => $data['external_id'],
+                'invoice_id'  => $body['id'],
+                'invoice_url' => $body['invoice_url'],
             ],
-            'expires_at' => $body['expiration_date'] ?? null,
+            'expires_at' => $body['expiry_date'] ?? null,
         ];
-    }
-
-    private function createQrisCharge(array $data): array
-    {
-        $amountIdr = $this->toIDR($data['amount']);
-
-        if ($amountIdr > 10_000_000) {
-            throw new \DomainException(
-                'QRIS tidak mendukung transaksi di atas Rp 10.000.000. Gunakan metode pembayaran lain (VA atau Invoice).'
-            );
-        }
-
-        if ($amountIdr < 1) {
-            throw new \DomainException('Nominal order tidak valid untuk pembayaran QRIS.');
-        }
-
-        $response = Http::withBasicAuth($this->secretKey, '')
-            ->withHeaders(['api-version' => '2022-07-31'])
-            ->post("{$this->baseUrl}/qr_codes", [
-                'reference_id' => $data['external_id'],
-                'type'         => 'DYNAMIC',
-                'currency'     => 'IDR',
-                'amount'       => $amountIdr,
-            ]);
-
-        $this->assertSuccess($response, 'Failed to create Xendit QRIS charge');
-        $body = $response->json();
-
-        return [
-            'gateway_ref'     => $body['id'],
-            'redirect_url'    => null,
-            'payment_details' => [
-                'reference_id' => $data['external_id'], // reference_id sent to Xendit
-                'qr_id'        => $body['id'],          // id from response — used for simulate
-                'qr_string'    => $body['qr_string'] ?? null,
-            ],
-            'expires_at' => $body['expires_at'] ?? null,
-        ];
-    }
-
-    private function createEWalletCharge(array $data): array
-    {
-        $ewalletType = strtoupper($data['ewallet_type'] ?? 'GOPAY');
-
-        $payload = [
-            'reference_id'        => $data['external_id'],
-            'currency'            => 'IDR',
-            'amount'              => $this->toIDR($data['amount']),
-            'checkout_method'     => 'ONE_TIME_PAYMENT',
-            'channel_code'        => $ewalletType,
-            'channel_properties'  => $this->buildEWalletChannelProperties($ewalletType, $data),
-        ];
-
-        $response = Http::withBasicAuth($this->secretKey, '')
-            ->post("{$this->baseUrl}/ewallets/charges", $payload);
-
-        $this->assertSuccess($response, 'Failed to create Xendit e-wallet charge');
-        $body = $response->json();
-
-        $checkoutUrl = $body['actions']['desktop_web_checkout_url']
-            ?? $body['actions']['mobile_web_checkout_url']
-            ?? $body['actions']['mobile_deeplink_checkout_url']
-            ?? null;
-
-        return [
-            'gateway_ref'     => $body['id'],
-            'redirect_url'    => $checkoutUrl,
-            'payment_details' => [
-                'external_id'  => $data['external_id'], // needed for sandbox simulate API
-                'ewallet_type' => $ewalletType,
-                'charge_id'    => $body['id'],
-                'checkout_url' => $checkoutUrl,
-            ],
-            'expires_at' => null,
-        ];
-    }
-
-    private function buildEWalletChannelProperties(string $type, array $data): array
-    {
-        return match ($type) {
-            'OVO'      => ['mobile_number' => $data['phone'] ?? ''],
-            'SHOPEEPAY' => ['success_redirect_url' => $data['success_redirect_url'] ?? config('app.url')],
-            default    => [
-                'success_redirect_url' => $data['success_redirect_url'] ?? config('app.url'),
-                'failure_redirect_url' => $data['failure_redirect_url'] ?? config('app.url'),
-            ],
-        };
     }
 
     public function cancelCharge(string $chargeRef, string $method): bool
     {
         try {
-            return match ($method) {
-                'virtual_account' => $this->cancelVirtualAccount($chargeRef),
-                'ewallet'         => $this->cancelEWalletCharge($chargeRef),
-                'qris'            => $this->deactivateQris($chargeRef),
-                default           => $this->expireInvoice($chargeRef),
-            };
+            return $this->expireInvoice($chargeRef);
         } catch (\Throwable) {
-            return false; // best-effort — gateway already expired or ref invalid
+            return false;
         }
-    }
-
-    private function cancelVirtualAccount(string $id): bool
-    {
-        $response = Http::withBasicAuth($this->secretKey, '')
-            ->patch("{$this->baseUrl}/callback_virtual_accounts/{$id}", [
-                'expiration_date' => now()->subSecond()->toISOString(),
-            ]);
-
-        return $response->successful() || in_array($response->status(), [404, 422]);
-    }
-
-    private function cancelEWalletCharge(string $id): bool
-    {
-        $response = Http::withBasicAuth($this->secretKey, '')
-            ->post("{$this->baseUrl}/ewallets/charges/{$id}/cancel");
-
-        return $response->successful() || in_array($response->status(), [404, 409]);
-    }
-
-    private function deactivateQris(string $id): bool
-    {
-        $response = Http::withBasicAuth($this->secretKey, '')
-            ->patch("{$this->baseUrl}/qr_codes/{$id}", ['status' => 'INACTIVE']);
-
-        return $response->successful() || in_array($response->status(), [404, 422]);
     }
 
     private function expireInvoice(string $id): bool
@@ -217,6 +68,11 @@ class XenditPaymentService implements PaymentGatewayInterface
             ->post("{$this->baseUrl}/v2/invoices/{$id}/expire!");
 
         return $response->successful() || in_array($response->status(), [404, 422]);
+    }
+
+    private function toIDR(int $cents): int
+    {
+        return (int) round($cents / 100);
     }
 
     public function getPaymentStatus(string $externalId): array
@@ -246,79 +102,18 @@ class XenditPaymentService implements PaymentGatewayInterface
     public function verifyWebhook(Request $request): bool
     {
         if (empty($this->webhookToken)) {
-            return false; // Reject all webhooks when token is not configured
+            return false;
         }
 
-        $callbackToken = $request->header('X-CALLBACK-TOKEN', '');
-
-        return hash_equals($this->webhookToken, $callbackToken);
+        return hash_equals($this->webhookToken, (string) $request->header('X-CALLBACK-TOKEN', ''));
     }
 
     public function parseWebhookPayload(Request $request): array
     {
-        $payload = $request->json()->all();
-        $event   = $payload['event'] ?? '';
-
-        // Virtual account — payment received (has both payment_id and account_number)
-        if (isset($payload['payment_id']) && isset($payload['account_number'])) {
-            return [
-                'event'       => 'payment.succeeded',
-                'external_id' => $payload['external_id'] ?? '',
-                'status'      => 'paid',
-                'amount'      => (int) ($payload['amount'] ?? 0),
-            ];
-        }
-
-        // Virtual account — creation/update notification (has account_number but no payment_id)
-        // Xendit fires this when a VA is first registered. It is NOT a payment event.
-        if (isset($payload['account_number']) && ! isset($payload['payment_id'])) {
-            return [
-                'event'       => 'va.registered',
-                'external_id' => $payload['external_id'] ?? '',
-                'status'      => 'pending',
-                'amount'      => 0,
-            ];
-        }
-
-        // QRIS payment — identified by qr_id field (no 'event' key in payload)
-        // Payload: { qr_id, reference_id, status: "SUCCEEDED"|"EXPIRED", amount (IDR) }
-        if (isset($payload['qr_id'])) {
-            $qrisStatus = strtoupper($payload['status'] ?? '');
-            $status     = match ($qrisStatus) {
-                'SUCCEEDED' => 'paid',
-                'EXPIRED'   => 'expired',
-                default     => 'failed',
-            };
-
-            return [
-                'event'       => $status === 'paid' ? 'payment.succeeded' : 'payment.' . $status,
-                'external_id' => $payload['reference_id'] ?? '',
-                'status'      => $status,
-                'amount'      => (int) ($payload['amount'] ?? 0) * 100, // IDR → cents
-            ];
-        }
-
-        // E-wallet
-        if (str_contains($event, 'ewallet')) {
-            $chargeStatus = strtoupper($payload['data']['status'] ?? $payload['charge_status'] ?? '');
-            $status       = match ($chargeStatus) {
-                'SUCCEEDED' => 'paid',
-                'FAILED'    => 'failed',
-                'VOIDED'    => 'expired',
-                default     => 'failed',
-            };
-
-            return [
-                'event'       => $status === 'paid' ? 'payment.succeeded' : 'payment.failed',
-                'external_id' => $payload['data']['reference_id'] ?? $payload['external_id'] ?? '',
-                'status'      => $status,
-                'amount'      => (int) ($payload['data']['charge_amount'] ?? $payload['amount'] ?? 0),
-            ];
-        }
-
-        // Hosted invoice (legacy + fallback)
+        $payload       = $request->json()->all();
         $invoiceStatus = strtoupper($payload['status'] ?? '');
-        $status        = match ($invoiceStatus) {
+
+        $status = match ($invoiceStatus) {
             'PAID'    => 'paid',
             'EXPIRED' => 'expired',
             default   => 'failed',
@@ -328,7 +123,7 @@ class XenditPaymentService implements PaymentGatewayInterface
             'event'       => $status === 'paid' ? 'payment.succeeded' : 'payment.' . $status,
             'external_id' => $payload['external_id'] ?? '',
             'status'      => $status,
-            'amount'      => (int) ($payload['paid_amount'] ?? $payload['amount'] ?? 0),
+            'amount'      => (int) ($payload['paid_amount'] ?? $payload['amount'] ?? 0) * 100,
         ];
     }
 

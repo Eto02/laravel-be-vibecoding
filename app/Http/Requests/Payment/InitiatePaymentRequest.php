@@ -15,22 +15,8 @@ class InitiatePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'order_id'            => ['required', 'integer', Rule::exists('orders', 'id')->where('user_id', $this->user()->id)],
-            'gateway'             => ['required', 'string', Rule::in(['xendit', 'midtrans'])],
-            'method'              => ['required', 'string', Rule::in(['invoice', 'virtual_account', 'qris', 'ewallet', 'snap'])],
-            'bank_code'           => ['nullable', 'string', 'required_if:method,virtual_account'],
-            'ewallet_type'        => ['nullable', 'string', 'required_if:method,ewallet', Rule::in(['OVO', 'DANA', 'GOPAY', 'SHOPEEPAY', 'LINKAJA'])],
-            'phone'               => ['nullable', 'string', 'required_if:ewallet_type,OVO'],
-            'success_redirect_url' => ['nullable', 'url'],
-        ];
-    }
-
-    public function messages(): array
-    {
-        return [
-            'bank_code.required_if'    => 'Bank code is required for virtual account payments.',
-            'ewallet_type.required_if' => 'E-wallet type is required for e-wallet payments.',
-            'phone.required_if'        => 'Phone number is required for OVO payments.',
+            'order_id' => ['required', 'integer', Rule::exists('orders', 'id')->where('user_id', $this->user()->id)],
+            'gateway'  => ['required', 'string', Rule::in(['xendit', 'midtrans'])],
         ];
     }
 }

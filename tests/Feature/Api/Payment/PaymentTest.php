@@ -53,9 +53,9 @@ class PaymentTest extends TestCase
     private function mockGateway(array $result = []): void
     {
         $default = [
-            'gateway_ref'     => 'gw-ref-123',
-            'redirect_url'    => 'https://gateway.test/pay',
-            'payment_details' => ['bank_code' => 'BCA', 'account_number' => '88081234567'],
+            'gateway_ref'     => 'inv-ref-123',
+            'redirect_url'    => 'https://gateway.test/invoice/pay',
+            'payment_details' => ['invoice_id' => 'inv-123', 'invoice_url' => 'https://gateway.test/invoice/pay'],
             'expires_at'      => now()->addHours(24)->toISOString(),
         ];
 
@@ -77,7 +77,7 @@ class PaymentTest extends TestCase
 
     // ── initiate ──────────────────────────────────────────────────────────────
 
-    public function test_buyer_can_initiate_va_payment(): void
+    public function test_buyer_can_initiate_invoice_payment(): void
     {
         Event::fake();
         $this->mockGateway();
@@ -85,102 +85,60 @@ class PaymentTest extends TestCase
         $order = $this->pendingOrder($buyer);
 
         $response = $this->actingAs($buyer)->postJson('/api/payments/initiate', [
-            'order_id'  => $order->id,
-            'gateway'   => 'xendit',
-            'method'    => 'virtual_account',
-            'bank_code' => 'BCA',
+            'order_id' => $order->id,
+            'gateway'  => 'xendit',
         ], ['X-Idempotency-Key' => 'test-key-1']);
 
         $response->assertStatus(201)->assertJsonStructure([
-            'success', 'message', 'data' => ['id', 'order_id', 'gateway', 'method', 'amount_cents', 'amount', 'status', 'payment_details'],
+            'success', 'message', 'data' => ['id', 'order_id', 'gateway', 'method', 'amount_cents', 'amount', 'status', 'redirect_url', 'payment_details'],
         ]);
-        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'method' => 'virtual_account']);
+        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'method' => 'invoice']);
     }
 
     public function test_initiate_returns_existing_payment_when_pending_exists(): void
     {
         Event::fake();
         $this->mockGateway();
-        $buyer   = $this->buyer();
-        $order   = $this->pendingOrder($buyer);
+        $buyer    = $this->buyer();
+        $order    = $this->pendingOrder($buyer);
         $existing = Payment::factory()->create([
             'order_id' => $order->id,
             'status'   => PaymentStatus::Pending,
         ]);
 
         $response = $this->actingAs($buyer)->postJson('/api/payments/initiate', [
-            'order_id'  => $order->id,
-            'gateway'   => 'xendit',
-            'method'    => 'virtual_account',
-            'bank_code' => 'BCA',
+            'order_id' => $order->id,
+            'gateway'  => 'xendit',
         ]);
 
         $response->assertStatus(201);
         $this->assertSame($existing->id, $response->json('data.id'));
-        $this->assertDatabaseCount('payments', 1); // no new payment created
+        $this->assertDatabaseCount('payments', 1);
     }
 
     public function test_initiate_returns_422_for_wrong_order(): void
     {
-        $buyer       = $this->buyer();
-        $otherBuyer  = $this->buyer();
-        $order       = $this->pendingOrder($otherBuyer);
+        $buyer      = $this->buyer();
+        $otherBuyer = $this->buyer();
+        $order      = $this->pendingOrder($otherBuyer);
 
-        $response = $this->actingAs($buyer)->postJson('/api/payments/initiate', [
+        $this->actingAs($buyer)->postJson('/api/payments/initiate', [
             'order_id' => $order->id,
             'gateway'  => 'xendit',
-            'method'   => 'virtual_account',
-            'bank_code' => 'BCA',
-        ]);
-
-        $response->assertStatus(422);
+        ])->assertStatus(422);
     }
 
     public function test_initiate_requires_auth(): void
     {
-        $response = $this->postJson('/api/payments/initiate', [
+        $this->postJson('/api/payments/initiate', [
             'order_id' => 1,
             'gateway'  => 'xendit',
-            'method'   => 'virtual_account',
-        ]);
-
-        $response->assertStatus(401);
-    }
-
-    public function test_ewallet_requires_ewallet_type(): void
-    {
-        $buyer = $this->buyer();
-        $order = $this->pendingOrder($buyer);
-
-        $response = $this->actingAs($buyer)->postJson('/api/payments/initiate', [
-            'order_id' => $order->id,
-            'gateway'  => 'xendit',
-            'method'   => 'ewallet',
-            // missing ewallet_type
-        ]);
-
-        $response->assertStatus(422)->assertJsonValidationErrors(['ewallet_type']);
-    }
-
-    public function test_ovo_requires_phone(): void
-    {
-        $buyer = $this->buyer();
-        $order = $this->pendingOrder($buyer);
-
-        $response = $this->actingAs($buyer)->postJson('/api/payments/initiate', [
-            'order_id'    => $order->id,
-            'gateway'     => 'xendit',
-            'method'      => 'ewallet',
-            'ewallet_type' => 'OVO',
-            // missing phone
-        ]);
-
-        $response->assertStatus(422)->assertJsonValidationErrors(['phone']);
+        ])->assertStatus(401);
     }
 
     // ── switch ────────────────────────────────────────────────────────────────
 
-    public function test_buyer_can_switch_payment_method(): void
+    public function test_buyer_can_switch_payment_gateway(): void
     {
         Event::fake();
         $this->mockGateway();
@@ -189,18 +147,17 @@ class PaymentTest extends TestCase
         $payment = Payment::factory()->create([
             'order_id' => $order->id,
             'status'   => PaymentStatus::Pending,
-            'method'   => 'virtual_account',
+            'method'   => 'invoice',
             'gateway'  => 'xendit',
         ]);
 
         $response = $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/switch", [
-            'gateway' => 'xendit',
-            'method'  => 'qris',
+            'gateway' => 'midtrans',
         ]);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => PaymentStatus::Expired->value]);
-        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'method' => 'qris']);
+        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'method' => 'snap']);
     }
 
     public function test_switch_requires_auth(): void
@@ -208,8 +165,7 @@ class PaymentTest extends TestCase
         $payment = Payment::factory()->create();
 
         $this->postJson("/api/payments/{$payment->id}/switch", [
-            'gateway' => 'xendit',
-            'method'  => 'qris',
+            'gateway' => 'midtrans',
         ])->assertStatus(401);
     }
 
@@ -220,12 +176,9 @@ class PaymentTest extends TestCase
         $order   = $this->pendingOrder($buyer);
         $payment = Payment::factory()->paid()->create(['order_id' => $order->id, 'gateway' => 'xendit']);
 
-        $response = $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/switch", [
-            'gateway' => 'xendit',
-            'method'  => 'qris',
-        ]);
-
-        $response->assertStatus(422);
+        $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/switch", [
+            'gateway' => 'midtrans',
+        ])->assertStatus(422);
     }
 
     public function test_switch_returns_404_for_other_users_payment(): void
@@ -235,12 +188,9 @@ class PaymentTest extends TestCase
         $order      = $this->pendingOrder($otherBuyer);
         $payment    = Payment::factory()->create(['order_id' => $order->id, 'status' => PaymentStatus::Pending]);
 
-        $response = $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/switch", [
-            'gateway' => 'xendit',
-            'method'  => 'qris',
-        ]);
-
-        $response->assertStatus(404);
+        $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/switch", [
+            'gateway' => 'midtrans',
+        ])->assertStatus(404);
     }
 
     // ── status ────────────────────────────────────────────────────────────────
@@ -251,11 +201,10 @@ class PaymentTest extends TestCase
         $order   = $this->pendingOrder($buyer);
         $payment = Payment::factory()->create(['order_id' => $order->id]);
 
-        $response = $this->actingAs($buyer)->getJson("/api/payments/{$payment->id}/status");
-
-        $response->assertStatus(200)->assertJsonStructure([
-            'success', 'data' => ['id', 'status', 'amount_cents'],
-        ]);
+        $this->actingAs($buyer)->getJson("/api/payments/{$payment->id}/status")
+            ->assertStatus(200)->assertJsonStructure([
+                'success', 'data' => ['id', 'status', 'amount_cents'],
+            ]);
     }
 
     public function test_status_requires_auth(): void
@@ -286,25 +235,22 @@ class PaymentTest extends TestCase
         $order   = $this->pendingOrder($buyer);
         $payment = Payment::factory()->paid()->create(['order_id' => $order->id, 'amount' => 10000000]);
 
-        $response = $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/refund", [
+        $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/refund", [
             'reason' => 'Item not received',
-        ]);
+        ])->assertStatus(200)->assertJsonStructure(['data' => ['id', 'status', 'amount_cents']]);
 
-        $response->assertStatus(200)->assertJsonStructure(['data' => ['id', 'status', 'amount_cents']]);
         $this->assertDatabaseHas('refunds', ['payment_id' => $payment->id]);
     }
 
     public function test_buyer_cannot_refund_other_users_payment(): void
     {
-        $buyer       = $this->buyer();
-        $otherBuyer  = $this->buyer();
-        $order       = $this->pendingOrder($otherBuyer);
-        $payment     = Payment::factory()->paid()->create(['order_id' => $order->id]);
+        $buyer      = $this->buyer();
+        $otherBuyer = $this->buyer();
+        $order      = $this->pendingOrder($otherBuyer);
+        $payment    = Payment::factory()->paid()->create(['order_id' => $order->id]);
 
-        $response = $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/refund", [
+        $this->actingAs($buyer)->postJson("/api/payments/{$payment->id}/refund", [
             'reason' => 'Test',
-        ]);
-
-        $response->assertStatus(404);
+        ])->assertStatus(404);
     }
 }

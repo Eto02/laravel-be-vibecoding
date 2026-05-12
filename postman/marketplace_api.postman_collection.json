@@ -152,7 +152,7 @@
       "type": "string"
     },
     {
-      "key": "payment_external_id",
+      "key": "invoice_id",
       "value": "",
       "type": "string"
     },
@@ -4907,7 +4907,7 @@
       "item": [
         {
           "name": "Payment",
-          "description": "Initiate & manage payments via Xendit / Midtrans gateway",
+          "description": "Initiate & manage payments via Xendit Invoice / Midtrans Snap",
           "item": [
             {
               "name": "Initiate Payment 🔒",
@@ -4919,16 +4919,14 @@
                       "if (pm.response.code === 201) {",
                       "  const body = pm.response.json();",
                       "  pm.collectionVariables.set('payment_id', String(body.data.id || ''));",
-                      "  const extId = body.data.payment_details?.external_id || '';",
-                      "  pm.collectionVariables.set('payment_external_id', extId);",
+                      "  const invoiceId = body.data.payment_details?.invoice_id || '';",
+                      "  pm.collectionVariables.set('invoice_id', invoiceId);",
                       "  pm.test('Initiate payment returns 201', () => pm.response.to.have.status(201));",
                       "  pm.test('Response has payment data', () => {",
                       "    pm.expect(body.data).to.have.property('id');",
                       "    pm.expect(body.data).to.have.property('status');",
                       "    pm.expect(body.data).to.have.property('amount_cents');",
-                      "  });",
-                      "  pm.test('payment_details has external_id for simulation', () => {",
-                      "    pm.expect(body.data.payment_details).to.have.property('external_id');",
+                      "    pm.expect(body.data).to.have.property('redirect_url');",
                       "  });",
                       "}"
                     ],
@@ -4955,7 +4953,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"order_id\": {{order_id}},\n  \"gateway\": \"xendit\",\n  \"method\": \"virtual_account\",\n  \"bank_code\": \"BCA\"\n}",
+                  "raw": "{\n  \"order_id\": {{order_id}},\n  \"gateway\": \"xendit\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4973,11 +4971,11 @@
                     "initiate"
                   ]
                 },
-                "description": "Buat gateway charge dan Payment record.\n\n**Selalu sertakan `X-Idempotency-Key`** (UUID) untuk mencegah double charge.\n\n**method** options:\n- `virtual_account` → `bank_code` required (BCA/BNI/BRI/MANDIRI)\n- `qris` → universal QRIS, no extra params\n- `ewallet` → `ewallet_type` required (OVO/DANA/GOPAY/SHOPEEPAY/LINKAJA); OVO also needs `phone`\n- `invoice` → Xendit hosted checkout (legacy)\n- `snap` → Midtrans Snap hosted checkout (use `gateway: midtrans`)\n\n`amount` stored as integer cents."
+                "description": "Buat gateway charge dan Payment record.\n\n**Selalu sertakan `X-Idempotency-Key`** (UUID) untuk mencegah double charge.\n\n**gateway** options:\n- `xendit` → Xendit Invoice hosted checkout (VA, QRIS, e-wallet, card semua tersedia di halaman invoice)\n- `midtrans` → Midtrans Snap hosted checkout\n\nMethod diassign otomatis oleh server: `xendit` → `invoice`, `midtrans` → `snap`.\n\nUser akan diarahkan ke `redirect_url` untuk menyelesaikan pembayaran. Webhook otomatis mengupdate status saat pembayaran selesai.\n\n`amount` stored as integer cents."
               },
               "response": [
                 {
-                  "name": "201 Created — Virtual Account",
+                  "name": "201 Created — Xendit Invoice",
                   "status": "Created",
                   "code": 201,
                   "header": [
@@ -4986,10 +4984,10 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment initiated successfully.\",\n  \"data\": {\n    \"id\": 1,\n    \"order_id\": 5,\n    \"gateway\": \"xendit\",\n    \"method\": \"virtual_account\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"pending\",\n    \"payment_details\": {\n      \"bank_code\": \"BCA\",\n      \"account_number\": \"8808123456789\",\n      \"virtual_account_id\": \"va-xxx\"\n    },\n    \"redirect_url\": null,\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment initiated successfully.\",\n  \"data\": {\n    \"id\": 1,\n    \"order_id\": 5,\n    \"gateway\": \"xendit\",\n    \"method\": \"invoice\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"pending\",\n    \"redirect_url\": \"https://checkout.xendit.co/v2/623fca...\",\n    \"payment_details\": {\n      \"external_id\": \"PAY-ABCDEFGHIJ-5\",\n      \"invoice_id\": \"623fca...\",\n      \"invoice_url\": \"https://checkout.xendit.co/v2/623fca...\"\n    },\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 },
                 {
-                  "name": "201 Created — QRIS",
+                  "name": "201 Created — Midtrans Snap",
                   "status": "Created",
                   "code": 201,
                   "header": [
@@ -4998,10 +4996,10 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment initiated successfully.\",\n  \"data\": {\n    \"id\": 2,\n    \"order_id\": 6,\n    \"gateway\": \"xendit\",\n    \"method\": \"qris\",\n    \"amount_cents\": 50000000,\n    \"amount\": \"Rp 500.000\",\n    \"status\": \"pending\",\n    \"payment_details\": {\n      \"qr_id\": \"qr-xxx\",\n      \"qr_string\": \"00020101021226...\"\n    },\n    \"redirect_url\": null,\n    \"expires_at\": \"2026-05-12T10:05:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment initiated successfully.\",\n  \"data\": {\n    \"id\": 2,\n    \"order_id\": 6,\n    \"gateway\": \"midtrans\",\n    \"method\": \"snap\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"pending\",\n    \"redirect_url\": \"https://app.sandbox.midtrans.com/snap/v4/redirection/...\",\n    \"payment_details\": {\n      \"snap_token\": \"abc123...\",\n      \"redirect_url\": \"https://app.sandbox.midtrans.com/snap/v4/redirection/...\"\n    },\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 },
                 {
-                  "name": "201 Created — GoPay E-wallet",
+                  "name": "201 Created — Existing Pending Payment Returned",
                   "status": "Created",
                   "code": 201,
                   "header": [
@@ -5010,10 +5008,10 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment initiated successfully.\",\n  \"data\": {\n    \"id\": 3,\n    \"order_id\": 7,\n    \"gateway\": \"xendit\",\n    \"method\": \"ewallet\",\n    \"amount_cents\": 100000000,\n    \"amount\": \"Rp 1.000.000\",\n    \"status\": \"pending\",\n    \"payment_details\": {\n      \"ewallet_type\": \"GOPAY\",\n      \"charge_id\": \"ewc-xxx\",\n      \"checkout_url\": \"https://wallet.google.com/gopay/...\"\n    },\n    \"redirect_url\": \"https://wallet.google.com/gopay/...\",\n    \"expires_at\": \"2026-05-12T10:05:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment initiated successfully.\",\n  \"data\": {\n    \"id\": 1,\n    \"order_id\": 5,\n    \"gateway\": \"xendit\",\n    \"method\": \"invoice\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"pending\",\n    \"redirect_url\": \"https://checkout.xendit.co/v2/623fca...\",\n    \"payment_details\": { \"invoice_id\": \"623fca...\", \"invoice_url\": \"https://checkout.xendit.co/v2/623fca...\" },\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 },
                 {
-                  "name": "422 Unprocessable — Missing ewallet_type",
+                  "name": "422 Unprocessable — Order Not Owned",
                   "status": "Unprocessable Entity",
                   "code": 422,
                   "header": [
@@ -5022,7 +5020,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": {\n    \"ewallet_type\": [\"The ewallet type field is required when method is ewallet.\"]\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                  "body": "{\n  \"success\": false,\n  \"message\": \"The given data was invalid.\",\n  \"errors\": {\n    \"order_id\": [\"The selected order id is invalid.\"]\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 }
               ]
             },
@@ -5037,6 +5035,7 @@
                       "pm.test('Response has status field', () => {",
                       "  const body = pm.response.json();",
                       "  pm.expect(body.data).to.have.property('status');",
+                      "  pm.expect(body.data).to.have.property('amount_cents');",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -5063,11 +5062,11 @@
                     "status"
                   ]
                 },
-                "description": "Poll status pembayaran. Frontend menggunakan ini untuk mendeteksi saat pembayaran VA/QRIS selesai.\n\nReturns Payment dengan relasi order dan transaction."
+                "description": "Poll status pembayaran. Frontend menggunakan ini untuk mendeteksi saat pembayaran Invoice/Snap selesai.\n\nReturns Payment dengan relasi order dan transaction."
               },
               "response": [
                 {
-                  "name": "200 OK",
+                  "name": "200 OK — Pending",
                   "status": "OK",
                   "code": 200,
                   "header": [
@@ -5076,12 +5075,24 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment status retrieved.\",\n  \"data\": {\n    \"id\": 1,\n    \"order_id\": 5,\n    \"gateway\": \"xendit\",\n    \"method\": \"virtual_account\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"paid\",\n    \"payment_details\": { \"bank_code\": \"BCA\", \"account_number\": \"8808123456789\" },\n    \"redirect_url\": null,\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment status retrieved.\",\n  \"data\": {\n    \"id\": 1,\n    \"order_id\": 5,\n    \"gateway\": \"xendit\",\n    \"method\": \"invoice\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"pending\",\n    \"redirect_url\": \"https://checkout.xendit.co/v2/623fca...\",\n    \"payment_details\": { \"invoice_id\": \"623fca...\", \"invoice_url\": \"https://checkout.xendit.co/v2/623fca...\" },\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
+                },
+                {
+                  "name": "200 OK — Paid",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment status retrieved.\",\n  \"data\": {\n    \"id\": 1,\n    \"order_id\": 5,\n    \"gateway\": \"xendit\",\n    \"method\": \"invoice\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"paid\",\n    \"redirect_url\": \"https://checkout.xendit.co/v2/623fca...\",\n    \"payment_details\": { \"invoice_id\": \"623fca...\" },\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 }
               ]
             },
             {
-              "name": "Switch Payment Method 🔒",
+              "name": "Switch Payment Gateway 🔒",
               "event": [
                 {
                   "listen": "test",
@@ -5090,12 +5101,13 @@
                       "if (pm.response.code === 201) {",
                       "  const body = pm.response.json();",
                       "  pm.collectionVariables.set('payment_id', String(body.data.id || ''));",
-                      "  const extId = body.data.payment_details?.external_id || '';",
-                      "  pm.collectionVariables.set('payment_external_id', extId);",
+                      "  const invoiceId = body.data.payment_details?.invoice_id || '';",
+                      "  pm.collectionVariables.set('invoice_id', invoiceId);",
                       "  pm.test('Switch returns 201', () => pm.response.to.have.status(201));",
                       "  pm.test('New payment created', () => {",
                       "    pm.expect(body.data).to.have.property('id');",
                       "    pm.expect(body.data.status).to.equal('pending');",
+                      "    pm.expect(body.data).to.have.property('redirect_url');",
                       "  });",
                       "}"
                     ],
@@ -5117,7 +5129,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"gateway\": \"xendit\",\n  \"method\": \"qris\"\n}",
+                  "raw": "{\n  \"gateway\": \"midtrans\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5136,11 +5148,11 @@
                     "switch"
                   ]
                 },
-                "description": "Ganti metode pembayaran untuk payment yang sedang **pending**.\n\nMekanisme:\n1. Cancel gateway charge lama (VA di-deactivate, e-wallet charge di-cancel)\n2. Payment lama → status `expired`\n3. Buat gateway charge baru dengan metode yang diminta\n4. Return Payment baru\n\n**Order tidak dibatalkan** — tetap `pending` sampai timer habis.\n\n**Hanya bekerja untuk payment berstatus `pending`.** Paid/expired/refunded → 422.\n\nSame validation as Initiate: `bank_code` required for VA, `ewallet_type` for ewallet, `phone` for OVO."
+                "description": "Ganti gateway pembayaran untuk payment yang sedang **pending**.\n\nMekanisme:\n1. Expire invoice/snap lama di gateway (best-effort — tidak gagal jika sudah expire)\n2. Payment lama → status `expired`\n3. Buat gateway charge baru dengan gateway yang diminta\n4. Return Payment baru dengan `redirect_url` baru\n\n**Order tidak dibatalkan** — tetap `pending` sampai timer habis.\n\n**Hanya bekerja untuk payment berstatus `pending`.** Paid/expired/refunded → 422."
               },
               "response": [
                 {
-                  "name": "201 Created — Switched to QRIS",
+                  "name": "201 Created — Switched to Midtrans",
                   "status": "Created",
                   "code": 201,
                   "header": [
@@ -5149,7 +5161,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment method switched.\",\n  \"data\": {\n    \"id\": 2,\n    \"order_id\": 5,\n    \"gateway\": \"xendit\",\n    \"method\": \"qris\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"pending\",\n    \"payment_details\": {\n      \"external_id\": \"PAY-XXXXXXXXXX-5\",\n      \"qr_id\": \"qr-xxx\",\n      \"qr_string\": \"00020101021226...\"\n    },\n    \"redirect_url\": null,\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:01:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:01:00.000000Z\" }\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Payment method switched.\",\n  \"data\": {\n    \"id\": 2,\n    \"order_id\": 5,\n    \"gateway\": \"midtrans\",\n    \"method\": \"snap\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"pending\",\n    \"redirect_url\": \"https://app.sandbox.midtrans.com/snap/v4/redirection/...\",\n    \"payment_details\": {\n      \"snap_token\": \"abc123...\",\n      \"redirect_url\": \"https://app.sandbox.midtrans.com/snap/v4/redirection/...\"\n    },\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:01:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:01:00.000000Z\" }\n}"
                 },
                 {
                   "name": "422 Unprocessable — Payment Not Pending",
@@ -5373,7 +5385,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"success\": true,\n  \"message\": \"Wallet transactions retrieved.\",\n  \"data\": [\n    {\n      \"id\": 2,\n      \"type\": \"credit\",\n      \"amount_cents\": 50000000,\n      \"amount\": \"Rp 500.000\",\n      \"description\": \"Top-up via BCA VA\",\n      \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n    },\n    {\n      \"id\": 1,\n      \"type\": \"debit\",\n      \"amount_cents\": 10000000,\n      \"amount\": \"Rp 100.000\",\n      \"description\": \"Withdrawal — on_hold\",\n      \"created_at\": \"2026-05-12T09:00:00.000000Z\"\n    }\n  ],\n  \"meta\": {\n    \"timestamp\": \"2026-05-12T10:00:00.000000Z\",\n    \"pagination\": { \"current_page\": 1, \"last_page\": 1, \"per_page\": 20, \"total\": 2 }\n  }\n}"
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Wallet transactions retrieved.\",\n  \"data\": [\n    {\n      \"id\": 2,\n      \"type\": \"credit\",\n      \"amount_cents\": 50000000,\n      \"amount\": \"Rp 500.000\",\n      \"description\": \"Top-up via Xendit Invoice\",\n      \"created_at\": \"2026-05-12T10:00:00.000000Z\"\n    },\n    {\n      \"id\": 1,\n      \"type\": \"debit\",\n      \"amount_cents\": 10000000,\n      \"amount\": \"Rp 100.000\",\n      \"description\": \"Withdrawal — on_hold\",\n      \"created_at\": \"2026-05-12T09:00:00.000000Z\"\n    }\n  ],\n  \"meta\": {\n    \"timestamp\": \"2026-05-12T10:00:00.000000Z\",\n    \"pagination\": { \"current_page\": 1, \"last_page\": 1, \"per_page\": 20, \"total\": 2 }\n  }\n}"
                 }
               ]
             },
@@ -5522,10 +5534,10 @@
         },
         {
           "name": "Sandbox Simulator",
-          "description": "⚠️ Xendit SANDBOX only — simulate payments to trigger webhook callbacks.\n\nPre-condition: run 'Initiate Payment' first — it auto-saves `payment_external_id` and `payment_id` variables.\n\nThese requests hit Xendit API directly (not your Laravel app), using Basic auth with `xendit_secret_key`.",
+          "description": "⚠️ Xendit SANDBOX only — simulate invoice payment to trigger webhook callbacks.\n\nPre-condition: run 'Initiate Payment' first — it auto-saves `invoice_id` and `payment_id` variables.\n\nThese requests hit Xendit API directly (not your Laravel app), using Basic auth with `xendit_secret_key`.",
           "item": [
             {
-              "name": "Simulate VA Payment (Xendit Sandbox)",
+              "name": "Simulate Invoice Payment (Xendit Sandbox)",
               "event": [
                 {
                   "listen": "test",
@@ -5565,7 +5577,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"amount\": 39000000\n}",
+                  "raw": "{}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5573,7 +5585,7 @@
                   }
                 },
                 "url": {
-                  "raw": "https://api.xendit.co/callback_virtual_accounts/external_id/{{payment_external_id}}/simulate_payment",
+                  "raw": "https://api.xendit.co/v2/invoices/{{invoice_id}}/simulate_payment",
                   "protocol": "https",
                   "host": [
                     "api",
@@ -5581,13 +5593,13 @@
                     "co"
                   ],
                   "path": [
-                    "callback_virtual_accounts",
-                    "external_id",
-                    "{{payment_external_id}}",
+                    "v2",
+                    "invoices",
+                    "{{invoice_id}}",
                     "simulate_payment"
                   ]
                 },
-                "description": "Simulate VA payment berhasil di Xendit Sandbox.\n\n**Xendit akan otomatis kirim webhook** ke callback URL yang terdaftar di dashboard → Laravel app memproses → payment menjadi `paid`.\n\n**Pre-condition:**\n1. Jalankan 'Initiate Payment' dulu → `payment_external_id` tersimpan otomatis\n2. Pastikan `xendit_secret_key` diisi di collection variables\n3. Webhook URL sudah di-set di Xendit dashboard (Settings → Webhooks) → `https://your-ngrok.io/api/webhooks/xendit`\n\n**Setelah ini:** panggil `GET /api/payments/{id}/status` → status harus `paid`\n\n⚠️ **Sandbox only** — tidak ada endpoint ini di production."
+                "description": "Simulate invoice payment berhasil di Xendit Sandbox.\n\n**Xendit akan otomatis kirim webhook** ke callback URL yang terdaftar di dashboard → Laravel app memproses → payment menjadi `paid`.\n\n**Pre-condition:**\n1. Jalankan 'Initiate Payment' dulu → `invoice_id` tersimpan otomatis\n2. Pastikan `xendit_secret_key` diisi di collection variables\n3. Webhook URL sudah di-set di Xendit dashboard (Settings → Webhooks → Invoice) → `https://your-ngrok.io/api/webhooks/xendit`\n\n**Setelah ini:** panggil `GET /api/payments/{id}/status` → status harus `paid`\n\n⚠️ **Sandbox only** — tidak ada endpoint ini di production."
               },
               "response": [
                 {
@@ -5600,74 +5612,9 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\"id\": \"62efe2def7d34a54e6a51c81\", \"external_id\": \"PAY-ABCDEFGHIJ-5\", \"account_number\": \"8808123456789\", \"bank_code\": \"BCA\", \"amount\": 39000000, \"status\": \"COMPLETED\"}"
+                  "body": "{\"id\": \"623fca...\", \"external_id\": \"PAY-ABCDEFGHIJ-5\", \"status\": \"PAID\", \"amount\": 390000, \"paid_amount\": 390000, \"currency\": \"IDR\"}"
                 }
               ]
-            },
-            {
-              "name": "Simulate GoPay Payment (Xendit Sandbox)",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('GoPay simulate returns 200', () => pm.response.to.have.status(200));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "auth": {
-                  "type": "basic",
-                  "basic": [
-                    {
-                      "key": "username",
-                      "value": "{{xendit_secret_key}}",
-                      "type": "string"
-                    },
-                    {
-                      "key": "password",
-                      "value": "",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"amount\": 50000000\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "https://api.xendit.co/ewallets/charges/{{payment_external_id}}/payments/simulate",
-                  "protocol": "https",
-                  "host": [
-                    "api",
-                    "xendit",
-                    "co"
-                  ],
-                  "path": [
-                    "ewallets",
-                    "charges",
-                    "{{payment_external_id}}",
-                    "payments",
-                    "simulate"
-                  ]
-                },
-                "description": "Simulate e-wallet payment (GoPay/DANA/ShopeePay) di Xendit Sandbox.\n\nUntuk e-wallet, gunakan `payment_details.charge_id` (bukan `external_id`) — set manual ke `payment_external_id` variable jika berbeda.\n\n**Xendit akan kirim webhook** `ewallet.payment` ke callback URL.\n\n⚠️ **Sandbox only**."
-              },
-              "response": []
             }
           ]
         }
