@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\User;
 
 use App\Contracts\Shared\MediaServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\ConfirmAvatarRequest;
 use App\Http\Requests\User\SendPhoneOtpRequest;
 use App\Http\Requests\User\UpdateProfileRequest;
 use App\Http\Requests\User\UploadAvatarRequest;
@@ -44,10 +45,8 @@ class UserController extends Controller
         return ApiResponse::success('Avatar presigned URL generated.', $result, 201);
     }
 
-    public function confirmAvatar(Request $request): JsonResponse
+    public function confirmAvatar(ConfirmAvatarRequest $request): JsonResponse
     {
-        $request->validate(['key' => ['required', 'string', 'max:500']]);
-
         $key       = $request->input('key');
         $confirmed = $this->media->confirmUpload($key);
 

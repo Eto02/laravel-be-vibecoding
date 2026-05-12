@@ -72,7 +72,7 @@ class StoreTest extends TestCase
 
         $this->actingAs($user)
             ->postJson("/api/stores/{$store->slug}/follow")
-            ->assertStatus(200)
+            ->assertStatus(201)
             ->assertJson(['success' => true]);
 
         $this->assertDatabaseHas('store_followers', ['store_id' => $store->id, 'user_id' => $user->id]);
@@ -111,8 +111,7 @@ class StoreTest extends TestCase
 
         $this->actingAs($user)
             ->deleteJson("/api/stores/{$store->slug}/follow")
-            ->assertStatus(200)
-            ->assertJson(['success' => true]);
+            ->assertStatus(204);
 
         $this->assertDatabaseMissing('store_followers', ['store_id' => $store->id, 'user_id' => $user->id]);
     }

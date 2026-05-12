@@ -135,12 +135,12 @@ class AuthController extends Controller
         return ApiResponse::success('Active sessions retrieved.', $sessions);
     }
 
-    public function revokeSession(Request $request, int $id): JsonResponse
+    public function revokeSession(Request $request, int $id): \Illuminate\Http\Response|JsonResponse
     {
         try {
             $this->authService->revokeSession($request->user(), $id);
 
-            return ApiResponse::success('Session revoked successfully.', null, 200);
+            return response()->noContent();
         } catch (\Exception $e) {
             return ApiResponse::error('Session not found.', 404);
         }
