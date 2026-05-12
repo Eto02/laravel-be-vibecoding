@@ -11,6 +11,7 @@ Route::middleware('auth:sanctum')->prefix('orders')->name('order.orders.')->grou
     Route::get('/{id}',                 [OrderController::class, 'show'])->name('show');
     Route::post('/{id}/cancel',         [OrderController::class, 'cancel'])->name('cancel');
     Route::post('/{id}/receive',        [OrderController::class, 'receive'])->name('receive');
+    Route::post('/{id}/complete',       [OrderController::class, 'complete'])->name('complete');
     Route::post('/{id}/disputes',       [OrderController::class, 'dispute'])->name('dispute');
 });
 

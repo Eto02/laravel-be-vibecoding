@@ -69,6 +69,14 @@ class OrderController extends Controller
         return ApiResponse::success('Order confirmed as received.', new OrderResource($order));
     }
 
+    public function complete(Request $request, int $id): JsonResponse
+    {
+        $order = $this->orderService->findForBuyer($request->user(), $id);
+        $order = $this->orderService->completeOrder($request->user(), $order);
+
+        return ApiResponse::success('Order marked as completed.', new OrderResource($order));
+    }
+
     public function dispute(StoreDisputeRequest $request, int $id): JsonResponse
     {
         $order   = $this->orderService->findForBuyer($request->user(), $id);

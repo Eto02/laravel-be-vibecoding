@@ -10,6 +10,7 @@ use App\Contracts\Shared\OtpServiceInterface;
 use App\Contracts\Shared\SmsServiceInterface;
 use App\Models\ProductVariant;
 use App\Observers\ProductVariantObserver;
+use App\Services\Payment\MidtransPaymentService;
 use App\Services\Payment\PaymentGatewayInterface;
 use App\Services\Payment\XenditPaymentService;
 use App\Services\Shared\CacheService;
@@ -24,8 +25,13 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Payment
-        $this->app->bind(PaymentGatewayInterface::class, XenditPaymentService::class);
+        // Payment — named bindings; primary resolved via env (Sprint 12: switch to GatewayResolver)
+        $this->app->bind('payment.xendit', XenditPaymentService::class);
+        $this->app->bind('payment.midtrans', MidtransPaymentService::class);
+        $this->app->bind(PaymentGatewayInterface::class, function ($app) {
+            $gateway = config('payment.default_gateway', 'xendit');
+            return $app->make("payment.{$gateway}");
+        });
 
         // Shared Services
         $this->app->bind(CacheServiceInterface::class, CacheService::class);
