@@ -128,6 +128,15 @@
                       "    pm.expect(body.data).to.have.property('amount_cents');",
                       "    pm.expect(body.data).to.have.property('redirect_url');",
                       "  });",
+                      "  ",
+                      "  // Auto-fill variables for webhook bodies",
+                      "  const _details = body.data.payment_details || {};",
+                      "  const _externalId = _details.external_id || _details.invoice_id || '';",
+                      "  const _amountCents = body.data.amount_cents || 0;",
+                      "  pm.collectionVariables.set('payment_external_id', _externalId);",
+                      "  pm.collectionVariables.set('payment_amount',     String(_amountCents / 100));",
+                      "  pm.collectionVariables.set('payment_amount_str', (_amountCents / 100).toFixed(2));",
+                      "  pm.collectionVariables.set('payment_gateway',    body.data.gateway || '');",
                       "}"
                     ],
                     "type": "text/javascript"

@@ -110,7 +110,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"id\": \"623fca3f9fea3b00d1c4a7b2\",\n  \"external_id\": \"PAY-ABCDEFGHIJ-5\",\n  \"user_id\": \"your-xendit-user-id\",\n  \"status\": \"PAID\",\n  \"merchant_name\": \"Marketplace Dev\",\n  \"amount\": 390000,\n  \"paid_amount\": 390000,\n  \"paid_at\": \"2026-05-12T10:05:00.000Z\",\n  \"payer_email\": \"buyer@example.com\",\n  \"description\": \"Payment for order ORD-XXXXX\",\n  \"currency\": \"IDR\",\n  \"payment_method\": \"BANK_TRANSFER\",\n  \"bank_code\": \"BCA\",\n  \"payment_channel\": \"BCA\",\n  \"payment_destination\": \"8808123456789\"\n}",
+                  "raw": "{\n  \"id\": \"{{invoice_id}}\",\n  \"external_id\": \"{{payment_external_id}}\",\n  \"user_id\": \"your-xendit-user-id\",\n  \"status\": \"PAID\",\n  \"merchant_name\": \"Marketplace Dev\",\n  \"amount\": {{payment_amount}},\n  \"paid_amount\": {{payment_amount}},\n  \"paid_at\": \"2026-05-12T10:05:00.000Z\",\n  \"payer_email\": \"buyer@example.com\",\n  \"description\": \"Payment for order\",\n  \"currency\": \"IDR\",\n  \"payment_method\": \"BANK_TRANSFER\",\n  \"bank_code\": \"BCA\",\n  \"payment_channel\": \"BCA\",\n  \"payment_destination\": \"8808123456789\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -202,7 +202,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"id\": \"623fca3f9fea3b00d1c4a7b2\",\n  \"external_id\": \"PAY-ABCDEFGHIJ-5\",\n  \"status\": \"EXPIRED\",\n  \"amount\": 390000,\n  \"currency\": \"IDR\",\n  \"description\": \"Payment for order ORD-XXXXX\"\n}",
+                  "raw": "{\n  \"id\": \"{{invoice_id}}\",\n  \"external_id\": \"{{payment_external_id}}\",\n  \"status\": \"EXPIRED\",\n  \"amount\": {{payment_amount}},\n  \"currency\": \"IDR\",\n  \"description\": \"Payment for order\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -261,20 +261,12 @@
                       "  var CryptoJS = { SHA512: (s) => ({ toString: () => require('crypto').createHash('sha512').update(String(s),'utf8').digest('hex') }) };",
                       "}",
                       "",
-                      "// Auto-compute Midtrans webhook signature",
-                      "// Signature = SHA-512(order_id + status_code + gross_amount + server_key)",
+                      "// Compute Midtrans signature from collection variables (auto-filled by Initiate Payment)",
                       "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
-                      "if (!serverKey) {",
-                      "  console.warn('midtrans_server_key not set — signature will be invalid');",
-                      "  return;",
-                      "}",
-                      "try {",
-                      "  const body = JSON.parse(pm.request.body.raw);",
-                      "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                      "  const sig = CryptoJS.SHA512(input).toString();",
-                      "  pm.collectionVariables.set('midtrans_signature', sig);",
-                      "} catch(e) {",
-                      "  console.error('Failed to compute signature:', e);",
+                      "if (!serverKey) { console.warn('midtrans_server_key not set'); }",
+                      "else {",
+                      "  const input = pm.collectionVariables.get('payment_external_id') + '200' + pm.collectionVariables.get('payment_amount_str') + serverKey;",
+                      "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -318,7 +310,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"settlement\",\n  \"transaction_id\": \"txn-abc123\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"PAY-ABCDEFGHIJ-8\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\"\n}",
+                  "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"settlement\",\n  \"transaction_id\": \"txn-abc123\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"{{payment_external_id}}\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"{{payment_amount_str}}\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -384,13 +376,13 @@
                       "  var CryptoJS = { SHA512: (s) => ({ toString: () => require('crypto').createHash('sha512').update(String(s),'utf8').digest('hex') }) };",
                       "}",
                       "",
+                      "// Compute Midtrans signature from collection variables (auto-filled by Initiate Payment)",
                       "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
-                      "if (!serverKey) { return; }",
-                      "try {",
-                      "  const body = JSON.parse(pm.request.body.raw);",
-                      "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
+                      "if (!serverKey) { console.warn('midtrans_server_key not set'); }",
+                      "else {",
+                      "  const input = pm.collectionVariables.get('payment_external_id') + '407' + pm.collectionVariables.get('payment_amount_str') + serverKey;",
                       "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
-                      "} catch(e) { console.error(e); }"
+                      "}"
                     ],
                     "type": "text/javascript"
                   }
@@ -433,7 +425,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"expire\",\n  \"transaction_id\": \"txn-abc123\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"407\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"PAY-ABCDEFGHIJ-8\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"currency\": \"IDR\"\n}",
+                  "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"expire\",\n  \"transaction_id\": \"txn-abc123\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"407\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"{{payment_external_id}}\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"{{payment_amount_str}}\",\n  \"currency\": \"IDR\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -487,13 +479,13 @@
                       "  var CryptoJS = { SHA512: (s) => ({ toString: () => require('crypto').createHash('sha512').update(String(s),'utf8').digest('hex') }) };",
                       "}",
                       "",
+                      "// Compute Midtrans signature from collection variables (auto-filled by Initiate Payment)",
                       "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
-                      "if (!serverKey) { return; }",
-                      "try {",
-                      "  const body = JSON.parse(pm.request.body.raw);",
-                      "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
+                      "if (!serverKey) { console.warn('midtrans_server_key not set'); }",
+                      "else {",
+                      "  const input = pm.collectionVariables.get('payment_external_id') + '200' + pm.collectionVariables.get('payment_amount_str') + serverKey;",
                       "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
-                      "} catch(e) { console.error(e); }"
+                      "}"
                     ],
                     "type": "text/javascript"
                   }
@@ -516,7 +508,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"capture\",\n  \"transaction_id\": \"txn-abc124\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"credit_card\",\n  \"order_id\": \"PAY-ABCDEFGHIJ-9\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\",\n  \"masked_card\": \"481111-1114\",\n  \"bank\": \"bca\"\n}",
+                  "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"capture\",\n  \"transaction_id\": \"txn-abc124\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"credit_card\",\n  \"order_id\": \"{{payment_external_id}}\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"{{payment_amount_str}}\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\",\n  \"masked_card\": \"481111-1114\",\n  \"bank\": \"bca\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
