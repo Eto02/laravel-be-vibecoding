@@ -71,7 +71,18 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test('Webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test('Webhook returns 200', () => pm.response.to.have.status(200));"
                     ],
                     "type": "text/javascript"
                   }
@@ -153,7 +164,18 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test('Webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test('Webhook returns 200', () => pm.response.to.have.status(200));"
                     ],
                     "type": "text/javascript"
                   }
@@ -227,18 +249,30 @@
                   "listen": "prerequest",
                   "script": {
                     "exec": [
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    request: { body: { get raw() { return JSON.stringify(req.getBody()); } } }",
+                      "  };",
+                      "}",
+                      "if (typeof CryptoJS === 'undefined') {",
+                      "  var CryptoJS = { SHA512: (s) => ({ toString: () => require('crypto').createHash('sha512').update(String(s),'utf8').digest('hex') }) };",
+                      "}",
+                      "",
                       "// Auto-compute Midtrans webhook signature",
                       "// Signature = SHA-512(order_id + status_code + gross_amount + server_key)",
-                      "const serverKey = bru.getVar('midtrans_server_key');",
+                      "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
                       "if (!serverKey) {",
                       "  console.warn('midtrans_server_key not set — signature will be invalid');",
                       "  return;",
                       "}",
                       "try {",
-                      "  const body = req.getBody();",
+                      "  const body = JSON.parse(pm.request.body.raw);",
                       "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                      "  const sig = require('crypto').createHash('sha512').update(input, 'utf8').digest('hex');",
-                      "  bru.setVar('midtrans_signature', sig);",
+                      "  const sig = CryptoJS.SHA512(input).toString();",
+                      "  pm.collectionVariables.set('midtrans_signature', sig);",
                       "} catch(e) {",
                       "  console.error('Failed to compute signature:', e);",
                       "}"
@@ -250,7 +284,18 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test('Midtrans webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test('Midtrans webhook returns 200', () => pm.response.to.have.status(200));"
                     ],
                     "type": "text/javascript"
                   }
@@ -327,12 +372,24 @@
                   "listen": "prerequest",
                   "script": {
                     "exec": [
-                      "const serverKey = bru.getVar('midtrans_server_key');",
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    request: { body: { get raw() { return JSON.stringify(req.getBody()); } } }",
+                      "  };",
+                      "}",
+                      "if (typeof CryptoJS === 'undefined') {",
+                      "  var CryptoJS = { SHA512: (s) => ({ toString: () => require('crypto').createHash('sha512').update(String(s),'utf8').digest('hex') }) };",
+                      "}",
+                      "",
+                      "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
                       "if (!serverKey) { return; }",
                       "try {",
-                      "  const body = req.getBody();",
+                      "  const body = JSON.parse(pm.request.body.raw);",
                       "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                      "  bru.setVar('midtrans_signature', require('crypto').createHash('sha512').update(input, 'utf8').digest('hex'));",
+                      "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
                       "} catch(e) { console.error(e); }"
                     ],
                     "type": "text/javascript"
@@ -342,7 +399,18 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test('Midtrans expire webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test('Midtrans expire webhook returns 200', () => pm.response.to.have.status(200));"
                     ],
                     "type": "text/javascript"
                   }
@@ -407,12 +475,24 @@
                   "listen": "prerequest",
                   "script": {
                     "exec": [
-                      "const serverKey = bru.getVar('midtrans_server_key');",
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    request: { body: { get raw() { return JSON.stringify(req.getBody()); } } }",
+                      "  };",
+                      "}",
+                      "if (typeof CryptoJS === 'undefined') {",
+                      "  var CryptoJS = { SHA512: (s) => ({ toString: () => require('crypto').createHash('sha512').update(String(s),'utf8').digest('hex') }) };",
+                      "}",
+                      "",
+                      "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
                       "if (!serverKey) { return; }",
                       "try {",
-                      "  const body = req.getBody();",
+                      "  const body = JSON.parse(pm.request.body.raw);",
                       "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                      "  bru.setVar('midtrans_signature', require('crypto').createHash('sha512').update(input, 'utf8').digest('hex'));",
+                      "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
                       "} catch(e) { console.error(e); }"
                     ],
                     "type": "text/javascript"
@@ -475,11 +555,22 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Login returns 200', () => expect(res.getStatus()).to.equal(200));",
-                          "if (res.getStatus() === 200) {",
-                          "  const body = res.getBody();",
-                          "  bru.setVar('access_token', body.data.access_token || '');",
-                          "  test('access_token is present', () => expect(body.data.access_token).to.be.a('string').and.not.empty);",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                          "if (pm.response.code === 200) {",
+                          "  const body = pm.response.json();",
+                          "  pm.collectionVariables.set('access_token', body.data.access_token || '');",
+                          "  pm.test('access_token is present', () => pm.expect(body.data.access_token).to.be.a('string').and.not.empty);",
                           "}"
                         ],
                         "type": "text/javascript"
@@ -545,18 +636,29 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Initiate payment returns 201', () => expect(res.getStatus()).to.equal(201));",
-                          "if (res.getStatus() === 201) {",
-                          "  const body = res.getBody();",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Initiate payment returns 201', () => pm.response.to.have.status(201));",
+                          "if (pm.response.code === 201) {",
+                          "  const body = pm.response.json();",
                           "  const data = body.data;",
-                          "  bru.setVar('sot_payment_id', String(data.id));",
-                          "  bru.setVar('sot_order_id', String(data.order_id));",
+                          "  pm.collectionVariables.set('sot_payment_id', String(data.id));",
+                          "  pm.collectionVariables.set('sot_order_id', String(data.order_id));",
                           "  // external_id is in payment_details — used as webhook external_id field",
                           "  const externalId = (data.payment_details && data.payment_details.external_id) || '';",
-                          "  bru.setVar('sot_external_id', externalId);",
-                          "  test('payment_id saved', () => expect(String(data.id)).to.not.be.empty);",
-                          "  test('external_id saved', () => expect(externalId).to.not.be.empty);",
-                          "  test('payment is pending', () => expect(data.status).to.equal('pending'));",
+                          "  pm.collectionVariables.set('sot_external_id', externalId);",
+                          "  pm.test('payment_id saved', () => pm.expect(String(data.id)).to.not.be.empty);",
+                          "  pm.test('external_id saved', () => pm.expect(externalId).to.not.be.empty);",
+                          "  pm.test('payment is pending', () => pm.expect(data.status).to.equal('pending'));",
                           "  console.log('SOT external_id:', externalId);",
                           "  console.log('SOT payment_id:', data.id);",
                           "}"
@@ -631,11 +733,22 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Status 200 — webhook accepted', () => expect(res.getStatus()).to.equal(200));",
-                          "test('Response envelope has success=true', () => {",
-                          "  const body = res.getBody();",
-                          "  expect(body.success).to.be.true;",
-                          "  expect(body.message).to.be.a('string');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Status 200 — webhook accepted', () => pm.response.to.have.status(200));",
+                          "pm.test('Response envelope has success=true', () => {",
+                          "  const body = pm.response.json();",
+                          "  pm.expect(body.success).to.be.true;",
+                          "  pm.expect(body.message).to.be.a('string');",
                           "});",
                           "// Note: dengan QUEUE_CONNECTION=sync, job sudah diproses sebelum response ini",
                           "// Lanjutkan dengan [1A-V] untuk verifikasi DB state"
@@ -707,10 +820,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
-                          "test('✅ payment.status = paid (SOT hardening: state changed by dual-verified API status)', () => {",
-                          "  const data = res.getBody().data;",
-                          "  expect(data.status).to.equal('paid');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
+                          "pm.test('✅ payment.status = paid (SOT hardening: state changed by dual-verified API status)', () => {",
+                          "  const data = pm.response.json().data;",
+                          "  pm.expect(data.status).to.equal('paid');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -771,11 +895,22 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('✅ Invalid signature returns 403 (rejected before queue)', () => expect(res.getStatus()).to.equal(403));",
-                          "test('Response has success=false', () => {",
-                          "  const body = res.getBody();",
-                          "  expect(body.success).to.be.false;",
-                          "  expect(body.message).to.include('signature');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('✅ Invalid signature returns 403 (rejected before queue)', () => pm.response.to.have.status(403));",
+                          "pm.test('Response has success=false', () => {",
+                          "  const body = pm.response.json();",
+                          "  pm.expect(body.success).to.be.false;",
+                          "  pm.expect(body.message).to.include('signature');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -845,10 +980,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('✅ Unknown external_id returns 200 (silently ignored)', () => expect(res.getStatus()).to.equal(200));",
-                          "test('Response has success=true', () => {",
-                          "  const body = res.getBody();",
-                          "  expect(body.success).to.be.true;",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('✅ Unknown external_id returns 200 (silently ignored)', () => pm.response.to.have.status(200));",
+                          "pm.test('Response has success=true', () => {",
+                          "  const body = pm.response.json();",
+                          "  pm.expect(body.success).to.be.true;",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -918,10 +1064,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('✅ Duplicate paid webhook returns 200 (no error)', () => expect(res.getStatus()).to.equal(200));",
-                          "test('Response has success=true', () => {",
-                          "  const body = res.getBody();",
-                          "  expect(body.success).to.be.true;",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('✅ Duplicate paid webhook returns 200 (no error)', () => pm.response.to.have.status(200));",
+                          "pm.test('Response has success=true', () => {",
+                          "  const body = pm.response.json();",
+                          "  pm.expect(body.success).to.be.true;",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -991,10 +1148,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
-                          "test('✅ Payment still paid — hard-terminal guard worked', () => {",
-                          "  const data = res.getBody().data;",
-                          "  expect(data.status).to.equal('paid');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
+                          "pm.test('✅ Payment still paid — hard-terminal guard worked', () => {",
+                          "  const data = pm.response.json().data;",
+                          "  pm.expect(data.status).to.equal('paid');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1042,10 +1210,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Status 200 — webhook accepted', () => expect(res.getStatus()).to.equal(200));",
-                          "test('Response success=true', () => {",
-                          "  const body = res.getBody();",
-                          "  expect(body.success).to.be.true;",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Status 200 — webhook accepted', () => pm.response.to.have.status(200));",
+                          "pm.test('Response success=true', () => {",
+                          "  const body = pm.response.json();",
+                          "  pm.expect(body.success).to.be.true;",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1115,10 +1294,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
-                          "test('✅ payment.status = expired', () => {",
-                          "  const data = res.getBody().data;",
-                          "  expect(data.status).to.equal('expired');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
+                          "pm.test('✅ payment.status = expired', () => {",
+                          "  const data = pm.response.json().data;",
+                          "  pm.expect(data.status).to.equal('expired');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1160,10 +1350,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
-                          "test('✅ order.status = cancelled (CancelOrderOnPaymentFailed listener fired)', () => {",
-                          "  const data = res.getBody().data;",
-                          "  expect(data.status).to.equal('cancelled');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
+                          "pm.test('✅ order.status = cancelled (CancelOrderOnPaymentFailed listener fired)', () => {",
+                          "  const data = pm.response.json().data;",
+                          "  pm.expect(data.status).to.equal('cancelled');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1210,10 +1411,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Status 200 — webhook accepted', () => expect(res.getStatus()).to.equal(200));",
-                          "test('Response success=true', () => {",
-                          "  const body = res.getBody();",
-                          "  expect(body.success).to.be.true;",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Status 200 — webhook accepted', () => pm.response.to.have.status(200));",
+                          "pm.test('Response success=true', () => {",
+                          "  const body = pm.response.json();",
+                          "  pm.expect(body.success).to.be.true;",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1283,10 +1495,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
-                          "test('✅ payment.status = paid (recovered from expired)', () => {",
-                          "  const data = res.getBody().data;",
-                          "  expect(data.status).to.equal('paid');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
+                          "pm.test('✅ payment.status = paid (recovered from expired)', () => {",
+                          "  const data = pm.response.json().data;",
+                          "  pm.expect(data.status).to.equal('paid');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1328,10 +1551,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
-                          "test('✅ order.status = paid (recovery successful — order fulfilled)', () => {",
-                          "  const data = res.getBody().data;",
-                          "  expect(data.status).to.equal('paid');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
+                          "pm.test('✅ order.status = paid (recovery successful — order fulfilled)', () => {",
+                          "  const data = pm.response.json().data;",
+                          "  pm.expect(data.status).to.equal('paid');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1372,10 +1606,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Status 200 — webhook accepted', () => expect(res.getStatus()).to.equal(200));",
-                          "test('Response success=true', () => {",
-                          "  const body = res.getBody();",
-                          "  expect(body.success).to.be.true;",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Status 200 — webhook accepted', () => pm.response.to.have.status(200));",
+                          "pm.test('Response success=true', () => {",
+                          "  const body = pm.response.json();",
+                          "  pm.expect(body.success).to.be.true;",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1445,10 +1690,21 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
-                          "test('✅ payment.status = expired (not changed — double-charge handled separately via wallet)', () => {",
-                          "  const data = res.getBody().data;",
-                          "  expect(data.status).to.equal('expired');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
+                          "pm.test('✅ payment.status = expired (not changed — double-charge handled separately via wallet)', () => {",
+                          "  const data = pm.response.json().data;",
+                          "  pm.expect(data.status).to.equal('expired');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1490,9 +1746,20 @@
                       "listen": "test",
                       "script": {
                         "exec": [
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
                           "// Ini hanya placeholder — DB check harus dilakukan via tinker",
-                          "test('This is a manual DB verification — check instructions in description', () => {",
-                          "  expect(true).to.be.true; // always passes — reminder only",
+                          "pm.test('This is a manual DB verification — check instructions in description', () => {",
+                          "  pm.expect(true).to.be.true; // always passes — reminder only",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1540,12 +1807,24 @@
                       "listen": "prerequest",
                       "script": {
                         "exec": [
-                          "const serverKey = bru.getVar('midtrans_server_key');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    request: { body: { get raw() { return JSON.stringify(req.getBody()); } } }",
+                          "  };",
+                          "}",
+                          "if (typeof CryptoJS === 'undefined') {",
+                          "  var CryptoJS = { SHA512: (s) => ({ toString: () => require('crypto').createHash('sha512').update(String(s),'utf8').digest('hex') }) };",
+                          "}",
+                          "",
+                          "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
                           "if (!serverKey) { console.warn('midtrans_server_key not set'); return; }",
                           "try {",
-                          "  const body = req.getBody();",
+                          "  const body = JSON.parse(pm.request.body.raw);",
                           "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                          "  bru.setVar('midtrans_signature', require('crypto').createHash('sha512').update(input, 'utf8').digest('hex'));",
+                          "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
                           "} catch(e) { console.error(e); }"
                         ],
                         "type": "text/javascript"
@@ -1555,7 +1834,18 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('✅ Midtrans cancel webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('✅ Midtrans cancel webhook returns 200', () => pm.response.to.have.status(200));"
                         ],
                         "type": "text/javascript"
                       }
@@ -1607,12 +1897,24 @@
                       "listen": "prerequest",
                       "script": {
                         "exec": [
-                          "const serverKey = bru.getVar('midtrans_server_key');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    request: { body: { get raw() { return JSON.stringify(req.getBody()); } } }",
+                          "  };",
+                          "}",
+                          "if (typeof CryptoJS === 'undefined') {",
+                          "  var CryptoJS = { SHA512: (s) => ({ toString: () => require('crypto').createHash('sha512').update(String(s),'utf8').digest('hex') }) };",
+                          "}",
+                          "",
+                          "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
                           "if (!serverKey) { return; }",
                           "try {",
-                          "  const body = req.getBody();",
+                          "  const body = JSON.parse(pm.request.body.raw);",
                           "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                          "  bru.setVar('midtrans_signature', require('crypto').createHash('sha512').update(input, 'utf8').digest('hex'));",
+                          "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
                           "} catch(e) { console.error(e); }"
                         ],
                         "type": "text/javascript"
@@ -1622,7 +1924,18 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('✅ Midtrans deny webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('✅ Midtrans deny webhook returns 200', () => pm.response.to.have.status(200));"
                         ],
                         "type": "text/javascript"
                       }
@@ -1674,12 +1987,24 @@
                       "listen": "prerequest",
                       "script": {
                         "exec": [
-                          "const serverKey = bru.getVar('midtrans_server_key');",
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    request: { body: { get raw() { return JSON.stringify(req.getBody()); } } }",
+                          "  };",
+                          "}",
+                          "if (typeof CryptoJS === 'undefined') {",
+                          "  var CryptoJS = { SHA512: (s) => ({ toString: () => require('crypto').createHash('sha512').update(String(s),'utf8').digest('hex') }) };",
+                          "}",
+                          "",
+                          "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
                           "if (!serverKey) { return; }",
                           "try {",
-                          "  const body = req.getBody();",
+                          "  const body = JSON.parse(pm.request.body.raw);",
                           "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                          "  bru.setVar('midtrans_signature', require('crypto').createHash('sha512').update(input, 'utf8').digest('hex'));",
+                          "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
                           "} catch(e) { console.error(e); }"
                         ],
                         "type": "text/javascript"
@@ -1689,7 +2014,18 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "test('✅ Midtrans pending webhook returns 200 (informational — no state change)', () => expect(res.getStatus()).to.equal(200));"
+                          "// Compatibility shim — works in Bruno and Postman without changes",
+                          "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                          "  var pm = {",
+                          "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                          "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                          "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                          "    test: (name, fn) => test(name, fn),",
+                          "    expect: (val) => expect(val)",
+                          "  };",
+                          "}",
+                          "",
+                          "pm.test('✅ Midtrans pending webhook returns 200 (informational — no state change)', () => pm.response.to.have.status(200));"
                         ],
                         "type": "text/javascript"
                       }

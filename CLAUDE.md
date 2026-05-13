@@ -967,19 +967,26 @@ api-collections/
 └── marketplace_dev.environment.json ← satu environment untuk semua
 ```
 
-### Scripting Convention (Bruno-compatible)
+### Scripting Convention (Universal — Bruno + Postman + Insomnia)
 
-Scripts di dalam collection ditulis dengan **Bruno API** yang juga dapat dibaca oleh Postman/Insomnia dengan penyesuaian minor:
+Scripts ditulis dengan **standar Postman (`pm.*`)** yang familiar. Setiap script yang punya konten disertai **compatibility shim** di baris pertama — shim ini tidak aktif di Postman (karena `pm` sudah ada), dan di Bruno shim membuat objek `pm` yang di-map ke `bru.*` / `res.*`.
 
-| Operasi | Sintaks yang digunakan |
-|---|---|
-| Cek status response | `res.getStatus()` |
-| Ambil body response (parsed) | `res.getBody()` |
-| Set collection variable | `bru.setVar('key', value)` |
-| Get collection variable | `bru.getVar('key')` |
-| Set environment variable | `bru.setEnvVar('key', value)` |
-| Test assertion | `test('name', function() { expect(...) })` |
-| Crypto hash (prerequest) | `require('crypto').createHash('sha512').update(x).digest('hex')` |
+```javascript
+// Shim test script (otomatis diinjek oleh merge.py)
+if (typeof bru !== 'undefined' && typeof pm === 'undefined') {
+  var pm = {
+    response: { code: res.getStatus(), json: () => res.getBody(), ... },
+    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },
+    test: (name, fn) => test(name, fn),
+    expect: (val) => expect(val)
+  };
+}
+// Di bawah shim: tulis script dengan pm.* seperti biasa
+```
+
+Untuk **prerequest scripts** yang membutuhkan CryptoJS (Midtrans signature), shim juga menyertakan polyfill `CryptoJS` via Node `crypto`.
+
+**Aturan penulisan script baru:** Selalu tulis dengan `pm.*` — jangan campur dengan `bru.*`. Shim menangani kompatibilitas Bruno secara otomatis saat `merge.py` dijalankan.
 
 ### Workflow Wajib — Setiap Update Collection
 

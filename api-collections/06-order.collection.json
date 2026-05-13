@@ -144,12 +144,23 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test(\"Status 201\", () => expect(res.getStatus()).to.equal(201));",
-                      "test(\"Has order data\", () => {",
-                      "    const j = res.getBody();",
-                      "    expect(j.data).to.be.an(\"array\");",
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                      "pm.test(\"Has order data\", () => {",
+                      "    const j = pm.response.json();",
+                      "    pm.expect(j.data).to.be.an(\"array\");",
                       "    if (j.data && j.data[0]) {",
-                      "        bru.setVar(\"order_id\", j.data[0].id);",
+                      "        pm.collectionVariables.set(\"order_id\", j.data[0].id);",
                       "    }",
                       "});"
                     ],
@@ -204,10 +215,21 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
-                      "test(\"Has pagination\", () => {",
-                      "    const j = res.getBody();",
-                      "    expect(j.meta).to.have.property(\"pagination\");",
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Has pagination\", () => {",
+                      "    const j = pm.response.json();",
+                      "    pm.expect(j.meta).to.have.property(\"pagination\");",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -254,11 +276,22 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
-                      "test(\"Has items and status_logs\", () => {",
-                      "    const j = res.getBody();",
-                      "    expect(j.data).to.have.property(\"items\");",
-                      "    expect(j.data).to.have.property(\"status_logs\");",
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Has items and status_logs\", () => {",
+                      "    const j = pm.response.json();",
+                      "    pm.expect(j.data).to.have.property(\"items\");",
+                      "    pm.expect(j.data).to.have.property(\"status_logs\");",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -323,9 +356,20 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
-                      "test(\"Status is cancelled\", () => {",
-                      "    expect(res.getBody().data.status).to.eql(\"cancelled\");",
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Status is cancelled\", () => {",
+                      "    pm.expect(pm.response.json().data.status).to.eql(\"cancelled\");",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -373,8 +417,19 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
-                      "test(\"Status is delivered\", () => expect(res.getBody().data.status).to.eql(\"delivered\"));"
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Status is delivered\", () => pm.expect(pm.response.json().data.status).to.eql(\"delivered\"));"
                     ],
                     "type": "text/javascript"
                   }
@@ -451,8 +506,19 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test(\"Status 201\", () => expect(res.getStatus()).to.equal(201));",
-                      "test(\"Dispute status is open\", () => expect(res.getBody().data.status).to.eql(\"open\"));"
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                      "pm.test(\"Dispute status is open\", () => pm.expect(pm.response.json().data.status).to.eql(\"open\"));"
                     ],
                     "type": "text/javascript"
                   }
@@ -511,8 +577,19 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
-                      "test(\"Has pagination\", () => expect(res.getBody().meta).to.have.property(\"pagination\"));"
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Has pagination\", () => pm.expect(pm.response.json().meta).to.have.property(\"pagination\"));"
                     ],
                     "type": "text/javascript"
                   }
@@ -559,7 +636,18 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));"
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
                     ],
                     "type": "text/javascript"
                   }
@@ -624,8 +712,19 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
-                      "test(\"Status is processing\", () => expect(res.getBody().data.status).to.eql(\"processing\"));"
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Status is processing\", () => pm.expect(pm.response.json().data.status).to.eql(\"processing\"));"
                     ],
                     "type": "text/javascript"
                   }
@@ -703,9 +802,20 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
-                      "test(\"Status is shipped\", () => expect(res.getBody().data.status).to.eql(\"shipped\"));",
-                      "test(\"Has tracking number\", () => expect(res.getBody().data.tracking_number).to.be.a(\"string\"));"
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    response: { code: res.getStatus(), json: () => res.getBody(), text: () => res.getBody(), to: { have: { status: (n) => { expect(res.getStatus()).to.equal(n); } } } },",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    test: (name, fn) => test(name, fn),",
+                      "    expect: (val) => expect(val)",
+                      "  };",
+                      "}",
+                      "",
+                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Status is shipped\", () => pm.expect(pm.response.json().data.status).to.eql(\"shipped\"));",
+                      "pm.test(\"Has tracking number\", () => pm.expect(pm.response.json().data.tracking_number).to.be.a(\"string\"));"
                     ],
                     "type": "text/javascript"
                   }
