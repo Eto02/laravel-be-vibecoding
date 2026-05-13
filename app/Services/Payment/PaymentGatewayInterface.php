@@ -13,7 +13,7 @@ interface PaymentGatewayInterface
      */
     public function createCharge(array $data): array;
 
-    public function getPaymentStatus(string $externalId): array;
+    public function getPaymentStatus(string $gatewayRef): array;
 
     public function refundPayment(string $chargeRef, int $amount): array;
 
