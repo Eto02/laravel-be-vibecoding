@@ -1,6 +1,6 @@
 # Sprint 07c — Payment Gateway SOT Fix
 
-**Status:** 🔲 Belum dikerjakan
+**Status:** ✅ Selesai
 **Branch:** `fix/payment-gateway-sot-fix` (dari `main` setelah PR #29 merged)
 **Affects:** Sprint 7 — Payment Module
 **Predecessor:** Sprint 07b Payment SOT Hardening (`09cb994`)
@@ -270,12 +270,12 @@ return [
 
 ## Definition of Done
 
-- [ ] `getPaymentStatus(string $gatewayRef)` — renamed di interface + 2 implementasi
-- [ ] `handleWebhook()` menggunakan `$payment->gateway_ref` untuk API call, dengan null guard (return + `Log::warning` jika null)
-- [ ] Midtrans `capture + challenge` → `pending` di `parseStatusResponse()` dan `parseWebhookPayload()`
-- [ ] Midtrans `deny` → `expired` di `parseWebhookPayload()` (sebelumnya hanya di `parseStatusResponse`)
-- [ ] `parseWebhookPayload()` amount: `str_replace` → `* 100`
-- [ ] Unit tests: semua case di atas covered
-- [ ] `php artisan test` pass
-- [ ] `api-collections/` tidak perlu diupdate (tidak ada endpoint baru)
-- [ ] Self-review report dikirim
+- [x] `getPaymentStatus(string $gatewayRef)` — renamed di interface + 2 implementasi
+- [x] `handleWebhook()` menggunakan `$payment->gateway_ref` untuk API call, dengan null guard (return + `Log::warning` jika null)
+- [x] Midtrans `capture + challenge` → `pending` di `parseStatusResponse()` dan `parseWebhookPayload()`
+- [x] Midtrans `deny` → `expired` di `parseWebhookPayload()` (sebelumnya hanya di `parseStatusResponse`)
+- [x] `parseWebhookPayload()` amount: `str_replace` → `* 100`
+- [x] Unit tests: semua case di atas covered
+- [x] `php artisan test` pass
+- [x] `api-collections/` tidak perlu diupdate (tidak ada endpoint baru)
+- [x] Self-review report dikirim
