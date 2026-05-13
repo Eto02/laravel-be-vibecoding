@@ -170,6 +170,17 @@ public function handleWebhook(Request $request, string $provider): void
         return;
     }
 
+    // Guard: gateway_ref null berarti payment tidak punya referensi valid ke gateway API.
+    // Jangan fallback ke external_id — itu justru mengembalikan bug yang kita fix.
+    if (! $payment->gateway_ref) {
+        Log::warning('handleWebhook: gateway_ref null, skipping dual-verify', [
+            'payment_id'  => $payment->id,
+            'external_id' => $externalId,
+            'provider'    => $provider,
+        ]);
+        return;
+    }
+
     // FIX: gunakan gateway_ref dari DB, bukan external_id dari webhook
     $apiResponse = $gateway->getPaymentStatus($payment->gateway_ref);
     $verified    = $gateway->parseStatusResponse($apiResponse);
@@ -251,7 +262,7 @@ return [
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| Bug 1 fix: jika `gateway_ref` null (payment lama tanpa gateway_ref) | Medium | `handleApiStatusUpdate()` sudah handle ini dengan fallback ke `transaction->external_id`. Untuk `handleWebhook()`, jika `gateway_ref` null → log warning + skip dual-verify → masih aman karena `applyStatusTransition()` memiliki guard |
+| Bug 1 fix: jika `gateway_ref` null (payment lama tanpa gateway_ref) | Medium | `handleWebhook()` → return langsung + `Log::warning` (tidak fallback ke `external_id` — fallback justru mengembalikan bug yang sama). `handleApiStatusUpdate()` sudah benar dengan `gateway_ref ?? transaction->external_id` dan tidak diubah. |
 | Midtrans `deny` sudah ada di `parseStatusResponse` tapi tidak di `parseWebhookPayload` | Low | Ditambahkan sekalian di Phase 3, tidak ada behavioral regression karena sebelumnya `deny` jatuh ke `default => failed` di kedua tempat |
 | Rename parameter: breaking change? | None | PHP tidak punya named arguments untuk interface methods secara wajib. Rename parameter tidak breaking selama signature type-nya sama |
 
@@ -260,7 +271,7 @@ return [
 ## Definition of Done
 
 - [ ] `getPaymentStatus(string $gatewayRef)` — renamed di interface + 2 implementasi
-- [ ] `handleWebhook()` menggunakan `$payment->gateway_ref` untuk API call
+- [ ] `handleWebhook()` menggunakan `$payment->gateway_ref` untuk API call, dengan null guard (return + `Log::warning` jika null)
 - [ ] Midtrans `capture + challenge` → `pending` di `parseStatusResponse()` dan `parseWebhookPayload()`
 - [ ] Midtrans `deny` → `expired` di `parseWebhookPayload()` (sebelumnya hanya di `parseStatusResponse`)
 - [ ] `parseWebhookPayload()` amount: `str_replace` → `* 100`
