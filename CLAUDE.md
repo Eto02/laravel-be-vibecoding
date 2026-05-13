@@ -845,11 +845,11 @@ Alur kerja standar untuk setiap modul/sprint. **Semua perubahan kode WAJIB melal
 
 ### Meta-Change Workflow (Rules, Skills, Commands, Docs, Config)
 
-Untuk perubahan yang **BUKAN feature code** — rule (`CLAUDE.md`), `.claude/` config (skills, slash commands, agents), planning docs, Docker/ENV config, script utility (mis: `postman/merge.py`) — pakai alur ringan ini:
+Untuk perubahan yang **BUKAN feature code** — rule (`CLAUDE.md`), `.claude/` config (skills, slash commands, agents), planning docs, Docker/ENV config, script utility (mis: `api-collections/merge.py`) — pakai alur ringan ini:
 
 ```
 1. Branch dari main: chore/{short-description}
-   (mis: chore/sprint-workflow-rules, chore/update-postman-merge)
+   (mis: chore/sprint-workflow-rules, chore/update-api-collections)
 2. Lakukan perubahan
 3. Commit lokal (no push)
 4. Short summary ke user (bukan full Self-Review Report)
@@ -860,7 +860,7 @@ Untuk perubahan yang **BUKAN feature code** — rule (`CLAUDE.md`), `.claude/` c
 - ❌ GitHub issue
 - ❌ `/plan-review` (tidak ada planning doc)
 - ❌ Test suite run (kecuali perubahan mempengaruhi test config)
-- ❌ Postman update
+- ❌ Collection update (api-collections/)
 - ❌ DevSeeder update
 - ❌ Full Self-Review Report
 
@@ -907,14 +907,14 @@ Saat stop di akhir modul, kirim report dengan format konsisten ini:
 - **Mails/Views** ({n}): ...
 - **Tests** ({n}): ...
 - **Routes** ({n}): ...
-- **Postman** ({n}): ...
+- **api-collections** ({n}): ...
 - **Other** ({n}): ...
 
 ### Tests
 
 - {X} passed, {Y} failed, {Z} skipped — duration {T}s
 
-### New Endpoints in Postman
+### New Endpoints
 
 - `{METHOD} {path}` — {short description}
 
@@ -972,7 +972,7 @@ api-collections/
 Scripts ditulis dengan **standar Postman (`pm.*`)** yang familiar. Setiap script yang punya konten disertai **compatibility shim** di baris pertama — shim ini tidak aktif di Postman (karena `pm` sudah ada), dan di Bruno shim membuat objek `pm` yang di-map ke `bru.*` / `res.*`.
 
 ```javascript
-// Shim test script (otomatis diinjek oleh merge.py)
+// Shim test script — salin manual ke awal setiap exec array yang baru ditulis
 if (typeof bru !== 'undefined' && typeof pm === 'undefined') {
   var pm = {
     response: { code: res.getStatus(), json: () => res.getBody(), ... },
@@ -986,7 +986,7 @@ if (typeof bru !== 'undefined' && typeof pm === 'undefined') {
 
 Untuk **prerequest scripts** yang membutuhkan CryptoJS (Midtrans signature), shim juga menyertakan polyfill `CryptoJS` via Node `crypto`.
 
-**Aturan penulisan script baru:** Selalu tulis dengan `pm.*` — jangan campur dengan `bru.*`. Shim menangani kompatibilitas Bruno secara otomatis saat `merge.py` dijalankan.
+**Aturan penulisan script baru:** Selalu tulis dengan `pm.*` — jangan campur dengan `bru.*`. Salin shim di atas ke baris pertama setiap `exec` array baru yang kamu tulis — `merge.py` tidak menginjeksi shim secara otomatis.
 
 ### Workflow Wajib — Setiap Update Collection
 
