@@ -113,9 +113,20 @@ class PaymentService
             return;
         }
 
+        // Guard: gateway_ref null means no valid gateway reference stored — do not fall back to
+        // external_id because that would reintroduce the exact bug we're fixing here.
+        if (! $payment->gateway_ref) {
+            Log::warning('handleWebhook: gateway_ref null, skipping dual-verify', [
+                'payment_id'  => $payment->id,
+                'external_id' => $externalId,
+                'provider'    => $provider,
+            ]);
+            return;
+        }
+
         // Dual verification: webhook payload is a signal, not the truth.
-        // Call the gateway API to get the authoritative status before changing any DB state.
-        $apiResponse = $gateway->getPaymentStatus($externalId);
+        // Use gateway_ref from DB (stored at createCharge time) — not external_id from webhook.
+        $apiResponse = $gateway->getPaymentStatus($payment->gateway_ref);
         $verified    = $gateway->parseStatusResponse($apiResponse);
 
         $this->applyStatusTransition($payment, $verified['status'], $verified['amount']);

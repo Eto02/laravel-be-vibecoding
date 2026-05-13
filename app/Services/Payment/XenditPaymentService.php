@@ -79,12 +79,12 @@ class XenditPaymentService implements PaymentGatewayInterface
         return (int) round($cents / 100);
     }
 
-    public function getPaymentStatus(string $externalId): array
+    public function getPaymentStatus(string $gatewayRef): array
     {
         $timeout  = config('payment.dual_verification_timeout_seconds', 5);
         $response = Http::timeout($timeout)
             ->withBasicAuth($this->secretKey, '')
-            ->get("{$this->baseUrl}/v2/invoices/{$externalId}");
+            ->get("{$this->baseUrl}/v2/invoices/{$gatewayRef}");
 
         $this->assertSuccess($response, 'Failed to fetch Xendit payment status');
 

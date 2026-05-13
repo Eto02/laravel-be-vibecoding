@@ -41,7 +41,7 @@ class MidtransParseStatusResponseTest extends TestCase
         $this->assertSame('paid', $result['status']);
     }
 
-    public function test_capture_with_challenge_does_not_normalize_to_paid(): void
+    public function test_capture_with_challenge_normalizes_to_pending(): void
     {
         $result = $this->service->parseStatusResponse([
             'transaction_status' => 'capture',
@@ -49,7 +49,7 @@ class MidtransParseStatusResponseTest extends TestCase
             'gross_amount'       => '50000.00',
         ]);
 
-        $this->assertNotSame('paid', $result['status']);
+        $this->assertSame('pending', $result['status']);
     }
 
     public function test_cancel_normalizes_to_expired(): void
@@ -116,5 +116,88 @@ class MidtransParseStatusResponseTest extends TestCase
         ]);
 
         $this->assertSame(7500000, $result['amount']);
+    }
+
+    public function test_large_amount_with_comma_separator_converts_correctly(): void
+    {
+        $result = $this->service->parseStatusResponse([
+            'transaction_status' => 'settlement',
+            'fraud_status'       => '',
+            'gross_amount'       => '1500000.00',
+        ]);
+
+        $this->assertSame(150000000, $result['amount']);
+    }
+
+    // --- parseWebhookPayload ---
+
+    private function webhookRequest(array $payload): \Illuminate\Http\Request
+    {
+        $request = \Illuminate\Http\Request::create('/webhook', 'POST', [], [], [], [], json_encode($payload));
+        $request->headers->set('Content-Type', 'application/json');
+        return $request;
+    }
+
+    public function test_webhook_capture_accept_normalizes_to_paid_with_correct_amount(): void
+    {
+        $result = $this->service->parseWebhookPayload($this->webhookRequest([
+            'transaction_status' => 'capture',
+            'fraud_status'       => 'accept',
+            'order_id'           => 'PAY-ABC123-1',
+            'gross_amount'       => '100000.00',
+        ]));
+
+        $this->assertSame('paid', $result['status']);
+        $this->assertSame('payment.succeeded', $result['event']);
+        $this->assertSame(10000000, $result['amount']);
+    }
+
+    public function test_webhook_capture_challenge_normalizes_to_pending(): void
+    {
+        $result = $this->service->parseWebhookPayload($this->webhookRequest([
+            'transaction_status' => 'capture',
+            'fraud_status'       => 'challenge',
+            'order_id'           => 'PAY-ABC123-1',
+            'gross_amount'       => '100000.00',
+        ]));
+
+        $this->assertSame('pending', $result['status']);
+    }
+
+    public function test_webhook_deny_normalizes_to_expired(): void
+    {
+        $result = $this->service->parseWebhookPayload($this->webhookRequest([
+            'transaction_status' => 'deny',
+            'fraud_status'       => '',
+            'order_id'           => 'PAY-ABC123-1',
+            'gross_amount'       => '100000.00',
+        ]));
+
+        $this->assertSame('expired', $result['status']);
+    }
+
+    public function test_webhook_amount_uses_multiplication_not_string_replace(): void
+    {
+        $result = $this->service->parseWebhookPayload($this->webhookRequest([
+            'transaction_status' => 'settlement',
+            'fraud_status'       => '',
+            'order_id'           => 'PAY-ABC123-1',
+            'gross_amount'       => '100000.00',
+        ]));
+
+        // str_replace would yield 100000; correct is 10000000 (cents)
+        $this->assertSame(10000000, $result['amount']);
+    }
+
+    public function test_webhook_large_amount_converts_correctly(): void
+    {
+        $result = $this->service->parseWebhookPayload($this->webhookRequest([
+            'transaction_status' => 'settlement',
+            'fraud_status'       => '',
+            'order_id'           => 'PAY-ABC123-1',
+            'gross_amount'       => '1500000.00',
+        ]));
+
+        $this->assertSame(150000000, $result['amount']);
     }
 }

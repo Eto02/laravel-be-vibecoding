@@ -80,7 +80,7 @@ class MidtransPaymentService implements PaymentGatewayInterface
         }
     }
 
-    public function getPaymentStatus(string $externalId): array
+    public function getPaymentStatus(string $gatewayRef): array
     {
         $baseUrl  = config('midtrans.is_production', false)
             ? 'https://api.midtrans.com'
@@ -89,7 +89,7 @@ class MidtransPaymentService implements PaymentGatewayInterface
         $timeout  = config('payment.dual_verification_timeout_seconds', 5);
         $response = Http::timeout($timeout)
             ->withBasicAuth($this->serverKey, '')
-            ->get("{$baseUrl}/v2/{$externalId}/status");
+            ->get("{$baseUrl}/v2/{$gatewayRef}/status");
 
         if (! $response->successful()) {
             throw new \RuntimeException('Failed to get Midtrans payment status: ' . $response->body());
@@ -103,11 +103,13 @@ class MidtransPaymentService implements PaymentGatewayInterface
         $transactionStatus = $apiResponse['transaction_status'] ?? '';
         $fraudStatus       = $apiResponse['fraud_status'] ?? '';
 
-        $isPaid = ($transactionStatus === 'capture' && $fraudStatus === 'accept')
+        $isPaid        = ($transactionStatus === 'capture' && $fraudStatus === 'accept')
             || $transactionStatus === 'settlement';
+        $isFraudReview = $transactionStatus === 'capture' && $fraudStatus === 'challenge';
 
         $status = match (true) {
             $isPaid                                                    => 'paid',
+            $isFraudReview                                             => 'pending',
             in_array($transactionStatus, ['cancel', 'expire', 'deny']) => 'expired',
             $transactionStatus === 'failure'                           => 'failed',
             $transactionStatus === 'pending'                           => 'pending',
@@ -158,21 +160,23 @@ class MidtransPaymentService implements PaymentGatewayInterface
         $transactionStatus = $payload['transaction_status'] ?? '';
         $fraudStatus       = $payload['fraud_status'] ?? '';
 
-        $isPaid = ($transactionStatus === 'capture' && $fraudStatus === 'accept')
+        $isPaid        = ($transactionStatus === 'capture' && $fraudStatus === 'accept')
             || $transactionStatus === 'settlement';
+        $isFraudReview = $transactionStatus === 'capture' && $fraudStatus === 'challenge';
 
         $status = match (true) {
-            $isPaid                                             => 'paid',
-            in_array($transactionStatus, ['cancel', 'expire']) => 'expired',
-            $transactionStatus === 'pending'                    => 'pending', // risk review — no state change
-            default                                             => 'failed',
+            $isPaid                                                    => 'paid',
+            $isFraudReview                                             => 'pending',
+            in_array($transactionStatus, ['cancel', 'expire', 'deny']) => 'expired',
+            $transactionStatus === 'pending'                           => 'pending',
+            default                                                    => 'failed',
         };
 
         return [
             'event'       => $status === 'paid' ? 'payment.succeeded' : 'payment.' . $status,
             'external_id' => $payload['order_id'] ?? '',
             'status'      => $status,
-            'amount'      => (int) str_replace([',', '.00'], '', $payload['gross_amount'] ?? '0'),
+            'amount'      => (int) round((float) ($payload['gross_amount'] ?? 0) * 100),
         ];
     }
 }
