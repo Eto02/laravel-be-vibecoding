@@ -4731,6 +4731,32 @@
               ],
               "event": [
                 {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    request: { body: { get raw() { return JSON.stringify(req.getBody()); } } }",
+                      "  };",
+                      "}",
+                      "if (typeof CryptoJS === 'undefined') {",
+                      "  var CryptoJS = { SHA512: (s) => ({ toString: () => require('crypto').createHash('sha512').update(String(s),'utf8').digest('hex') }) };",
+                      "}",
+                      "",
+                      "// Auto-generate fresh GUID for X-Idempotency-Key on every request",
+                      "const _uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {",
+                      "  const r = Math.random() * 16 | 0;",
+                      "  return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);",
+                      "});",
+                      "pm.collectionVariables.set('idempotency_key', _uuid);"
+                    ]
+                  }
+                },
+                {
                   "listen": "test",
                   "script": {
                     "exec": [
@@ -5428,6 +5454,32 @@
               "name": "Initiate Payment 🔒",
               "event": [
                 {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Compatibility shim — works in Bruno and Postman without changes",
+                      "if (typeof bru !== 'undefined' && typeof pm === 'undefined') {",
+                      "  var pm = {",
+                      "    collectionVariables: { set: (k,v) => bru.setVar(k,v), get: (k) => bru.getVar(k) },",
+                      "    environment: { set: (k,v) => bru.setEnvVar(k,v), get: (k) => bru.getEnvVar(k) },",
+                      "    request: { body: { get raw() { return JSON.stringify(req.getBody()); } } }",
+                      "  };",
+                      "}",
+                      "if (typeof CryptoJS === 'undefined') {",
+                      "  var CryptoJS = { SHA512: (s) => ({ toString: () => require('crypto').createHash('sha512').update(String(s),'utf8').digest('hex') }) };",
+                      "}",
+                      "",
+                      "// Auto-generate fresh GUID for X-Idempotency-Key on every request",
+                      "const _uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {",
+                      "  const r = Math.random() * 16 | 0;",
+                      "  return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);",
+                      "});",
+                      "pm.collectionVariables.set('idempotency_key', _uuid);"
+                    ]
+                  }
+                },
+                {
                   "listen": "test",
                   "script": {
                     "exec": [
@@ -5479,7 +5531,7 @@
                   },
                   {
                     "key": "X-Idempotency-Key",
-                    "value": "{{$guid}}",
+                    "value": "{{idempotency_key}}",
                     "description": "Unique key per request — prevents double payment"
                   }
                 ],
