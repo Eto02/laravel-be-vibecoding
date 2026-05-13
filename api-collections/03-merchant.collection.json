@@ -78,9 +78,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  var json = pm.response.json();",
-                  "  pm.collectionVariables.set(\"store_slug\", json.data.slug);",
+                  "if (res.getStatus() === 201) {",
+                  "  var json = res.getBody();",
+                  "  bru.setVar(\"store_slug\", json.data.slug);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -182,14 +182,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  const data = pm.response.json().data || {};",
-                  "  pm.collectionVariables.set(\"kyc_upload_url\", data.upload_url || \"\");",
-                  "  pm.collectionVariables.set(\"kyc_key\", data.key || \"\");",
+                  "if (res.getStatus() === 201) {",
+                  "  const data = res.getBody().data || {};",
+                  "  bru.setVar(\"kyc_upload_url\", data.upload_url || \"\");",
+                  "  bru.setVar(\"kyc_key\", data.key || \"\");",
                   "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
-                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
-                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
-                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "  bru.setVar(\"media_upload_url\", data.upload_url || \"\");",
+                  "  bru.setVar(\"media_key\", data.key || \"\");",
+                  "  bru.setVar(\"media_public_url\", data.public_url || \"\");",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -331,14 +331,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  const data = pm.response.json().data || {};",
-                  "  pm.collectionVariables.set(\"kyc_upload_url\", data.upload_url || \"\");",
-                  "  pm.collectionVariables.set(\"kyc_key\", data.key || \"\");",
+                  "if (res.getStatus() === 201) {",
+                  "  const data = res.getBody().data || {};",
+                  "  bru.setVar(\"kyc_upload_url\", data.upload_url || \"\");",
+                  "  bru.setVar(\"kyc_key\", data.key || \"\");",
                   "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
-                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
-                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
-                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "  bru.setVar(\"media_upload_url\", data.upload_url || \"\");",
+                  "  bru.setVar(\"media_key\", data.key || \"\");",
+                  "  bru.setVar(\"media_public_url\", data.public_url || \"\");",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -405,14 +405,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  const data = pm.response.json().data || {};",
-                  "  pm.collectionVariables.set(\"logo_upload_url\", data.upload_url || \"\");",
-                  "  pm.collectionVariables.set(\"logo_key\", data.key || \"\");",
+                  "if (res.getStatus() === 201) {",
+                  "  const data = res.getBody().data || {};",
+                  "  bru.setVar(\"logo_upload_url\", data.upload_url || \"\");",
+                  "  bru.setVar(\"logo_key\", data.key || \"\");",
                   "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
-                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
-                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
-                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "  bru.setVar(\"media_upload_url\", data.upload_url || \"\");",
+                  "  bru.setVar(\"media_key\", data.key || \"\");",
+                  "  bru.setVar(\"media_public_url\", data.public_url || \"\");",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -500,14 +500,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  const data = pm.response.json().data || {};",
-                  "  pm.collectionVariables.set(\"banner_upload_url\", data.upload_url || \"\");",
-                  "  pm.collectionVariables.set(\"banner_key\", data.key || \"\");",
+                  "if (res.getStatus() === 201) {",
+                  "  const data = res.getBody().data || {};",
+                  "  bru.setVar(\"banner_upload_url\", data.upload_url || \"\");",
+                  "  bru.setVar(\"banner_key\", data.key || \"\");",
                   "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
-                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
-                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
-                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
+                  "  bru.setVar(\"media_upload_url\", data.upload_url || \"\");",
+                  "  bru.setVar(\"media_key\", data.key || \"\");",
+                  "  bru.setVar(\"media_public_url\", data.public_url || \"\");",
                   "}"
                 ],
                 "type": "text/javascript"

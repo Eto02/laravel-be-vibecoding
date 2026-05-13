@@ -351,7 +351,7 @@ public function process(CheckoutDTO $data): Order { ... }
 
 14. **Sprint Execution Workflow.** Semua perubahan kode WAJIB mengikuti **Sprint Execution Workflow** — plan-first → `/execute` (issue + branch) → kerjakan modul → self-review report → STOP. Push, PR, dan merge HANYA via slash command user (`/push`, `/pr`, `/merge-ok`). Detail lengkap di section terpisah.
 
-15. **API Documentation.** Setiap penambahan endpoint WAJIB ditambah ke `postman/{nn}-{domain}.postman_collection.json` (nomor prefix selaras dengan tabel Domain Modules) dan `python3 postman/merge.py` dijalankan sebelum stop. Ini bagian dari **Definition of Done** modul (lihat Sprint Execution Workflow).
+15. **API Documentation.** Setiap penambahan endpoint WAJIB ditambah ke `api-collections/{nn}-{domain}.collection.json` (nomor prefix selaras dengan tabel Domain Modules) dan `python3 api-collections/merge.py` dijalankan sebelum stop. Ini bagian dari **Definition of Done** modul (lihat Sprint Execution Workflow).
 
 
 ---
@@ -803,7 +803,7 @@ Alur kerja standar untuk setiap modul/sprint. **Semua perubahan kode WAJIB melal
    → git checkout -b feat/sprint-7-payment
    → Kerjakan FULL modul (semua phase sekaligus)
    → Commit lokal atomic per logical unit (NO push)
-   → Update Postman: postman/07-payment.postman_collection.json + jalankan merge.py
+   → Update collection: api-collections/07-payment.collection.json + jalankan merge.py
    → Update planning/07-payment.md: centang checkbox + status ✅ Selesai
    → Update DevSeeder kalau ada entity baru
    → Pastikan php artisan test lulus
@@ -834,7 +834,7 @@ Alur kerja standar untuk setiap modul/sprint. **Semua perubahan kode WAJIB melal
 4.  **Local commits OK, no push.** Selama eksekusi boleh commit atomic per logical unit (mis: `feat(order): enums + migrations`, `feat(order): service + events`). Push HANYA setelah `/push`.
 5.  **Definition of Done per modul** — sebelum stop dan minta review, harus selesai SEMUA:
     - `php artisan test` lulus semua
-    - File Postman domain diupdate + `python3 postman/merge.py` dijalankan
+    - File collection domain diupdate + `python3 api-collections/merge.py` dijalankan
     - `planning/NN-module.md` — checkbox dicentang sesuai yang dikerjakan, status diubah ke `✅ Selesai`
     - DevSeeder ditambah sample data untuk entity baru (jika ada)
     - Self-review report dikirim ke user
@@ -929,7 +929,7 @@ Saat stop di akhir modul, kirim report dengan format konsisten ini:
 ### Done Criteria Status
 
 - [x] Tests pass
-- [x] Postman updated + merge.py run
+- [x] Collection updated (api-collections/) + merge.py run
 - [x] Planning doc updated (✅ Selesai)
 - [x] DevSeeder updated (if applicable)
 - [x] Local commits atomic ({N} commits)
@@ -939,58 +939,72 @@ Saat stop di akhir modul, kirim report dengan format konsisten ini:
 
 ---
 
-## API Documentation (Postman)
+## API Documentation (Collections)
 
-Agar API mudah dicoba oleh tim Frontend atau QA:
+Agar API mudah dicoba oleh tim Frontend atau QA via **Bruno**, Postman, atau Insomnia.
 
 ### Struktur File
 
-Setiap domain memiliki **satu file collection terpisah** di folder `postman/`. Nomor prefix **selaras persis dengan nomor modul** di tabel Domain Modules. Utilities yang tidak punya nomor modul pakai prefix `00-`.
+Setiap domain memiliki **satu file collection terpisah** di folder `api-collections/`. Format: **Postman v2.1 JSON** — dapat diimport ke Bruno, Postman, dan Insomnia. Nomor prefix **selaras persis dengan nomor modul** di tabel Domain Modules. Utilities yang tidak punya nomor modul pakai prefix `00-`.
 
 ```
-postman/
-├── 00-health.postman_collection.json       ← utility (no module number)
-├── 00-media.postman_collection.json        ← utility (shared MediaService)
-├── 01-auth.postman_collection.json         ← Module 1: Auth
-├── 02-user.postman_collection.json         ← Module 2: User
-├── 03-merchant.postman_collection.json     ← Module 3: Merchant
-├── 04-product.postman_collection.json      ← Module 4: Product
-├── 05-cart.postman_collection.json         ← Module 5: Cart & Wishlist
-├── 06-order.postman_collection.json        ← Module 6: Order
-├── 07-payment.postman_collection.json      ← Module 7: Payment
-├── 07-webhooks.postman_collection.json     ← Module 7: Payment Webhooks (sub)
-├── 08-shipping.postman_collection.json     ← Module 8: Shipping  (sprint 8)
-├── 09-review.postman_collection.json       ← Module 9: Review    (sprint 9)
-├── 10-notification.postman_collection.json ← Module 10: Notification
-├── 11-voucher.postman_collection.json      ← Module 11: Voucher
-├── 12-admin.postman_collection.json        ← Module 12: Admin
-└── marketplace_dev.postman_environment.json ← satu environment untuk semua
+api-collections/
+├── 00-health.collection.json       ← utility (no module number)
+├── 00-media.collection.json        ← utility (shared MediaService)
+├── 01-auth.collection.json         ← Module 1: Auth
+├── 02-user.collection.json         ← Module 2: User
+├── 03-merchant.collection.json     ← Module 3: Merchant
+├── 04-product.collection.json      ← Module 4: Product
+├── 05-cart.collection.json         ← Module 5: Cart & Wishlist
+├── 06-order.collection.json        ← Module 6: Order
+├── 07-payment.collection.json      ← Module 7: Payment
+├── 07-webhooks.collection.json     ← Module 7: Payment Webhooks (sub)
+├── 08-shipping.collection.json     ← Module 8: Shipping  (sprint 8)
+├── 09-review.collection.json       ← Module 9: Review    (sprint 9)
+├── 10-notification.collection.json ← Module 10: Notification
+├── 11-voucher.collection.json      ← Module 11: Voucher
+├── 12-admin.collection.json        ← Module 12: Admin
+└── marketplace_dev.environment.json ← satu environment untuk semua
 ```
+
+### Scripting Convention (Bruno-compatible)
+
+Scripts di dalam collection ditulis dengan **Bruno API** yang juga dapat dibaca oleh Postman/Insomnia dengan penyesuaian minor:
+
+| Operasi | Sintaks yang digunakan |
+|---|---|
+| Cek status response | `res.getStatus()` |
+| Ambil body response (parsed) | `res.getBody()` |
+| Set collection variable | `bru.setVar('key', value)` |
+| Get collection variable | `bru.getVar('key')` |
+| Set environment variable | `bru.setEnvVar('key', value)` |
+| Test assertion | `test('name', function() { expect(...) })` |
+| Crypto hash (prerequest) | `require('crypto').createHash('sha512').update(x).digest('hex')` |
 
 ### Workflow Wajib — Setiap Update Collection
 
 ```bash
 # 1. Edit file domain yang relevan
-#    postman/{nn}-{domain}.postman_collection.json
+#    api-collections/{nn}-{domain}.collection.json
 
 # 2. Jalankan merge script untuk regenerate master collection
-python3 postman/merge.py
+python3 api-collections/merge.py
 
 # 3. Commit KEDUANYA — domain file + master
-git add postman/{nn}-{domain}.postman_collection.json postman/marketplace_api.postman_collection.json
-git commit -m "docs(postman): update {domain} collection"
+git add api-collections/{nn}-{domain}.collection.json api-collections/marketplace_api.collection.json
+git commit -m "docs(api-collections): update {domain} collection"
 ```
 
 > **Jangan commit domain file tanpa menjalankan merge.py terlebih dahulu.**
-> `marketplace_api.postman_collection.json` harus selalu sinkron dengan domain files.
+> `marketplace_api.collection.json` harus selalu sinkron dengan domain files.
 
 ### Aturan Wajib
 
-1.  **Satu file per domain.** Penamaan: `{nn}-{domain}.postman_collection.json`. Nomor prefix **harus selaras** dengan nomor modul di tabel Domain Modules. Sub-modul dari modul yang sama pakai nomor yang sama (contoh: `07-webhooks` untuk sub-modul Payment).
-2.  **File master** `postman/marketplace_api.postman_collection.json` di-generate oleh `postman/merge.py` — **jangan edit manual**. Ini yang diimport ke Postman sebagai satu collection dengan semua folder.
-3.  **Satu environment file** — `postman/marketplace_dev.postman_environment.json` — berisi semua variable (`base_url`, `access_token`, `refresh_token`, dan variable per-domain). Semua collection merujuk ke environment yang sama.
+1.  **Satu file per domain.** Penamaan: `{nn}-{domain}.collection.json`. Nomor prefix **harus selaras** dengan nomor modul di tabel Domain Modules. Sub-modul dari modul yang sama pakai nomor yang sama (contoh: `07-webhooks` untuk sub-modul Payment).
+2.  **File master** `api-collections/marketplace_api.collection.json` di-generate oleh `api-collections/merge.py` — **jangan edit manual**. Ini yang diimport sebagai satu collection dengan semua folder.
+3.  **Satu environment file** — `api-collections/marketplace_dev.environment.json` — berisi semua variable (`base_url`, `access_token`, `refresh_token`, dan variable per-domain). Semua collection merujuk ke environment yang sama.
 4.  **Setiap collection menyertakan variable** yang dibutuhkan domain tersebut (minimal: `base_url`, `access_token`, `refresh_token`) di dalam field `variable` collection, sebagai fallback.
 5.  **Authentication** di level collection menggunakan `Bearer Token` dari variable `{{access_token}}`.
 6.  **Setiap sprint yang menambah endpoint WAJIB membuat atau mengupdate file collection domain-nya** lalu jalankan `merge.py`. Ini bagian dari Definition of Done tiap sprint.
-7.  **Simpan contoh response** (Success & Error) di setiap request Postman agar frontend tahu struktur data tanpa menjalankan API.
-8.  **Automated Doc (Optional):** Gunakan `knuckleswtf/scribe` untuk generate dokumentasi HTML dan Postman collection otomatis dari DocBlock di Controller (direncanakan Sprint 8+).
+7.  **Simpan contoh response** (Success & Error) di setiap request agar frontend tahu struktur data tanpa menjalankan API.
+8.  **Automated Doc (Optional):** Gunakan `knuckleswtf/scribe` untuk generate dokumentasi HTML otomatis dari DocBlock di Controller (direncanakan Sprint 8+).

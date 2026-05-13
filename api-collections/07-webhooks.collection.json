@@ -8,14 +8,53 @@
     "type": "noauth"
   },
   "variable": [
-    { "key": "base_url",             "value": "http://localhost:8000", "type": "string" },
-    { "key": "XENDIT_WEBHOOK_TOKEN", "value": "",                      "type": "string", "description": "Isi dari .env XENDIT_WEBHOOK_TOKEN" },
-    { "key": "midtrans_server_key",  "value": "",                      "type": "string", "description": "Isi dari .env MIDTRANS_SERVER_KEY" },
-    { "key": "midtrans_signature",   "value": "",                      "type": "string", "description": "Auto-computed by pre-request script" },
-    { "key": "access_token",         "value": "",                      "type": "string", "description": "Bearer token — auto-saved by Setup: Login" },
-    { "key": "sot_order_id",         "value": "",                      "type": "string", "description": "Order ID for SOT tests — auto-saved by Setup, or set manually" },
-    { "key": "sot_payment_id",       "value": "",                      "type": "string", "description": "Payment ID in DB — auto-saved by Setup: Initiate Payment" },
-    { "key": "sot_external_id",      "value": "",                      "type": "string", "description": "gateway_ref / external_id for webhook payloads — auto-saved by Setup: Initiate Payment" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "XENDIT_WEBHOOK_TOKEN",
+      "value": "",
+      "type": "string",
+      "description": "Isi dari .env XENDIT_WEBHOOK_TOKEN"
+    },
+    {
+      "key": "midtrans_server_key",
+      "value": "",
+      "type": "string",
+      "description": "Isi dari .env MIDTRANS_SERVER_KEY"
+    },
+    {
+      "key": "midtrans_signature",
+      "value": "",
+      "type": "string",
+      "description": "Auto-computed by pre-request script"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string",
+      "description": "Bearer token — auto-saved by Setup: Login"
+    },
+    {
+      "key": "sot_order_id",
+      "value": "",
+      "type": "string",
+      "description": "Order ID for SOT tests — auto-saved by Setup, or set manually"
+    },
+    {
+      "key": "sot_payment_id",
+      "value": "",
+      "type": "string",
+      "description": "Payment ID in DB — auto-saved by Setup: Initiate Payment"
+    },
+    {
+      "key": "sot_external_id",
+      "value": "",
+      "type": "string",
+      "description": "gateway_ref / external_id for webhook payloads — auto-saved by Setup: Initiate Payment"
+    }
   ],
   "item": [
     {
@@ -32,29 +71,51 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Webhook returns 200', () => pm.response.to.have.status(200));"
+                      "test('Webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
                     ],
                     "type": "text/javascript"
                   }
                 }
               ],
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "POST",
                 "header": [
-                  { "key": "Accept",          "value": "application/json" },
-                  { "key": "Content-Type",    "value": "application/json" },
-                  { "key": "x-callback-token","value": "{{XENDIT_WEBHOOK_TOKEN}}", "description": "Dari .env XENDIT_WEBHOOK_TOKEN" }
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-callback-token",
+                    "value": "{{XENDIT_WEBHOOK_TOKEN}}",
+                    "description": "Dari .env XENDIT_WEBHOOK_TOKEN"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"id\": \"623fca3f9fea3b00d1c4a7b2\",\n  \"external_id\": \"PAY-ABCDEFGHIJ-5\",\n  \"user_id\": \"your-xendit-user-id\",\n  \"status\": \"PAID\",\n  \"merchant_name\": \"Marketplace Dev\",\n  \"amount\": 390000,\n  \"paid_amount\": 390000,\n  \"paid_at\": \"2026-05-12T10:05:00.000Z\",\n  \"payer_email\": \"buyer@example.com\",\n  \"description\": \"Payment for order ORD-XXXXX\",\n  \"currency\": \"IDR\",\n  \"payment_method\": \"BANK_TRANSFER\",\n  \"bank_code\": \"BCA\",\n  \"payment_channel\": \"BCA\",\n  \"payment_destination\": \"8808123456789\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{base_url}}/api/webhooks/xendit",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "webhooks", "xendit"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "xendit"
+                  ]
                 },
                 "description": "Xendit Invoice payment berhasil.\n\nDikirim Xendit ke Laravel saat buyer selesai bayar di halaman invoice (metode apapun — VA, QRIS, e-wallet, kartu kredit).\n\n**Field penting:**\n- `external_id` → harus match `payments.gateway_ref` atau `transactions.external_id`\n- `status: PAID` → Laravel set payment → `paid`, dispatch `PaymentCaptured`\n- `paid_amount` → amount aktual yang dibayar (dalam IDR, bukan cents)\n\n**Cara pakai:**\n1. Ganti `external_id` dengan nilai dari `payment_details.external_id` hasil Initiate Payment\n2. Isi `XENDIT_WEBHOOK_TOKEN` di collection variables\n3. Send → cek DB: `payments.status` harus jadi `paid`"
               },
@@ -63,14 +124,24 @@
                   "name": "200 OK",
                   "status": "OK",
                   "code": 200,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{ \"message\": \"Webhook processed.\" }"
                 },
                 {
                   "name": "403 Forbidden — Invalid Signature",
                   "status": "Forbidden",
                   "code": 403,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{\n  \"success\": false,\n  \"message\": \"Invalid webhook signature.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 }
               ]
@@ -82,29 +153,50 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Webhook returns 200', () => pm.response.to.have.status(200));"
+                      "test('Webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
                     ],
                     "type": "text/javascript"
                   }
                 }
               ],
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "POST",
                 "header": [
-                  { "key": "Accept",          "value": "application/json" },
-                  { "key": "Content-Type",    "value": "application/json" },
-                  { "key": "x-callback-token","value": "{{XENDIT_WEBHOOK_TOKEN}}" }
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-callback-token",
+                    "value": "{{XENDIT_WEBHOOK_TOKEN}}"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"id\": \"623fca3f9fea3b00d1c4a7b2\",\n  \"external_id\": \"PAY-ABCDEFGHIJ-5\",\n  \"status\": \"EXPIRED\",\n  \"amount\": 390000,\n  \"currency\": \"IDR\",\n  \"description\": \"Payment for order ORD-XXXXX\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{base_url}}/api/webhooks/xendit",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "webhooks", "xendit"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "xendit"
+                  ]
                 },
                 "description": "Xendit Invoice expired — buyer tidak bayar sampai batas waktu.\n\n**Cara pakai:**\n1. Ganti `external_id` dengan nilai dari `payment_details.external_id`\n2. Send → cek DB: `payments.status` harus jadi `expired`"
               },
@@ -113,7 +205,12 @@
                   "name": "200 OK",
                   "status": "OK",
                   "code": 200,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{ \"message\": \"Webhook processed.\" }"
                 }
               ]
@@ -132,16 +229,16 @@
                     "exec": [
                       "// Auto-compute Midtrans webhook signature",
                       "// Signature = SHA-512(order_id + status_code + gross_amount + server_key)",
-                      "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
+                      "const serverKey = bru.getVar('midtrans_server_key');",
                       "if (!serverKey) {",
                       "  console.warn('midtrans_server_key not set — signature will be invalid');",
                       "  return;",
                       "}",
                       "try {",
-                      "  const body = JSON.parse(pm.request.body.raw);",
+                      "  const body = req.getBody();",
                       "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                      "  const sig = CryptoJS.SHA512(input).toString();",
-                      "  pm.collectionVariables.set('midtrans_signature', sig);",
+                      "  const sig = require('crypto').createHash('sha512').update(input, 'utf8').digest('hex');",
+                      "  bru.setVar('midtrans_signature', sig);",
                       "} catch(e) {",
                       "  console.error('Failed to compute signature:', e);",
                       "}"
@@ -153,28 +250,46 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Midtrans webhook returns 200', () => pm.response.to.have.status(200));"
+                      "test('Midtrans webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
                     ],
                     "type": "text/javascript"
                   }
                 }
               ],
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "POST",
                 "header": [
-                  { "key": "Accept",       "value": "application/json" },
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"settlement\",\n  \"transaction_id\": \"txn-abc123\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"PAY-ABCDEFGHIJ-8\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{base_url}}/api/webhooks/midtrans",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "webhooks", "midtrans"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "midtrans"
+                  ]
                 },
                 "description": "Midtrans Snap payment notification — pembayaran berhasil (settlement).\n\n**Signature auto-computed** oleh pre-request script:\n`SHA-512(order_id + status_code + gross_amount + server_key)`\n\n**Pre-condition:**\n1. Isi `midtrans_server_key` di collection variables (dari .env `MIDTRANS_SERVER_KEY`)\n2. Ganti `order_id` dengan `external_id` dari Initiate Payment\n3. Sesuaikan `gross_amount` (format: `\"390000.00\"` — IDR tanpa cents)\n\n`order_id` di Midtrans = `external_id` di tabel `transactions`."
               },
@@ -183,14 +298,24 @@
                   "name": "200 OK",
                   "status": "OK",
                   "code": 200,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{ \"message\": \"Webhook processed.\" }"
                 },
                 {
                   "name": "403 Forbidden — Invalid Signature",
                   "status": "Forbidden",
                   "code": 403,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{\n  \"success\": false,\n  \"message\": \"Invalid webhook signature.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 }
               ]
@@ -202,12 +327,12 @@
                   "listen": "prerequest",
                   "script": {
                     "exec": [
-                      "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
+                      "const serverKey = bru.getVar('midtrans_server_key');",
                       "if (!serverKey) { return; }",
                       "try {",
-                      "  const body = JSON.parse(pm.request.body.raw);",
+                      "  const body = req.getBody();",
                       "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                      "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
+                      "  bru.setVar('midtrans_signature', require('crypto').createHash('sha512').update(input, 'utf8').digest('hex'));",
                       "} catch(e) { console.error(e); }"
                     ],
                     "type": "text/javascript"
@@ -217,28 +342,46 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Midtrans expire webhook returns 200', () => pm.response.to.have.status(200));"
+                      "test('Midtrans expire webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
                     ],
                     "type": "text/javascript"
                   }
                 }
               ],
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "POST",
                 "header": [
-                  { "key": "Accept",       "value": "application/json" },
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"expire\",\n  \"transaction_id\": \"txn-abc123\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"407\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"PAY-ABCDEFGHIJ-8\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"currency\": \"IDR\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{base_url}}/api/webhooks/midtrans",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "webhooks", "midtrans"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "midtrans"
+                  ]
                 },
                 "description": "Midtrans Snap expired — buyer tidak bayar sampai batas waktu.\n\n**Status code untuk expire: `407`** (berbeda dengan settlement `200`)\n\n**Pre-condition:**\n1. Isi `midtrans_server_key` di collection variables\n2. Ganti `order_id` dan `gross_amount` sesuai transaksi\n3. Pre-request script akan auto-compute signature\n\n**Note:** Signature SHA-512 input: `order_id + \"407\" + gross_amount + serverKey`"
               },
@@ -247,7 +390,12 @@
                   "name": "200 OK",
                   "status": "OK",
                   "code": 200,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{ \"message\": \"Webhook processed.\" }"
                 }
               ]
@@ -259,12 +407,12 @@
                   "listen": "prerequest",
                   "script": {
                     "exec": [
-                      "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
+                      "const serverKey = bru.getVar('midtrans_server_key');",
                       "if (!serverKey) { return; }",
                       "try {",
-                      "  const body = JSON.parse(pm.request.body.raw);",
+                      "  const body = req.getBody();",
                       "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                      "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
+                      "  bru.setVar('midtrans_signature', require('crypto').createHash('sha512').update(input, 'utf8').digest('hex'));",
                       "} catch(e) { console.error(e); }"
                     ],
                     "type": "text/javascript"
@@ -272,21 +420,39 @@
                 }
               ],
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "POST",
                 "header": [
-                  { "key": "Accept",       "value": "application/json" },
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"transaction_time\": \"2026-05-12 10:00:00\",\n  \"transaction_status\": \"capture\",\n  \"transaction_id\": \"txn-abc124\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"credit_card\",\n  \"order_id\": \"PAY-ABCDEFGHIJ-9\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\",\n  \"masked_card\": \"481111-1114\",\n  \"bank\": \"bca\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{base_url}}/api/webhooks/midtrans",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "webhooks", "midtrans"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "midtrans"
+                  ]
                 },
                 "description": "Midtrans credit card capture — `transaction_status: capture` + `fraud_status: accept` → Laravel maps ke `paid`.\n\nIni format untuk kartu kredit. Debit/VA/GoPay umumnya langsung `settlement` bukan `capture`."
               },
@@ -309,11 +475,11 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
-                          "if (pm.response.code === 200) {",
-                          "  const body = pm.response.json();",
-                          "  pm.collectionVariables.set('access_token', body.data.access_token || '');",
-                          "  pm.test('access_token is present', () => pm.expect(body.data.access_token).to.be.a('string').and.not.empty);",
+                          "test('Login returns 200', () => expect(res.getStatus()).to.equal(200));",
+                          "if (res.getStatus() === 200) {",
+                          "  const body = res.getBody();",
+                          "  bru.setVar('access_token', body.data.access_token || '');",
+                          "  test('access_token is present', () => expect(body.data.access_token).to.be.a('string').and.not.empty);",
                           "}"
                         ],
                         "type": "text/javascript"
@@ -321,21 +487,39 @@
                     }
                   ],
                   "request": {
-                    "auth": { "type": "noauth" },
+                    "auth": {
+                      "type": "noauth"
+                    },
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",       "value": "application/json" },
-                      { "key": "Content-Type", "value": "application/json" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/auth/login",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "auth", "login"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "auth",
+                        "login"
+                      ]
                     },
                     "description": "Login sebagai buyer `test@example.com` (seeded oleh DevSeeder).\n\nTest script menyimpan `access_token` ke collection variables secara otomatis."
                   },
@@ -344,7 +528,12 @@
                       "name": "200 OK",
                       "status": "OK",
                       "code": 200,
-                      "header": [{ "key": "Content-Type", "value": "application/json" }],
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
                       "body": "{\n  \"success\": true,\n  \"message\": \"Login successful.\",\n  \"data\": {\n    \"access_token\": \"1|abc...\",\n    \"refresh_token\": \"...\",\n    \"token_type\": \"Bearer\"\n  }\n}"
                     }
                   ]
@@ -356,18 +545,18 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Initiate payment returns 201', () => pm.response.to.have.status(201));",
-                          "if (pm.response.code === 201) {",
-                          "  const body = pm.response.json();",
+                          "test('Initiate payment returns 201', () => expect(res.getStatus()).to.equal(201));",
+                          "if (res.getStatus() === 201) {",
+                          "  const body = res.getBody();",
                           "  const data = body.data;",
-                          "  pm.collectionVariables.set('sot_payment_id', String(data.id));",
-                          "  pm.collectionVariables.set('sot_order_id', String(data.order_id));",
+                          "  bru.setVar('sot_payment_id', String(data.id));",
+                          "  bru.setVar('sot_order_id', String(data.order_id));",
                           "  // external_id is in payment_details — used as webhook external_id field",
                           "  const externalId = (data.payment_details && data.payment_details.external_id) || '';",
-                          "  pm.collectionVariables.set('sot_external_id', externalId);",
-                          "  pm.test('payment_id saved', () => pm.expect(String(data.id)).to.not.be.empty);",
-                          "  pm.test('external_id saved', () => pm.expect(externalId).to.not.be.empty);",
-                          "  pm.test('payment is pending', () => pm.expect(data.status).to.equal('pending'));",
+                          "  bru.setVar('sot_external_id', externalId);",
+                          "  test('payment_id saved', () => expect(String(data.id)).to.not.be.empty);",
+                          "  test('external_id saved', () => expect(externalId).to.not.be.empty);",
+                          "  test('payment is pending', () => expect(data.status).to.equal('pending'));",
                           "  console.log('SOT external_id:', externalId);",
                           "  console.log('SOT payment_id:', data.id);",
                           "}"
@@ -379,19 +568,38 @@
                   "request": {
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",         "value": "application/json" },
-                      { "key": "Content-Type",   "value": "application/json" },
-                      { "key": "Authorization",  "value": "Bearer {{access_token}}" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{access_token}}"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"order_id\": {{sot_order_id}},\n  \"gateway\": \"xendit\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/payments/initiate",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "payments", "initiate"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "payments",
+                        "initiate"
+                      ]
                     },
                     "description": "Initiate Xendit payment untuk order yang sudah ada.\n\n**Pre-condition:** Set `sot_order_id` di collection variables dengan ID order yang statusnya `pending`.\n\n**Cara dapatkan order ID:**\n1. Jalankan 06-order collection (Login → Add to Cart → Checkout)\n2. Atau set manual: buka Postman, klik collection variables, isi `sot_order_id`\n\nTest script menyimpan `sot_payment_id` dan `sot_external_id` untuk dipakai di test cases berikutnya.\n\n**Note:** Request ini memanggil API Xendit untuk membuat invoice. Pastikan `XENDIT_SECRET_KEY` ada di `.env`."
                   },
@@ -400,7 +608,12 @@
                       "name": "201 Created",
                       "status": "Created",
                       "code": 201,
-                      "header": [{ "key": "Content-Type", "value": "application/json" }],
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
                       "body": "{\n  \"success\": true,\n  \"message\": \"Payment initiated.\",\n  \"data\": {\n    \"id\": 42,\n    \"order_id\": 17,\n    \"gateway\": \"xendit\",\n    \"status\": \"pending\",\n    \"amount_cents\": 39000000,\n    \"redirect_url\": \"https://checkout.xendit.co/web/inv_...\",\n    \"payment_details\": {\n      \"external_id\": \"PAY-ABCDEFGHIJ-17\",\n      \"invoice_id\": \"inv_64f...\",\n      \"invoice_url\": \"https://checkout.xendit.co/web/inv_...\"\n    },\n    \"expires_at\": \"2026-05-13T10:15:00.000000Z\"\n  }\n}"
                     }
                   ]
@@ -418,11 +631,11 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Status 200 — webhook accepted', () => pm.response.to.have.status(200));",
-                          "pm.test('Response envelope has success=true', () => {",
-                          "  const body = pm.response.json();",
-                          "  pm.expect(body.success).to.be.true;",
-                          "  pm.expect(body.message).to.be.a('string');",
+                          "test('Status 200 — webhook accepted', () => expect(res.getStatus()).to.equal(200));",
+                          "test('Response envelope has success=true', () => {",
+                          "  const body = res.getBody();",
+                          "  expect(body.success).to.be.true;",
+                          "  expect(body.message).to.be.a('string');",
                           "});",
                           "// Note: dengan QUEUE_CONNECTION=sync, job sudah diproses sebelum response ini",
                           "// Lanjutkan dengan [1A-V] untuk verifikasi DB state"
@@ -432,22 +645,43 @@
                     }
                   ],
                   "request": {
-                    "auth": { "type": "noauth" },
+                    "auth": {
+                      "type": "noauth"
+                    },
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",          "value": "application/json" },
-                      { "key": "Content-Type",    "value": "application/json" },
-                      { "key": "x-callback-token","value": "{{XENDIT_WEBHOOK_TOKEN}}" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "x-callback-token",
+                        "value": "{{XENDIT_WEBHOOK_TOKEN}}"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"id\": \"inv_sot_test_paid\",\n  \"external_id\": \"{{sot_external_id}}\",\n  \"status\": \"PAID\",\n  \"amount\": 390000,\n  \"paid_amount\": 390000,\n  \"paid_at\": \"2026-05-13T10:05:00.000Z\",\n  \"payer_email\": \"test@example.com\",\n  \"currency\": \"IDR\",\n  \"payment_method\": \"BANK_TRANSFER\",\n  \"bank_code\": \"BCA\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/webhooks/xendit",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "webhooks", "xendit"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "webhooks",
+                        "xendit"
+                      ]
                     },
                     "description": "**Expected behavior:**\n1. WebhookController: verifyWebhook() ✅ → dispatch ProcessWebhookJob → return 200\n2. ProcessWebhookJob (sync): parseWebhookPayload() → external_id\n3. Dual verification: getPaymentStatus(external_id) → API bilang PAID\n4. applyStatusTransition('paid') dengan lockForUpdate()\n5. payment.status → `paid`, order.status → `paid`\n6. Event PaymentCaptured dispatched → listener kirim OrderConfirmationMail\n\n**Expected response:** `{\"success\": true, \"message\": \"Webhook received.\"}`\n\n**Lanjutkan dengan [1A-V] untuk verifikasi."
                   },
@@ -456,7 +690,12 @@
                       "name": "200 OK — Webhook Accepted",
                       "status": "OK",
                       "code": 200,
-                      "header": [{ "key": "Content-Type", "value": "application/json" }],
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
                       "body": "{\n  \"success\": true,\n  \"message\": \"Webhook received.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-13T10:05:01.000000Z\" }\n}"
                     }
                   ]
@@ -468,10 +707,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
-                          "pm.test('✅ payment.status = paid (SOT hardening: state changed by dual-verified API status)', () => {",
-                          "  const data = pm.response.json().data;",
-                          "  pm.expect(data.status).to.equal('paid');",
+                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
+                          "test('✅ payment.status = paid (SOT hardening: state changed by dual-verified API status)', () => {",
+                          "  const data = res.getBody().data;",
+                          "  expect(data.status).to.equal('paid');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -481,13 +720,26 @@
                   "request": {
                     "method": "GET",
                     "header": [
-                      { "key": "Authorization", "value": "Bearer {{access_token}}" },
-                      { "key": "Accept",         "value": "application/json" }
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{access_token}}"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
                     ],
                     "url": {
                       "raw": "{{base_url}}/api/payments/{{sot_payment_id}}/status",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "payments", "{{sot_payment_id}}", "status"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "payments",
+                        "{{sot_payment_id}}",
+                        "status"
+                      ]
                     },
                     "description": "Verifikasi bahwa payment status berubah ke `paid` setelah webhook diterima.\n\n**Expected:** `data.status = \"paid\"`"
                   },
@@ -496,7 +748,12 @@
                       "name": "200 OK",
                       "status": "OK",
                       "code": 200,
-                      "header": [{ "key": "Content-Type", "value": "application/json" }],
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
                       "body": "{\n  \"success\": true,\n  \"message\": \"Payment status retrieved.\",\n  \"data\": {\n    \"id\": 42,\n    \"order_id\": 17,\n    \"status\": \"paid\",\n    \"amount_cents\": 39000000,\n    \"gateway\": \"xendit\"\n  }\n}"
                     }
                   ]
@@ -514,11 +771,11 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('✅ Invalid signature returns 403 (rejected before queue)', () => pm.response.to.have.status(403));",
-                          "pm.test('Response has success=false', () => {",
-                          "  const body = pm.response.json();",
-                          "  pm.expect(body.success).to.be.false;",
-                          "  pm.expect(body.message).to.include('signature');",
+                          "test('✅ Invalid signature returns 403 (rejected before queue)', () => expect(res.getStatus()).to.equal(403));",
+                          "test('Response has success=false', () => {",
+                          "  const body = res.getBody();",
+                          "  expect(body.success).to.be.false;",
+                          "  expect(body.message).to.include('signature');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -526,22 +783,43 @@
                     }
                   ],
                   "request": {
-                    "auth": { "type": "noauth" },
+                    "auth": {
+                      "type": "noauth"
+                    },
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",          "value": "application/json" },
-                      { "key": "Content-Type",    "value": "application/json" },
-                      { "key": "x-callback-token","value": "WRONG_TOKEN_THAT_WILL_FAIL" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "x-callback-token",
+                        "value": "WRONG_TOKEN_THAT_WILL_FAIL"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"external_id\": \"PAY-FAKE-12345\",\n  \"status\": \"PAID\",\n  \"amount\": 100000,\n  \"currency\": \"IDR\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/webhooks/xendit",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "webhooks", "xendit"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "webhooks",
+                        "xendit"
+                      ]
                     },
                     "description": "**SOT Hardening: Signature Verification**\n\nSignature check terjadi SYNCHRONOUS di WebhookController sebelum job di-dispatch. Webhook palsu ditolak sebelum masuk queue.\n\n**Expected:** 403 Forbidden — `{\"success\": false, \"message\": \"Invalid webhook signature.\"}`\n\n**Bisa ditest tanpa state apapun.** `x-callback-token` sengaja diisi WRONG_TOKEN."
                   },
@@ -550,7 +828,12 @@
                       "name": "403 Forbidden",
                       "status": "Forbidden",
                       "code": 403,
-                      "header": [{ "key": "Content-Type", "value": "application/json" }],
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
                       "body": "{\n  \"success\": false,\n  \"message\": \"Invalid webhook signature.\",\n  \"meta\": { \"timestamp\": \"2026-05-13T10:00:00.000000Z\" }\n}"
                     }
                   ]
@@ -562,10 +845,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('✅ Unknown external_id returns 200 (silently ignored)', () => pm.response.to.have.status(200));",
-                          "pm.test('Response has success=true', () => {",
-                          "  const body = pm.response.json();",
-                          "  pm.expect(body.success).to.be.true;",
+                          "test('✅ Unknown external_id returns 200 (silently ignored)', () => expect(res.getStatus()).to.equal(200));",
+                          "test('Response has success=true', () => {",
+                          "  const body = res.getBody();",
+                          "  expect(body.success).to.be.true;",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -573,22 +856,43 @@
                     }
                   ],
                   "request": {
-                    "auth": { "type": "noauth" },
+                    "auth": {
+                      "type": "noauth"
+                    },
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",          "value": "application/json" },
-                      { "key": "Content-Type",    "value": "application/json" },
-                      { "key": "x-callback-token","value": "{{XENDIT_WEBHOOK_TOKEN}}" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "x-callback-token",
+                        "value": "{{XENDIT_WEBHOOK_TOKEN}}"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"external_id\": \"PAY-DOES-NOT-EXIST-999999\",\n  \"status\": \"PAID\",\n  \"amount\": 100000,\n  \"currency\": \"IDR\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/webhooks/xendit",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "webhooks", "xendit"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "webhooks",
+                        "xendit"
+                      ]
                     },
                     "description": "**SOT Hardening: Unknown Payment Handling**\n\nWebhook untuk payment yang tidak ada di DB. Harus diIgnore secara silent — return 200 agar gateway tidak retry terus-menerus.\n\nDual verification: `findPaymentByExternalId()` return null → return early tanpa memanggil gateway API.\n\n**Expected:** 200 OK — tidak ada state change di DB.\n\n**Bisa ditest tanpa state apapun.** `external_id` tidak ada di DB."
                   },
@@ -597,7 +901,12 @@
                       "name": "200 OK — Silently Ignored",
                       "status": "OK",
                       "code": 200,
-                      "header": [{ "key": "Content-Type", "value": "application/json" }],
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
                       "body": "{\n  \"success\": true,\n  \"message\": \"Webhook received.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-13T10:00:00.000000Z\" }\n}"
                     }
                   ]
@@ -609,10 +918,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('✅ Duplicate paid webhook returns 200 (no error)', () => pm.response.to.have.status(200));",
-                          "pm.test('Response has success=true', () => {",
-                          "  const body = pm.response.json();",
-                          "  pm.expect(body.success).to.be.true;",
+                          "test('✅ Duplicate paid webhook returns 200 (no error)', () => expect(res.getStatus()).to.equal(200));",
+                          "test('Response has success=true', () => {",
+                          "  const body = res.getBody();",
+                          "  expect(body.success).to.be.true;",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -620,22 +929,43 @@
                     }
                   ],
                   "request": {
-                    "auth": { "type": "noauth" },
+                    "auth": {
+                      "type": "noauth"
+                    },
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",          "value": "application/json" },
-                      { "key": "Content-Type",    "value": "application/json" },
-                      { "key": "x-callback-token","value": "{{XENDIT_WEBHOOK_TOKEN}}" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "x-callback-token",
+                        "value": "{{XENDIT_WEBHOOK_TOKEN}}"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"id\": \"inv_sot_duplicate\",\n  \"external_id\": \"{{sot_external_id}}\",\n  \"status\": \"PAID\",\n  \"amount\": 390000,\n  \"paid_amount\": 390000,\n  \"paid_at\": \"2026-05-13T10:06:00.000Z\",\n  \"currency\": \"IDR\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/webhooks/xendit",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "webhooks", "xendit"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "webhooks",
+                        "xendit"
+                      ]
                     },
                     "description": "**SOT Hardening: Hard-Terminal Idempotency (DB Lock)**\n\n**Pre-condition:** Jalankan [1A] terlebih dahulu — payment sudah berstatus `paid`.\n\nKirim webhook paid yang sama untuk payment yang SUDAH paid. Sistem harus:\n1. `applyStatusTransition()` acquire lockForUpdate()\n2. Deteksi `locked.status = Paid` (hard-terminal)\n3. Return tanpa perubahan apapun — idempotent\n\n**Expected:** 200 OK — payment tetap `paid`, tidak ada duplicate event.\n\n**Verify:** Jalankan [1A-V] lagi — `status` tetap `paid`, `updated_at` tidak berubah (atau berubah minimal karena lock)."
                   },
@@ -644,7 +974,12 @@
                       "name": "200 OK — Idempotent (No Change)",
                       "status": "OK",
                       "code": 200,
-                      "header": [{ "key": "Content-Type", "value": "application/json" }],
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
                       "body": "{\n  \"success\": true,\n  \"message\": \"Webhook received.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-13T10:06:01.000000Z\" }\n}"
                     }
                   ]
@@ -656,10 +991,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
-                          "pm.test('✅ Payment still paid — hard-terminal guard worked', () => {",
-                          "  const data = pm.response.json().data;",
-                          "  pm.expect(data.status).to.equal('paid');",
+                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
+                          "test('✅ Payment still paid — hard-terminal guard worked', () => {",
+                          "  const data = res.getBody().data;",
+                          "  expect(data.status).to.equal('paid');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -669,13 +1004,26 @@
                   "request": {
                     "method": "GET",
                     "header": [
-                      { "key": "Authorization", "value": "Bearer {{access_token}}" },
-                      { "key": "Accept",         "value": "application/json" }
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{access_token}}"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
                     ],
                     "url": {
                       "raw": "{{base_url}}/api/payments/{{sot_payment_id}}/status",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "payments", "{{sot_payment_id}}", "status"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "payments",
+                        "{{sot_payment_id}}",
+                        "status"
+                      ]
                     },
                     "description": "Verifikasi bahwa duplicate paid webhook tidak mengubah status payment yang sudah `paid`.\n\n**Expected:** `data.status = \"paid\"` (unchanged)"
                   },
@@ -694,10 +1042,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Status 200 — webhook accepted', () => pm.response.to.have.status(200));",
-                          "pm.test('Response success=true', () => {",
-                          "  const body = pm.response.json();",
-                          "  pm.expect(body.success).to.be.true;",
+                          "test('Status 200 — webhook accepted', () => expect(res.getStatus()).to.equal(200));",
+                          "test('Response success=true', () => {",
+                          "  const body = res.getBody();",
+                          "  expect(body.success).to.be.true;",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -705,22 +1053,43 @@
                     }
                   ],
                   "request": {
-                    "auth": { "type": "noauth" },
+                    "auth": {
+                      "type": "noauth"
+                    },
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",          "value": "application/json" },
-                      { "key": "Content-Type",    "value": "application/json" },
-                      { "key": "x-callback-token","value": "{{XENDIT_WEBHOOK_TOKEN}}" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "x-callback-token",
+                        "value": "{{XENDIT_WEBHOOK_TOKEN}}"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"id\": \"inv_sot_expired\",\n  \"external_id\": \"{{sot_external_id}}\",\n  \"status\": \"EXPIRED\",\n  \"amount\": 390000,\n  \"currency\": \"IDR\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/webhooks/xendit",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "webhooks", "xendit"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "webhooks",
+                        "xendit"
+                      ]
                     },
                     "description": "**Expected behavior:**\n1. parseWebhookPayload() → status=expired\n2. Dual verification: getPaymentStatus() → API bilang EXPIRED\n3. applyStatusTransition('expired') dengan lockForUpdate()\n4. payment.status → `expired`\n5. Event PaymentFailed dispatched → listener CancelOrderOnPaymentFailed → order.status → `cancelled`\n\n**Lanjutkan dengan [3A-V] dan [3A-V2] untuk verifikasi."
                   },
@@ -729,7 +1098,12 @@
                       "name": "200 OK",
                       "status": "OK",
                       "code": 200,
-                      "header": [{ "key": "Content-Type", "value": "application/json" }],
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
                       "body": "{\n  \"success\": true,\n  \"message\": \"Webhook received.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-13T10:20:00.000000Z\" }\n}"
                     }
                   ]
@@ -741,10 +1115,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
-                          "pm.test('✅ payment.status = expired', () => {",
-                          "  const data = pm.response.json().data;",
-                          "  pm.expect(data.status).to.equal('expired');",
+                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
+                          "test('✅ payment.status = expired', () => {",
+                          "  const data = res.getBody().data;",
+                          "  expect(data.status).to.equal('expired');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -754,13 +1128,26 @@
                   "request": {
                     "method": "GET",
                     "header": [
-                      { "key": "Authorization", "value": "Bearer {{access_token}}" },
-                      { "key": "Accept",         "value": "application/json" }
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{access_token}}"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
                     ],
                     "url": {
                       "raw": "{{base_url}}/api/payments/{{sot_payment_id}}/status",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "payments", "{{sot_payment_id}}", "status"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "payments",
+                        "{{sot_payment_id}}",
+                        "status"
+                      ]
                     },
                     "description": "**Expected:** `data.status = \"expired\"`"
                   },
@@ -773,10 +1160,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
-                          "pm.test('✅ order.status = cancelled (CancelOrderOnPaymentFailed listener fired)', () => {",
-                          "  const data = pm.response.json().data;",
-                          "  pm.expect(data.status).to.equal('cancelled');",
+                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
+                          "test('✅ order.status = cancelled (CancelOrderOnPaymentFailed listener fired)', () => {",
+                          "  const data = res.getBody().data;",
+                          "  expect(data.status).to.equal('cancelled');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -786,13 +1173,25 @@
                   "request": {
                     "method": "GET",
                     "header": [
-                      { "key": "Authorization", "value": "Bearer {{access_token}}" },
-                      { "key": "Accept",         "value": "application/json" }
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{access_token}}"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
                     ],
                     "url": {
                       "raw": "{{base_url}}/api/orders/{{sot_order_id}}",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "orders", "{{sot_order_id}}"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "orders",
+                        "{{sot_order_id}}"
+                      ]
                     },
                     "description": "Verifikasi order di-cancel otomatis setelah payment expired.\n\n**Expected:** `data.status = \"cancelled\"`\n\nListener `CancelOrderOnPaymentFailed` bereaksi ke event `PaymentFailed` yang di-dispatch oleh `markExpired()`."
                   },
@@ -811,10 +1210,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Status 200 — webhook accepted', () => pm.response.to.have.status(200));",
-                          "pm.test('Response success=true', () => {",
-                          "  const body = pm.response.json();",
-                          "  pm.expect(body.success).to.be.true;",
+                          "test('Status 200 — webhook accepted', () => expect(res.getStatus()).to.equal(200));",
+                          "test('Response success=true', () => {",
+                          "  const body = res.getBody();",
+                          "  expect(body.success).to.be.true;",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -822,22 +1221,43 @@
                     }
                   ],
                   "request": {
-                    "auth": { "type": "noauth" },
+                    "auth": {
+                      "type": "noauth"
+                    },
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",          "value": "application/json" },
-                      { "key": "Content-Type",    "value": "application/json" },
-                      { "key": "x-callback-token","value": "{{XENDIT_WEBHOOK_TOKEN}}" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "x-callback-token",
+                        "value": "{{XENDIT_WEBHOOK_TOKEN}}"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"id\": \"inv_sot_recovery\",\n  \"external_id\": \"{{sot_external_id}}\",\n  \"status\": \"PAID\",\n  \"amount\": 390000,\n  \"paid_amount\": 390000,\n  \"paid_at\": \"2026-05-13T10:30:00.000Z\",\n  \"currency\": \"IDR\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/webhooks/xendit",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "webhooks", "xendit"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "webhooks",
+                        "xendit"
+                      ]
                     },
                     "description": "**Skenario: Uang sudah masuk ke gateway, tapi scheduler sudah expire payment secara lokal — order masih pending, bisa di-recover.**\n\nTerjadi ketika: scheduler (ExpireUnpaidPayments) jalan sebelum webhook gateway tiba. Payment di-expire lokal tapi gateway belum expire.\n\n## Manual Setup (jalankan via tinker SEBELUM send request ini)\n\n```bash\ndocker compose exec app php artisan tinker\n```\n\n```php\n// Ganti 42 dengan sot_payment_id yang baru\n$p = App\\Models\\Payment::find(42);\n$p->update(['status' => App\\Enums\\PaymentStatus::Expired]);\n\n// Pastikan order masih pending\n$o = $p->order;\necho 'Payment status: ' . $p->fresh()->status->value;      // harus: expired\necho 'Order status:   ' . $o->fresh()->status->value;      // harus: pending\n```\n\n## Expected Behavior\n1. applyStatusTransition() acquire lock\n2. Deteksi: `locked.status = Expired` + `apiStatus = paid`\n3. `order.status = Pending` → RECOVERY CASE\n4. Log::warning 'Paid signal for locally-expired payment — recovering'\n5. cancelPendingPaymentsForOrder() → expire any concurrent payments\n6. markPaid() → payment.status = `paid`, order.status = `paid`\n7. PaymentCaptured event dispatched\n\n## Verify dengan [4A-V]"
                   },
@@ -846,7 +1266,12 @@
                       "name": "200 OK",
                       "status": "OK",
                       "code": 200,
-                      "header": [{ "key": "Content-Type", "value": "application/json" }],
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
                       "body": "{\n  \"success\": true,\n  \"message\": \"Webhook received.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-13T10:30:01.000000Z\" }\n}"
                     }
                   ]
@@ -858,10 +1283,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
-                          "pm.test('✅ payment.status = paid (recovered from expired)', () => {",
-                          "  const data = pm.response.json().data;",
-                          "  pm.expect(data.status).to.equal('paid');",
+                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
+                          "test('✅ payment.status = paid (recovered from expired)', () => {",
+                          "  const data = res.getBody().data;",
+                          "  expect(data.status).to.equal('paid');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -871,13 +1296,26 @@
                   "request": {
                     "method": "GET",
                     "header": [
-                      { "key": "Authorization", "value": "Bearer {{access_token}}" },
-                      { "key": "Accept",         "value": "application/json" }
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{access_token}}"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
                     ],
                     "url": {
                       "raw": "{{base_url}}/api/payments/{{sot_payment_id}}/status",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "payments", "{{sot_payment_id}}", "status"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "payments",
+                        "{{sot_payment_id}}",
+                        "status"
+                      ]
                     },
                     "description": "**Expected:** `data.status = \"paid\"` (recovered dari expired)\n\nJuga cek log Laravel:\n```bash\ndocker compose exec app tail -f storage/logs/laravel.log | grep 'locally-expired'\n```\nHarus ada: `Paid signal for locally-expired payment — recovering`"
                   },
@@ -890,10 +1328,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
-                          "pm.test('✅ order.status = paid (recovery successful — order fulfilled)', () => {",
-                          "  const data = pm.response.json().data;",
-                          "  pm.expect(data.status).to.equal('paid');",
+                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
+                          "test('✅ order.status = paid (recovery successful — order fulfilled)', () => {",
+                          "  const data = res.getBody().data;",
+                          "  expect(data.status).to.equal('paid');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -903,13 +1341,25 @@
                   "request": {
                     "method": "GET",
                     "header": [
-                      { "key": "Authorization", "value": "Bearer {{access_token}}" },
-                      { "key": "Accept",         "value": "application/json" }
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{access_token}}"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
                     ],
                     "url": {
                       "raw": "{{base_url}}/api/orders/{{sot_order_id}}",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "orders", "{{sot_order_id}}"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "orders",
+                        "{{sot_order_id}}"
+                      ]
                     },
                     "description": "**Expected:** `data.status = \"paid\"` — order fulfilled setelah recovery"
                   },
@@ -922,10 +1372,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Status 200 — webhook accepted', () => pm.response.to.have.status(200));",
-                          "pm.test('Response success=true', () => {",
-                          "  const body = pm.response.json();",
-                          "  pm.expect(body.success).to.be.true;",
+                          "test('Status 200 — webhook accepted', () => expect(res.getStatus()).to.equal(200));",
+                          "test('Response success=true', () => {",
+                          "  const body = res.getBody();",
+                          "  expect(body.success).to.be.true;",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -933,22 +1383,43 @@
                     }
                   ],
                   "request": {
-                    "auth": { "type": "noauth" },
+                    "auth": {
+                      "type": "noauth"
+                    },
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",          "value": "application/json" },
-                      { "key": "Content-Type",    "value": "application/json" },
-                      { "key": "x-callback-token","value": "{{XENDIT_WEBHOOK_TOKEN}}" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "x-callback-token",
+                        "value": "{{XENDIT_WEBHOOK_TOKEN}}"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"id\": \"inv_sot_doublecharge\",\n  \"external_id\": \"{{sot_external_id}}\",\n  \"status\": \"PAID\",\n  \"amount\": 390000,\n  \"paid_amount\": 390000,\n  \"paid_at\": \"2026-05-13T10:45:00.000Z\",\n  \"currency\": \"IDR\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/webhooks/xendit",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "webhooks", "xendit"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "webhooks",
+                        "xendit"
+                      ]
                     },
                     "description": "**Skenario: User bayar dua kali — sekali via payment A (sudah fulfilled), sekali via payment B yang sudah expired (cancelCharge gagal). Uang payment B harus dikreditkan ke wallet.**\n\nTerjadi ketika: Payment switch dilakukan, cancelCharge() gagal, user bayar ke invoice lama.\n\n## Manual Setup (jalankan via tinker SEBELUM send request ini)\n\n**Butuh payment BARU (bukan dari kasus 4A):**\n1. Buat order baru + initiate payment baru → catat payment_id dan external_id baru ke collection variables\n\n```bash\ndocker compose exec app php artisan tinker\n```\n\n```php\n// Ganti 43 dengan sot_payment_id baru\n$p = App\\Models\\Payment::find(43);\n$p->update(['status' => App\\Enums\\PaymentStatus::Expired]);\n\n// Set order ke paid (simulasi order sudah fulfilled via payment lain)\n$o = $p->order;\n$o->update(['status' => App\\Enums\\OrderStatus::Paid]);\n\necho 'Payment status: ' . $p->fresh()->status->value;   // harus: expired\necho 'Order status:   ' . $o->fresh()->status->value;   // harus: paid\n```\n\n## Expected Behavior\n1. applyStatusTransition() acquire lock\n2. Deteksi: `locked.status = Expired` + `apiStatus = paid`\n3. `order.status = Paid` → DOUBLE CHARGE CASE\n4. refundDoubleChargeToWallet(): buat Refund record + credit WalletBalance\n5. Log::critical 'Double payment detected — auto-credited user wallet'\n6. Payment status TIDAK berubah (tetap expired)\n\n## Verify dengan [4B-V1], [4B-V2], [4B-V3]"
                   },
@@ -957,7 +1428,12 @@
                       "name": "200 OK",
                       "status": "OK",
                       "code": 200,
-                      "header": [{ "key": "Content-Type", "value": "application/json" }],
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
                       "body": "{\n  \"success\": true,\n  \"message\": \"Webhook received.\",\n  \"data\": null,\n  \"meta\": { \"timestamp\": \"2026-05-13T10:45:01.000000Z\" }\n}"
                     }
                   ]
@@ -969,10 +1445,10 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('Response 200', () => pm.response.to.have.status(200));",
-                          "pm.test('✅ payment.status = expired (not changed — double-charge handled separately via wallet)', () => {",
-                          "  const data = pm.response.json().data;",
-                          "  pm.expect(data.status).to.equal('expired');",
+                          "test('Response 200', () => expect(res.getStatus()).to.equal(200));",
+                          "test('✅ payment.status = expired (not changed — double-charge handled separately via wallet)', () => {",
+                          "  const data = res.getBody().data;",
+                          "  expect(data.status).to.equal('expired');",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -982,13 +1458,26 @@
                   "request": {
                     "method": "GET",
                     "header": [
-                      { "key": "Authorization", "value": "Bearer {{access_token}}" },
-                      { "key": "Accept",         "value": "application/json" }
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{access_token}}"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
                     ],
                     "url": {
                       "raw": "{{base_url}}/api/payments/{{sot_payment_id}}/status",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "payments", "{{sot_payment_id}}", "status"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "payments",
+                        "{{sot_payment_id}}",
+                        "status"
+                      ]
                     },
                     "description": "**Expected:** `data.status = \"expired\"` — payment tidak berubah, uang dikreditkan ke wallet bukan disimpan di payment ini."
                   },
@@ -1002,8 +1491,8 @@
                       "script": {
                         "exec": [
                           "// Ini hanya placeholder — DB check harus dilakukan via tinker",
-                          "pm.test('This is a manual DB verification — check instructions in description', () => {",
-                          "  pm.expect(true).to.be.true; // always passes — reminder only",
+                          "test('This is a manual DB verification — check instructions in description', () => {",
+                          "  expect(true).to.be.true; // always passes — reminder only",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1013,13 +1502,26 @@
                   "request": {
                     "method": "GET",
                     "header": [
-                      { "key": "Authorization", "value": "Bearer {{access_token}}" },
-                      { "key": "Accept",         "value": "application/json" }
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{access_token}}"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
                     ],
                     "url": {
                       "raw": "{{base_url}}/api/payments/{{sot_payment_id}}/status",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "payments", "{{sot_payment_id}}", "status"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "payments",
+                        "{{sot_payment_id}}",
+                        "status"
+                      ]
                     },
                     "description": "**Verifikasi via tinker bahwa refund record dan wallet credit dibuat:**\n\n```bash\ndocker compose exec app php artisan tinker\n```\n\n```php\n$p = App\\Models\\Payment::find(PAYMENT_ID); // ganti PAYMENT_ID\n\n// Cek refund record\n$refund = $p->refund()->latest()->first();\necho 'Refund created: ' . ($refund ? 'YES' : 'NO') . PHP_EOL;\necho 'Refund amount: ' . $refund?->amount . PHP_EOL;\necho 'Refund reason: ' . $refund?->reason . PHP_EOL;\n\n// Cek wallet credit\n$user = $p->order->user;\n$walletTx = $user->walletTransactions()->latest()->first();\necho 'Wallet credit: ' . ($walletTx ? 'YES' : 'NO') . PHP_EOL;\necho 'Credit type: '   . $walletTx?->type . PHP_EOL;    // harus: credit\necho 'Credit amount: ' . $walletTx?->amount . PHP_EOL;  // harus: sesuai payment amount\n```\n\n**Juga cek log:**\n```bash\ndocker compose exec app grep 'Double payment detected' storage/logs/laravel.log | tail -5\n```"
                   },
@@ -1038,12 +1540,12 @@
                       "listen": "prerequest",
                       "script": {
                         "exec": [
-                          "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
+                          "const serverKey = bru.getVar('midtrans_server_key');",
                           "if (!serverKey) { console.warn('midtrans_server_key not set'); return; }",
                           "try {",
-                          "  const body = JSON.parse(pm.request.body.raw);",
+                          "  const body = req.getBody();",
                           "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                          "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
+                          "  bru.setVar('midtrans_signature', require('crypto').createHash('sha512').update(input, 'utf8').digest('hex'));",
                           "} catch(e) { console.error(e); }"
                         ],
                         "type": "text/javascript"
@@ -1053,28 +1555,46 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('✅ Midtrans cancel webhook returns 200', () => pm.response.to.have.status(200));"
+                          "test('✅ Midtrans cancel webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
                         ],
                         "type": "text/javascript"
                       }
                     }
                   ],
                   "request": {
-                    "auth": { "type": "noauth" },
+                    "auth": {
+                      "type": "noauth"
+                    },
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",       "value": "application/json" },
-                      { "key": "Content-Type", "value": "application/json" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"transaction_time\": \"2026-05-13 10:00:00\",\n  \"transaction_status\": \"cancel\",\n  \"transaction_id\": \"txn-cancel-001\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"407\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"{{sot_external_id}}\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"fraud_status\": \"\",\n  \"currency\": \"IDR\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/webhooks/midtrans",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "webhooks", "midtrans"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "webhooks",
+                        "midtrans"
+                      ]
                     },
                     "description": "**Midtrans `cancel`** → `parseStatusResponse()` maps ke `expired` → `markExpired()`\n\n**Mapping di `parseStatusResponse()`:**\n- `cancel` → `expired`\n- `expire` → `expired`\n- `deny`   → `expired`\n\n**Pre-condition:** Set `sot_external_id` ke `order_id` Midtrans (sama dengan `external_id` di transactions table)."
                   },
@@ -1087,12 +1607,12 @@
                       "listen": "prerequest",
                       "script": {
                         "exec": [
-                          "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
+                          "const serverKey = bru.getVar('midtrans_server_key');",
                           "if (!serverKey) { return; }",
                           "try {",
-                          "  const body = JSON.parse(pm.request.body.raw);",
+                          "  const body = req.getBody();",
                           "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                          "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
+                          "  bru.setVar('midtrans_signature', require('crypto').createHash('sha512').update(input, 'utf8').digest('hex'));",
                           "} catch(e) { console.error(e); }"
                         ],
                         "type": "text/javascript"
@@ -1102,28 +1622,46 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('✅ Midtrans deny webhook returns 200', () => pm.response.to.have.status(200));"
+                          "test('✅ Midtrans deny webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
                         ],
                         "type": "text/javascript"
                       }
                     }
                   ],
                   "request": {
-                    "auth": { "type": "noauth" },
+                    "auth": {
+                      "type": "noauth"
+                    },
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",       "value": "application/json" },
-                      { "key": "Content-Type", "value": "application/json" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"transaction_time\": \"2026-05-13 10:00:00\",\n  \"transaction_status\": \"deny\",\n  \"transaction_id\": \"txn-deny-001\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"202\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"credit_card\",\n  \"order_id\": \"{{sot_external_id}}\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/webhooks/midtrans",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "webhooks", "midtrans"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "webhooks",
+                        "midtrans"
+                      ]
                     },
                     "description": "Midtrans `deny` — kartu ditolak bank/issuer.\n\n**Mapping:** `deny` → `expired` (dalam konteks marketplace, deny sama dengan expired — buyer harus retry dengan metode lain)."
                   },
@@ -1136,12 +1674,12 @@
                       "listen": "prerequest",
                       "script": {
                         "exec": [
-                          "const serverKey = pm.collectionVariables.get('midtrans_server_key');",
+                          "const serverKey = bru.getVar('midtrans_server_key');",
                           "if (!serverKey) { return; }",
                           "try {",
-                          "  const body = JSON.parse(pm.request.body.raw);",
+                          "  const body = req.getBody();",
                           "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                          "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
+                          "  bru.setVar('midtrans_signature', require('crypto').createHash('sha512').update(input, 'utf8').digest('hex'));",
                           "} catch(e) { console.error(e); }"
                         ],
                         "type": "text/javascript"
@@ -1151,28 +1689,46 @@
                       "listen": "test",
                       "script": {
                         "exec": [
-                          "pm.test('✅ Midtrans pending webhook returns 200 (informational — no state change)', () => pm.response.to.have.status(200));"
+                          "test('✅ Midtrans pending webhook returns 200 (informational — no state change)', () => expect(res.getStatus()).to.equal(200));"
                         ],
                         "type": "text/javascript"
                       }
                     }
                   ],
                   "request": {
-                    "auth": { "type": "noauth" },
+                    "auth": {
+                      "type": "noauth"
+                    },
                     "method": "POST",
                     "header": [
-                      { "key": "Accept",       "value": "application/json" },
-                      { "key": "Content-Type", "value": "application/json" }
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
                     ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"transaction_time\": \"2026-05-13 10:00:00\",\n  \"transaction_status\": \"pending\",\n  \"transaction_id\": \"txn-pending-001\",\n  \"status_message\": \"midtrans payment notification\",\n  \"status_code\": \"201\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"{{sot_external_id}}\",\n  \"merchant_id\": \"your-merchant-id\",\n  \"gross_amount\": \"390000.00\",\n  \"currency\": \"IDR\"\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": {
                       "raw": "{{base_url}}/api/webhooks/midtrans",
-                      "host": ["{{base_url}}"],
-                      "path": ["api", "webhooks", "midtrans"]
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "webhooks",
+                        "midtrans"
+                      ]
                     },
                     "description": "Midtrans `pending` — user sedang proses di ATM/bank, menunggu konfirmasi.\n\nIni informational callback — tidak ada state change. Payment tetap `pending`.\n\n**SOT Hardening:** `applyStatusTransition()` → match `'pending'` → `null` (no-op)."
                   },

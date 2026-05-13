@@ -157,18 +157,18 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  const body = pm.response.json();",
+                  "if (res.getStatus() === 201) {",
+                  "  const body = res.getBody();",
                   "  const data = body.data || {};",
-                  "  pm.collectionVariables.set(\"avatar_upload_url\", data.upload_url || \"\");",
-                  "  pm.collectionVariables.set(\"avatar_key\", data.key || \"\");",
+                  "  bru.setVar(\"avatar_upload_url\", data.upload_url || \"\");",
+                  "  bru.setVar(\"avatar_key\", data.key || \"\");",
                   "  // Mirror to shared media_upload_url so \"Upload File ke R2\" request works universally",
-                  "  pm.collectionVariables.set(\"media_upload_url\", data.upload_url || \"\");",
-                  "  pm.collectionVariables.set(\"media_key\", data.key || \"\");",
-                  "  pm.collectionVariables.set(\"media_public_url\", data.public_url || \"\");",
-                  "  pm.test(\"Returns 201 with upload info\", () => {",
-                  "    pm.response.to.have.status(201);",
-                  "    pm.expect(data).to.have.all.keys(\"upload_url\", \"key\", \"public_url\");",
+                  "  bru.setVar(\"media_upload_url\", data.upload_url || \"\");",
+                  "  bru.setVar(\"media_key\", data.key || \"\");",
+                  "  bru.setVar(\"media_public_url\", data.public_url || \"\");",
+                  "  test(\"Returns 201 with upload info\", () => {",
+                  "    expect(res.getStatus()).to.equal(201);",
+                  "    expect(data).to.have.all.keys(\"upload_url\", \"key\", \"public_url\");",
                   "  });",
                   "}"
                 ],
@@ -511,12 +511,12 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  const body = pm.response.json();",
+                  "if (res.getStatus() === 201) {",
+                  "  const body = res.getBody();",
                   "  if (body.data && body.data.id) {",
-                  "    pm.collectionVariables.set('address_id', String(body.data.id));",
+                  "    bru.setVar('address_id', String(body.data.id));",
                   "  }",
-                  "  pm.test('Create address returns 201', () => pm.response.to.have.status(201));",
+                  "  test('Create address returns 201', () => expect(res.getStatus()).to.equal(201));",
                   "}"
                 ],
                 "type": "text/javascript"

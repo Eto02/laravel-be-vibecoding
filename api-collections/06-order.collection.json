@@ -144,12 +144,12 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
-                      "pm.test(\"Has order data\", () => {",
-                      "    const j = pm.response.json();",
-                      "    pm.expect(j.data).to.be.an(\"array\");",
+                      "test(\"Status 201\", () => expect(res.getStatus()).to.equal(201));",
+                      "test(\"Has order data\", () => {",
+                      "    const j = res.getBody();",
+                      "    expect(j.data).to.be.an(\"array\");",
                       "    if (j.data && j.data[0]) {",
-                      "        pm.collectionVariables.set(\"order_id\", j.data[0].id);",
+                      "        bru.setVar(\"order_id\", j.data[0].id);",
                       "    }",
                       "});"
                     ],
@@ -204,10 +204,10 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Has pagination\", () => {",
-                      "    const j = pm.response.json();",
-                      "    pm.expect(j.meta).to.have.property(\"pagination\");",
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
+                      "test(\"Has pagination\", () => {",
+                      "    const j = res.getBody();",
+                      "    expect(j.meta).to.have.property(\"pagination\");",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -254,11 +254,11 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Has items and status_logs\", () => {",
-                      "    const j = pm.response.json();",
-                      "    pm.expect(j.data).to.have.property(\"items\");",
-                      "    pm.expect(j.data).to.have.property(\"status_logs\");",
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
+                      "test(\"Has items and status_logs\", () => {",
+                      "    const j = res.getBody();",
+                      "    expect(j.data).to.have.property(\"items\");",
+                      "    expect(j.data).to.have.property(\"status_logs\");",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -323,9 +323,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Status is cancelled\", () => {",
-                      "    pm.expect(pm.response.json().data.status).to.eql(\"cancelled\");",
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
+                      "test(\"Status is cancelled\", () => {",
+                      "    expect(res.getBody().data.status).to.eql(\"cancelled\");",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -373,8 +373,8 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Status is delivered\", () => pm.expect(pm.response.json().data.status).to.eql(\"delivered\"));"
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
+                      "test(\"Status is delivered\", () => expect(res.getBody().data.status).to.eql(\"delivered\"));"
                     ],
                     "type": "text/javascript"
                   }
@@ -451,8 +451,8 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
-                      "pm.test(\"Dispute status is open\", () => pm.expect(pm.response.json().data.status).to.eql(\"open\"));"
+                      "test(\"Status 201\", () => expect(res.getStatus()).to.equal(201));",
+                      "test(\"Dispute status is open\", () => expect(res.getBody().data.status).to.eql(\"open\"));"
                     ],
                     "type": "text/javascript"
                   }
@@ -511,8 +511,8 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Has pagination\", () => pm.expect(pm.response.json().meta).to.have.property(\"pagination\"));"
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
+                      "test(\"Has pagination\", () => expect(res.getBody().meta).to.have.property(\"pagination\"));"
                     ],
                     "type": "text/javascript"
                   }
@@ -559,7 +559,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));"
                     ],
                     "type": "text/javascript"
                   }
@@ -624,8 +624,8 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Status is processing\", () => pm.expect(pm.response.json().data.status).to.eql(\"processing\"));"
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
+                      "test(\"Status is processing\", () => expect(res.getBody().data.status).to.eql(\"processing\"));"
                     ],
                     "type": "text/javascript"
                   }
@@ -703,9 +703,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Status is shipped\", () => pm.expect(pm.response.json().data.status).to.eql(\"shipped\"));",
-                      "pm.test(\"Has tracking number\", () => pm.expect(pm.response.json().data.tracking_number).to.be.a(\"string\"));"
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
+                      "test(\"Status is shipped\", () => expect(res.getBody().data.status).to.eql(\"shipped\"));",
+                      "test(\"Has tracking number\", () => expect(res.getBody().data.tracking_number).to.be.a(\"string\"));"
                     ],
                     "type": "text/javascript"
                   }

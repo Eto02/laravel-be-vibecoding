@@ -73,23 +73,23 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "if (pm.response.code === 201) {",
-                      "  const body = pm.response.json();",
-                      "  pm.collectionVariables.set('payment_id', String(body.data.id || ''));",
+                      "if (res.getStatus() === 201) {",
+                      "  const body = res.getBody();",
+                      "  bru.setVar('payment_id', String(body.data.id || ''));",
                       "  // Xendit invoice",
                       "  const invoiceId = body.data.payment_details?.invoice_id || '';",
-                      "  pm.collectionVariables.set('invoice_id', invoiceId);",
+                      "  bru.setVar('invoice_id', invoiceId);",
                       "  // Midtrans snap",
                       "  const snapUrl = body.data.redirect_url || '';",
                       "  if (body.data.gateway === 'midtrans') {",
-                      "    pm.collectionVariables.set('snap_redirect_url', snapUrl);",
+                      "    bru.setVar('snap_redirect_url', snapUrl);",
                       "  }",
-                      "  pm.test('Initiate payment returns 201', () => pm.response.to.have.status(201));",
-                      "  pm.test('Response has payment data', () => {",
-                      "    pm.expect(body.data).to.have.property('id');",
-                      "    pm.expect(body.data).to.have.property('status');",
-                      "    pm.expect(body.data).to.have.property('amount_cents');",
-                      "    pm.expect(body.data).to.have.property('redirect_url');",
+                      "  test('Initiate payment returns 201', () => expect(res.getStatus()).to.equal(201));",
+                      "  test('Response has payment data', () => {",
+                      "    expect(body.data).to.have.property('id');",
+                      "    expect(body.data).to.have.property('status');",
+                      "    expect(body.data).to.have.property('amount_cents');",
+                      "    expect(body.data).to.have.property('redirect_url');",
                       "  });",
                       "}"
                     ],
@@ -194,11 +194,11 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Get status returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Response has status field', () => {",
-                      "  const body = pm.response.json();",
-                      "  pm.expect(body.data).to.have.property('status');",
-                      "  pm.expect(body.data).to.have.property('amount_cents');",
+                      "test('Get status returns 200', () => expect(res.getStatus()).to.equal(200));",
+                      "test('Response has status field', () => {",
+                      "  const body = res.getBody();",
+                      "  expect(body.data).to.have.property('status');",
+                      "  expect(body.data).to.have.property('amount_cents');",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -261,16 +261,16 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "if (pm.response.code === 201) {",
-                      "  const body = pm.response.json();",
-                      "  pm.collectionVariables.set('payment_id', String(body.data.id || ''));",
+                      "if (res.getStatus() === 201) {",
+                      "  const body = res.getBody();",
+                      "  bru.setVar('payment_id', String(body.data.id || ''));",
                       "  const invoiceId = body.data.payment_details?.invoice_id || '';",
-                      "  pm.collectionVariables.set('invoice_id', invoiceId);",
-                      "  pm.test('Switch returns 201', () => pm.response.to.have.status(201));",
-                      "  pm.test('New payment created', () => {",
-                      "    pm.expect(body.data).to.have.property('id');",
-                      "    pm.expect(body.data.status).to.equal('pending');",
-                      "    pm.expect(body.data).to.have.property('redirect_url');",
+                      "  bru.setVar('invoice_id', invoiceId);",
+                      "  test('Switch returns 201', () => expect(res.getStatus()).to.equal(201));",
+                      "  test('New payment created', () => {",
+                      "    expect(body.data).to.have.property('id');",
+                      "    expect(body.data.status).to.equal('pending');",
+                      "    expect(body.data).to.have.property('redirect_url');",
                       "  });",
                       "}"
                     ],
@@ -281,18 +281,35 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Accept", "value": "application/json" },
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"gateway\": \"midtrans\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{base_url}}/api/payments/{{payment_id}}/switch",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "payments", "{{payment_id}}", "switch"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "payments",
+                    "{{payment_id}}",
+                    "switch"
+                  ]
                 },
                 "description": "Ganti gateway pembayaran untuk payment yang sedang **pending**.\n\nMekanisme:\n1. Expire invoice/snap lama di gateway (best-effort — tidak gagal jika sudah expire)\n2. Payment lama → status `expired`\n3. Buat gateway charge baru dengan gateway yang diminta\n4. Return Payment baru dengan `redirect_url` baru\n\n**Order tidak dibatalkan** — tetap `pending` sampai timer habis.\n\n**Hanya bekerja untuk payment berstatus `pending`.** Paid/expired/refunded → 422."
               },
@@ -301,21 +318,36 @@
                   "name": "201 Created — Switched to Midtrans",
                   "status": "Created",
                   "code": 201,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{\n  \"success\": true,\n  \"message\": \"Payment method switched.\",\n  \"data\": {\n    \"id\": 2,\n    \"order_id\": 5,\n    \"gateway\": \"midtrans\",\n    \"method\": \"snap\",\n    \"amount_cents\": 39000000,\n    \"amount\": \"Rp 390.000\",\n    \"status\": \"pending\",\n    \"redirect_url\": \"https://app.sandbox.midtrans.com/snap/v4/redirection/...\",\n    \"payment_details\": {\n      \"snap_token\": \"abc123...\",\n      \"redirect_url\": \"https://app.sandbox.midtrans.com/snap/v4/redirection/...\"\n    },\n    \"expires_at\": \"2026-05-13T10:00:00.000000Z\",\n    \"created_at\": \"2026-05-12T10:01:00.000000Z\"\n  },\n  \"meta\": { \"timestamp\": \"2026-05-12T10:01:00.000000Z\" }\n}"
                 },
                 {
                   "name": "422 Unprocessable — Payment Not Pending",
                   "status": "Unprocessable Entity",
                   "code": 422,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{\n  \"success\": false,\n  \"message\": \"Can only switch a pending payment.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 },
                 {
                   "name": "404 Not Found — Wrong User",
                   "status": "Not Found",
                   "code": 404,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{\n  \"success\": false,\n  \"message\": \"No query results for model [App\\\\Models\\\\Payment].\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 }
               ]
@@ -327,11 +359,11 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Refund returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Refund has id', () => {",
-                      "  const body = pm.response.json();",
-                      "  pm.expect(body.data).to.have.property('id');",
-                      "  pm.expect(body.data.status).to.equal('processed');",
+                      "test('Refund returns 200', () => expect(res.getStatus()).to.equal(200));",
+                      "test('Refund has id', () => {",
+                      "  const body = res.getBody();",
+                      "  expect(body.data).to.have.property('id');",
+                      "  expect(body.data.status).to.equal('processed');",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -413,12 +445,12 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Balance returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Response has balance fields', () => {",
-                      "  const body = pm.response.json();",
-                      "  pm.expect(body.data).to.have.property('balance_cents');",
-                      "  pm.expect(body.data).to.have.property('available_cents');",
-                      "  pm.expect(body.data).to.have.property('on_hold_cents');",
+                      "test('Balance returns 200', () => expect(res.getStatus()).to.equal(200));",
+                      "test('Response has balance fields', () => {",
+                      "  const body = res.getBody();",
+                      "  expect(body.data).to.have.property('balance_cents');",
+                      "  expect(body.data).to.have.property('available_cents');",
+                      "  expect(body.data).to.have.property('on_hold_cents');",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -468,10 +500,10 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Transactions returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Response has pagination', () => {",
-                      "  const body = pm.response.json();",
-                      "  pm.expect(body.meta).to.have.property('pagination');",
+                      "test('Transactions returns 200', () => expect(res.getStatus()).to.equal(200));",
+                      "test('Response has pagination', () => {",
+                      "  const body = res.getBody();",
+                      "  expect(body.meta).to.have.property('pagination');",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -578,10 +610,10 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Withdraw returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('on_hold increased', () => {",
-                      "  const body = pm.response.json();",
-                      "  pm.expect(body.data.on_hold_cents).to.be.greaterThan(0);",
+                      "test('Withdraw returns 200', () => expect(res.getStatus()).to.equal(200));",
+                      "test('on_hold increased', () => {",
+                      "  const body = res.getBody();",
+                      "  expect(body.data.on_hold_cents).to.be.greaterThan(0);",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -674,11 +706,11 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Simulate returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Simulation triggered', () => {",
-                      "  const body = pm.response.json();",
-                      "  pm.expect(body).to.have.property('status');",
-                      "  pm.test('Invoice status is PAID', () => pm.expect(body.status).to.equal('PAID'));",
+                      "test('Simulate returns 200', () => expect(res.getStatus()).to.equal(200));",
+                      "test('Simulation triggered', () => {",
+                      "  const body = res.getBody();",
+                      "  expect(body).to.have.property('status');",
+                      "  test('Invoice status is PAID', () => expect(body.status).to.equal('PAID'));",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -689,22 +721,48 @@
                 "auth": {
                   "type": "basic",
                   "basic": [
-                    { "key": "username", "value": "{{xendit_secret_key}}", "type": "string" },
-                    { "key": "password", "value": "",                      "type": "string" }
+                    {
+                      "key": "username",
+                      "value": "{{xendit_secret_key}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "",
+                      "type": "string"
+                    }
                   ]
                 },
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "https://api.xendit.co/v2/invoices/{{invoice_id}}/simulate_payment",
                   "protocol": "https",
-                  "host": ["api", "xendit", "co"],
-                  "path": ["v2", "invoices", "{{invoice_id}}", "simulate_payment"]
+                  "host": [
+                    "api",
+                    "xendit",
+                    "co"
+                  ],
+                  "path": [
+                    "v2",
+                    "invoices",
+                    "{{invoice_id}}",
+                    "simulate_payment"
+                  ]
                 },
                 "description": "Simulate Xendit Invoice berhasil dibayar di sandbox — **satu klik, tanpa buka browser**.\n\nXendit akan kirim webhook `status: PAID` ke callback URL → Laravel set payment `paid`.\n\n**Setup (sekali saja):**\n1. Isi `xendit_secret_key` di collection variables\n2. Set Webhook URL di [Xendit Dashboard](https://dashboard.xendit.co) → Settings → Webhooks → Invoice paid → `https://your-ngrok.io/api/webhooks/xendit`\n3. Aktifkan Xendit → Settings → Webhooks → toggle Invoice paid ✅\n\n**Flow per test:**\n1. `POST /api/payments/initiate` dengan `gateway: xendit` → `invoice_id` tersimpan otomatis\n2. Send request ini → Xendit trigger webhook\n3. `GET /api/payments/{{payment_id}}/status` → status harus `paid`\n\n⚠️ **Sandbox only**"
               },
@@ -713,7 +771,12 @@
                   "name": "200 OK — Simulation triggered",
                   "status": "OK",
                   "code": 200,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{\n  \"id\": \"623fca3f9fea3b00d1c4a7b2\",\n  \"external_id\": \"PAY-ABCDEFGHIJ-5\",\n  \"status\": \"PAID\",\n  \"amount\": 390000,\n  \"paid_amount\": 390000,\n  \"currency\": \"IDR\",\n  \"payment_method\": \"BCA\"\n}"
                 }
               ]
@@ -721,12 +784,16 @@
             {
               "name": "Midtrans — Open Snap Checkout (Browser) 🌐",
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "GET",
                 "header": [],
                 "url": {
                   "raw": "{{snap_redirect_url}}",
-                  "host": ["{{snap_redirect_url}}"]
+                  "host": [
+                    "{{snap_redirect_url}}"
+                  ]
                 },
                 "description": "**Buka URL ini di browser** untuk masuk ke halaman Snap Midtrans.\n\n`snap_redirect_url` tersimpan otomatis saat kamu jalankan 'Initiate Payment' dengan `gateway: midtrans`.\n\n---\n\n## Test Credentials Midtrans Sandbox\n\n### Kartu Kredit\n| Card Number | Type | 3DS |\n|---|---|---|\n| `4811 1111 1111 1114` | Visa (success) | OTP: `112233` |\n| `4911 1111 1111 1113` | Visa (success, no 3DS) | — |\n| `4911 1111 1111 1129` | Visa (challenge/fraud) | — |\n| `5210 0000 0000 0002` | Mastercard | OTP: `112233` |\n\nCVV: `123` | Exp: `01/25` (masa depan)\n\n### Bank Transfer (VA)\nSemua VA di sandbox akan **auto-settle dalam beberapa detik** — tidak perlu aksi manual.\n\n### GoPay\n1. Pilih GoPay di Snap\n2. Scan QR atau klik deeplink\n3. Di sandbox, gunakan test number `+628123456789` dan PIN `123456`\n\n### ShopeePay\nRedirect ke halaman ShopeePay sandbox → approve dengan akun sandbox\n\n### QRIS\nScan QR dengan app sandbox QRIS atau konfirmasi manual di dashboard Midtrans\n\n---\n\n## Setelah Bayar\n\nMidtrans akan kirim webhook ke `POST /api/webhooks/midtrans`.\n\n**Setup webhook (sekali saja):**\n[Midtrans Dashboard](https://dashboard.sandbox.midtrans.com) → Settings → Configuration\n→ **Payment Notification URL:** `https://your-ngrok.io/api/webhooks/midtrans`\n\nAlternatif tanpa browser: gunakan request **'Midtrans — Snap Paid (Settlement)'** di collection `07-webhooks` untuk trigger webhook secara manual."
               },
@@ -741,15 +808,15 @@
                     "exec": [
                       "// Compute Midtrans signature: SHA-512(order_id + status_code + gross_amount + server_key)",
                       "// Ganti 'midtrans_server_key' di collection variables dengan MIDTRANS_SERVER_KEY dari .env",
-                      "const serverKey = pm.collectionVariables.get('midtrans_server_key') || '';",
+                      "const serverKey = bru.getVar('midtrans_server_key') || '';",
                       "if (!serverKey) {",
                       "  console.warn('⚠️ Set midtrans_server_key in collection variables!');",
                       "  return;",
                       "}",
                       "try {",
-                      "  const body = JSON.parse(pm.request.body.raw);",
+                      "  const body = req.getBody();",
                       "  const input = body.order_id + body.status_code + body.gross_amount + serverKey;",
-                      "  pm.collectionVariables.set('midtrans_signature', CryptoJS.SHA512(input).toString());",
+                      "  bru.setVar('midtrans_signature', require('crypto').createHash('sha512').update(input, 'utf8').digest('hex'));",
                       "} catch(e) { console.error('Signature error:', e); }"
                     ],
                     "type": "text/javascript"
@@ -759,28 +826,46 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Manual webhook returns 200', () => pm.response.to.have.status(200));"
+                      "test('Manual webhook returns 200', () => expect(res.getStatus()).to.equal(200));"
                     ],
                     "type": "text/javascript"
                   }
                 }
               ],
               "request": {
-                "auth": { "type": "noauth" },
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "POST",
                 "header": [
-                  { "key": "Accept",       "value": "application/json" },
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"transaction_status\": \"settlement\",\n  \"transaction_id\": \"txn-sandbox-001\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"{{midtrans_signature}}\",\n  \"payment_type\": \"gopay\",\n  \"order_id\": \"GANTI-DENGAN-EXTERNAL-ID-DARI-INITIATE\",\n  \"gross_amount\": \"GANTI-DENGAN-JUMLAH-IDR.00\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\",\n  \"transaction_time\": \"2026-05-12 10:00:00\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{base_url}}/api/webhooks/midtrans",
-                  "host": ["{{base_url}}"],
-                  "path": ["api", "webhooks", "midtrans"]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "midtrans"
+                  ]
                 },
                 "description": "Trigger webhook Midtrans secara manual ke Laravel — **tanpa buka browser, tanpa Midtrans dashboard**.\n\nCocok untuk development lokal dimana Midtrans tidak bisa reach server kamu.\n\n**Setup:**\n1. Isi `midtrans_server_key` di collection variables (dari `.env MIDTRANS_SERVER_KEY`)\n2. Ganti `order_id` dengan `external_id` dari hasil Initiate Payment (format: `PAY-XXXXX-5`)\n3. Ganti `gross_amount` dengan jumlah dalam IDR format string, contoh: `\"390000.00\"`\n4. Pre-request script akan auto-compute `signature_key` → webhook akan lolos verifikasi\n\n**Cara dapat `order_id`:**\nDari response Initiate Payment → `data.payment_details.external_id`\n\n**Cara dapat `gross_amount`:**\nDari `data.amount_cents` dibagi 100, format: `\"390000.00\"`\n\n**Setelah Send:** `GET /api/payments/{{payment_id}}/status` → status harus `paid`"
               },
@@ -789,14 +874,24 @@
                   "name": "200 OK — Webhook processed",
                   "status": "OK",
                   "code": 200,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{ \"message\": \"Webhook processed.\" }"
                 },
                 {
                   "name": "403 Forbidden — Wrong Server Key",
                   "status": "Forbidden",
                   "code": 403,
-                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
                   "body": "{\n  \"success\": false,\n  \"message\": \"Invalid webhook signature.\",\n  \"meta\": { \"timestamp\": \"2026-05-12T10:00:00.000000Z\" }\n}"
                 }
               ]

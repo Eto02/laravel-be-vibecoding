@@ -177,9 +177,9 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "if (pm.response.code === 201) {",
-                      "    const body = pm.response.json();",
-                      "    pm.collectionVariables.set('category_slug', body.data.slug);",
+                      "if (res.getStatus() === 201) {",
+                      "    const body = res.getBody();",
+                      "    bru.setVar('category_slug', body.data.slug);",
                       "    console.log('category_slug saved:', body.data.slug);",
                       "}"
                     ]
@@ -262,9 +262,9 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "if (pm.response.code === 200) {",
-                      "    const body = pm.response.json();",
-                      "    pm.collectionVariables.set('category_slug', body.data.slug);",
+                      "if (res.getStatus() === 200) {",
+                      "    const body = res.getBody();",
+                      "    bru.setVar('category_slug', body.data.slug);",
                       "    console.log('category_slug updated to:', body.data.slug);",
                       "}"
                     ]
@@ -406,11 +406,11 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "if (pm.response.code === 200) {",
-                      "  const body = pm.response.json();",
+                      "if (res.getStatus() === 200) {",
+                      "  const body = res.getBody();",
                       "  if (body.data && body.data.length > 0) {",
-                      "    pm.collectionVariables.set('product_slug', body.data[0].slug);",
-                      "    pm.collectionVariables.set('wishlist_product_id', body.data[0].id);",
+                      "    bru.setVar('product_slug', body.data[0].slug);",
+                      "    bru.setVar('wishlist_product_id', body.data[0].id);",
                       "  }",
                       "}"
                     ],
@@ -426,13 +426,13 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "if (pm.response.code === 200) {",
-                      "  const body = pm.response.json();",
+                      "if (res.getStatus() === 200) {",
+                      "  const body = res.getBody();",
                       "  if (body.data && body.data.slug) {",
-                      "    pm.collectionVariables.set('product_slug', body.data.slug);",
+                      "    bru.setVar('product_slug', body.data.slug);",
                       "  }",
                       "  if (body.data && body.data.id) {",
-                      "    pm.collectionVariables.set('wishlist_product_id', body.data.id);",
+                      "    bru.setVar('wishlist_product_id', body.data.id);",
                       "  }",
                       "}"
                     ],
@@ -563,10 +563,10 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "if (pm.response.code === 201) {",
-                      "  const body = pm.response.json();",
+                      "if (res.getStatus() === 201) {",
+                      "  const body = res.getBody();",
                       "  if (body.data && body.data.slug) {",
-                      "    pm.collectionVariables.set('product_slug', body.data.slug);",
+                      "    bru.setVar('product_slug', body.data.slug);",
                       "    console.log('product_slug saved:', body.data.slug);",
                       "  }",
                       "}"
@@ -750,14 +750,14 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "if (pm.response.code === 200) {",
-                      "  const body = pm.response.json();",
+                      "if (res.getStatus() === 200) {",
+                      "  const body = res.getBody();",
                       "  const data = body.data || {};",
                       "",
                       "  // Mirror to shared media_upload_url so \"Upload File ke R2\" works universally",
-                      "  pm.collectionVariables.set('media_upload_url', data.upload_url || '');",
-                      "  pm.collectionVariables.set('media_key', data.key || '');",
-                      "  pm.collectionVariables.set('media_public_url', data.public_url || '');",
+                      "  bru.setVar('media_upload_url', data.upload_url || '');",
+                      "  bru.setVar('media_key', data.key || '');",
+                      "  bru.setVar('media_public_url', data.public_url || '');",
                       "",
                       "  console.log('media_upload_url:', data.upload_url);",
                       "  console.log('media_key:', data.key);",
@@ -844,10 +844,10 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "if (pm.response.code === 201) {",
-                      "  const body = pm.response.json();",
+                      "if (res.getStatus() === 201) {",
+                      "  const body = res.getBody();",
                       "  if (body.data && body.data.id) {",
-                      "    pm.collectionVariables.set('product_media_id', String(body.data.id));",
+                      "    bru.setVar('product_media_id', String(body.data.id));",
                       "    console.log('product_media_id saved:', body.data.id);",
                       "  }",
                       "}"
@@ -974,10 +974,10 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "if (pm.response.code === 201) {",
-                      "  const body = pm.response.json();",
+                      "if (res.getStatus() === 201) {",
+                      "  const body = res.getBody();",
                       "  if (body.data && body.data.id) {",
-                      "    pm.collectionVariables.set('variant_id', String(body.data.id));",
+                      "    bru.setVar('variant_id', String(body.data.id));",
                       "    console.log('variant_id saved:', body.data.id);",
                       "  }",
                       "}"

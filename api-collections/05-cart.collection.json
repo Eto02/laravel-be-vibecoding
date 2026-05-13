@@ -96,11 +96,11 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Has stores array\", () => {",
-                      "    const j = pm.response.json();",
-                      "    pm.expect(j.data).to.have.property('stores');",
-                      "    pm.expect(j.data.stores).to.be.an('array');",
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
+                      "test(\"Has stores array\", () => {",
+                      "    const j = res.getBody();",
+                      "    expect(j.data).to.have.property('stores');",
+                      "    expect(j.data.stores).to.be.an('array');",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -177,13 +177,13 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
-                      "pm.test(\"Cart has items\", () => {",
-                      "    const j = pm.response.json();",
-                      "    pm.expect(j.data.total_items).to.be.above(0);",
+                      "test(\"Status 201\", () => expect(res.getStatus()).to.equal(201));",
+                      "test(\"Cart has items\", () => {",
+                      "    const j = res.getBody();",
+                      "    expect(j.data.total_items).to.be.above(0);",
                       "    // Save first cart item id for update/delete tests",
                       "    if (j.data.stores && j.data.stores[0] && j.data.stores[0].items[0]) {",
-                      "        pm.collectionVariables.set('cart_item_id', j.data.stores[0].items[0].id);",
+                      "        bru.setVar('cart_item_id', j.data.stores[0].items[0].id);",
                       "    }",
                       "});"
                     ],
@@ -245,7 +245,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));"
                     ],
                     "type": "text/javascript"
                   }
@@ -292,7 +292,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));"
                     ],
                     "type": "text/javascript"
                   }
@@ -337,7 +337,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                      "test(\"Status 204\", () => expect(res.getStatus()).to.equal(204));"
                     ],
                     "type": "text/javascript"
                   }
@@ -387,9 +387,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Has items array\", () => {",
-                      "    pm.expect(pm.response.json().data).to.have.property('items');",
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
+                      "test(\"Has items array\", () => {",
+                      "    expect(res.getBody().data).to.have.property('items');",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -458,7 +458,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                      "test(\"Status 201\", () => expect(res.getStatus()).to.equal(201));"
                     ],
                     "type": "text/javascript"
                   }
@@ -505,7 +505,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                      "test(\"Status 204\", () => expect(res.getStatus()).to.equal(204));"
                     ],
                     "type": "text/javascript"
                   }
@@ -553,9 +553,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                      "pm.test(\"Has is_wishlisted field\", () => {",
-                      "    pm.expect(pm.response.json().data).to.have.property('is_wishlisted');",
+                      "test(\"Status 200\", () => expect(res.getStatus()).to.equal(200));",
+                      "test(\"Has is_wishlisted field\", () => {",
+                      "    expect(res.getBody().data).to.have.property('is_wishlisted');",
                       "});"
                     ],
                     "type": "text/javascript"
